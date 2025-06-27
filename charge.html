@@ -127,7 +127,7 @@
                 if (storedUser) {
                     currentUser = JSON.parse(storedUser);
                     
-                    // 게스트 제한 제거 - 모든 사용자가 포인트 충전 가능
+                    // 게스트 제한 완전 제거 - 모든 사용자가 포인트 충전 가능
                     document.getElementById('userNameDisplay').textContent = `${currentUser.name}님 환영합니다!`;
                     document.getElementById('loginButton').style.display = 'none';
                     document.getElementById('homeButton').style.display = 'block';
@@ -138,11 +138,26 @@
                         showPointsExceedModal();
                     }
                 } else {
-                    window.location.href = '/login.html';
+                    // 로그인하지 않은 사용자도 포인트 충전 페이지 접근 가능
+                    document.getElementById('userNameDisplay').textContent = '게스트 사용자';
+                    document.getElementById('loginButton').style.display = 'block';
+                    document.getElementById('homeButton').style.display = 'none';
+                    document.getElementById('currentPoints').textContent = '0P';
+                    
+                    // 게스트용 충전 버튼 이벤트 추가
+                    const chargeButton = document.querySelector('button[onclick="chargePoints()"]');
+                    chargeButton.onclick = () => {
+                        alert('로그인 후 포인트 충전을 이용해주세요.');
+                        window.location.href = '/login.html';
+                    };
                 }
             } catch (error) {
                 console.error('사용자 정보 로드 실패:', error);
-                window.location.href = '/login.html';
+                // 오류 발생 시에도 게스트 모드로 작동
+                document.getElementById('userNameDisplay').textContent = '게스트 사용자';
+                document.getElementById('loginButton').style.display = 'block';
+                document.getElementById('homeButton').style.display = 'none';
+                document.getElementById('currentPoints').textContent = '0P';
             }
         });
 
@@ -165,6 +180,12 @@
         // 포인트 충전
         async function chargePoints() {
             try {
+                if (!currentUser) {
+                    alert('로그인 후 포인트 충전을 이용해주세요.');
+                    window.location.href = '/login.html';
+                    return;
+                }
+
                 // 보유 포인트가 500을 초과하는 경우 경고 모달 표시
                 if (currentUser.points > 500) {
                     showPointsExceedModal();
@@ -199,11 +220,6 @@
                 console.error('포인트 충전 오류:', error);
                 alert('포인트 충전 중 오류가 발생했습니다.');
             }
-        }
-
-        // 게스트 모달 표시
-        function showGuestModal() {
-            document.getElementById('guestModal').style.display = 'flex';
         }
 
         // 포인트 초과 모달 표시

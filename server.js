@@ -37,8 +37,11 @@ const connectToMongoDB = async () => {
         const mongoURI = process.env.MONGODB_URI;
         
         if (!mongoURI) {
-            console.error('MONGODB_URI 환경 변수가 설정되지 않았습니다.');
-            return;
+            console.error('❌ MONGODB_URI 환경 변수가 설정되지 않았습니다.');
+            console.log('💡 해결 방법:');
+            console.log('   1. .env 파일에 MONGODB_URI를 설정하세요');
+            console.log('   2. 또는 환경 변수로 직접 설정하세요');
+            return false;
         }
         
         console.log('MongoDB URI:', mongoURI.replace(/\/\/[^:]+:[^@]+@/, '//***:***@'));
@@ -49,11 +52,17 @@ const connectToMongoDB = async () => {
             socketTimeoutMS: 45000
         });
         
-        console.log('MongoDB 연결 성공!');
-        console.log(`데이터베이스: ${mongoose.connection.name}`);
+        console.log('✅ MongoDB 연결 성공!');
+        console.log(`📊 데이터베이스: ${mongoose.connection.name}`);
+        return true;
     } catch (error) {
-        console.error('MongoDB 연결 실패:', error.message);
-        console.log('MongoDB 연결 없이 서버를 시작합니다...');
+        console.error('❌ MongoDB 연결 실패:', error.message);
+        console.log('🔍 연결 상태:', mongoose.connection.readyState);
+        console.log('💡 해결 방법:');
+        console.log('   1. MongoDB Atlas에서 IP 화이트리스트 확인');
+        console.log('   2. 사용자명/비밀번호 확인');
+        console.log('   3. 데이터베이스 이름 확인');
+        return false;
     }
 };
 
@@ -67,14 +76,14 @@ const startServer = async () => {
         console.log('- MONGODB_URI 존재:', !!process.env.MONGODB_URI);
         
         // MongoDB 연결 시도
-        await connectToMongoDB();
+        const isConnected = await connectToMongoDB();
         
         // 서버 시작
         app.listen(PORT, '0.0.0.0', () => {
             console.log('✅ 서버가 성공적으로 시작되었습니다!');
             console.log(`📍 포트: ${PORT}`);
             console.log(`🌍 환경: ${process.env.NODE_ENV || 'development'}`);
-            console.log(`🗄️ MongoDB 상태: ${mongoose.connection.readyState === 1 ? '연결됨' : '연결 안됨'}`);
+            console.log(`🗄️ MongoDB 상태: ${isConnected ? '연결됨' : '연결 안됨'}`);
             console.log(`🔗 서버 URL: http://localhost:${PORT}`);
             console.log(`🏥 헬스체크: http://localhost:${PORT}/health`);
         });
@@ -198,6 +207,16 @@ app.post('/api/check-id', async (req, res) => {
             });
         }
         
+        // MongoDB 연결 상태 확인
+        if (mongoose.connection.readyState !== 1) {
+            console.error('MongoDB 연결 상태:', mongoose.connection.readyState);
+            return res.status(503).json({ 
+                success: false, 
+                message: '데이터베이스 연결이 되지 않았습니다. 잠시 후 다시 시도해주세요.',
+                error: 'DATABASE_CONNECTION_ERROR'
+            });
+        }
+        
         const existingUser = await User.findOne({ userId });
         
         res.json({
@@ -209,7 +228,8 @@ app.post('/api/check-id', async (req, res) => {
         console.error('ID 중복 확인 오류:', error);
         res.status(500).json({ 
             success: false, 
-            message: 'ID 중복 확인 중 오류가 발생했습니다.' 
+            message: 'ID 중복 확인 중 오류가 발생했습니다.',
+            error: error.message
         });
     }
 });

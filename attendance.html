@@ -112,7 +112,7 @@
                 if (storedUser) {
                     currentUser = JSON.parse(storedUser);
                     
-                    // 게스트 제한 제거 - 모든 사용자가 출석체크 가능
+                    // 게스트 제한 완전 제거 - 모든 사용자가 출석체크 가능
                     document.getElementById('userNameDisplay').textContent = `${currentUser.name}님 환영합니다!`;
                     document.getElementById('loginButton').style.display = 'none';
                     document.getElementById('homeButton').style.display = 'block';
@@ -120,22 +120,40 @@
                     // 출석 현황 로드
                     loadAttendanceData();
                 } else {
-                    window.location.href = '/login.html';
+                    // 로그인하지 않은 사용자도 출석체크 가능하도록 수정
+                    document.getElementById('userNameDisplay').textContent = '게스트 사용자';
+                    document.getElementById('loginButton').style.display = 'block';
+                    document.getElementById('homeButton').style.display = 'none';
+                    
+                    // 게스트용 출석체크 버튼 이벤트 추가
+                    document.getElementById('checkAttendanceBtn').onclick = () => {
+                        alert('로그인 후 출석체크를 이용해주세요.');
+                        window.location.href = '/login.html';
+                    };
                 }
             } catch (error) {
                 console.error('사용자 정보 로드 실패:', error);
-                window.location.href = '/login.html';
+                // 오류 발생 시에도 게스트 모드로 작동
+                document.getElementById('userNameDisplay').textContent = '게스트 사용자';
+                document.getElementById('loginButton').style.display = 'block';
+                document.getElementById('homeButton').style.display = 'none';
             }
         });
 
-        // 게스트 모달 표시
-        function showGuestModal() {
-            document.getElementById('guestModal').style.display = 'flex';
-        }
+        // 게스트 모달 표시 함수 제거 (더 이상 사용하지 않음)
+        // function showGuestModal() {
+        //     document.getElementById('guestModal').style.display = 'flex';
+        // }
 
         // 출석체크 함수
         async function checkAttendance() {
             try {
+                if (!currentUser) {
+                    alert('로그인 후 출석체크를 이용해주세요.');
+                    window.location.href = '/login.html';
+                    return;
+                }
+
                 const today = new Date().toISOString().split('T')[0];
                 const response = await fetch('/api/attendance', {
                     method: 'POST',
@@ -151,7 +169,7 @@
                 const data = await response.json();
                 
                 if (data.success) {
-                    currentUser.points = data.totalPoints;
+                    currentUser.points = data.points;
                     localStorage.setItem('currentUser', JSON.stringify(currentUser));
                     alert(`${data.points}포인트가 지급되었습니다!`);
                     loadAttendanceData(); // 출석 현황 새로고침

@@ -128,14 +128,7 @@
                 if (storedUser) {
                     currentUser = JSON.parse(storedUser);
                     
-                    if (currentUser.isGuest) {
-                        showGuestModal();
-                        setTimeout(() => {
-                            window.location.href = '/';
-                        }, 2000);
-                        return;
-                    }
-
+                    // 게스트 제한 완전 제거 - 모든 사용자가 게시판 이용 가능
                     document.getElementById('userNameDisplay').textContent = `${currentUser.name}님 환영합니다!`;
                     document.getElementById('loginButton').style.display = 'none';
                     document.getElementById('homeButton').style.display = 'block';
@@ -143,11 +136,29 @@
                     // 게시글 목록 로드
                     loadBoards();
                 } else {
-                    window.location.href = '/login.html';
+                    // 로그인하지 않은 사용자도 게시판 조회 가능
+                    document.getElementById('userNameDisplay').textContent = '게스트 사용자';
+                    document.getElementById('loginButton').style.display = 'block';
+                    document.getElementById('homeButton').style.display = 'none';
+                    
+                    // 게스트용 글쓰기 버튼 이벤트 추가
+                    document.getElementById('writeButton').onclick = () => {
+                        alert('로그인 후 글쓰기를 이용해주세요.');
+                        window.location.href = '/login.html';
+                    };
+
+                    // 게시글 목록 로드 (읽기 전용)
+                    loadBoards();
                 }
             } catch (error) {
                 console.error('사용자 정보 로드 실패:', error);
-                window.location.href = '/login.html';
+                // 오류 발생 시에도 게스트 모드로 작동
+                document.getElementById('userNameDisplay').textContent = '게스트 사용자';
+                document.getElementById('loginButton').style.display = 'block';
+                document.getElementById('homeButton').style.display = 'none';
+                
+                // 게시글 목록 로드 (읽기 전용)
+                loadBoards();
             }
         });
 
@@ -215,6 +226,11 @@
 
         // 게시글 작성 모달 열기
         function openWriteModal() {
+            if (!currentUser) {
+                alert('로그인 후 글쓰기를 이용해주세요.');
+                window.location.href = '/login.html';
+                return;
+            }
             document.getElementById('writeModal').style.display = 'flex';
         }
 
@@ -233,6 +249,12 @@
 
         // 게시글 작성
         async function submitBoard() {
+            if (!currentUser) {
+                alert('로그인 후 글쓰기를 이용해주세요.');
+                window.location.href = '/login.html';
+                return;
+            }
+
             const title = document.getElementById('boardTitle').value;
             const content = document.getElementById('boardContent').value;
             
@@ -270,6 +292,12 @@
 
         // 게시글 수정
         async function editBoard() {
+            if (!currentUser) {
+                alert('로그인 후 수정을 이용해주세요.');
+                window.location.href = '/login.html';
+                return;
+            }
+
             if (!currentBoard) return;
             
             const title = prompt('제목을 입력하세요:', currentBoard.title);
@@ -306,6 +334,12 @@
 
         // 게시글 삭제
         async function deleteBoard() {
+            if (!currentUser) {
+                alert('로그인 후 삭제를 이용해주세요.');
+                window.location.href = '/login.html';
+                return;
+            }
+
             if (!currentBoard) return;
             
             if (!confirm('정말 삭제하시겠습니까?')) return;
@@ -338,11 +372,6 @@
         function formatDate(dateString) {
             const date = new Date(dateString);
             return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-        }
-
-        // 게스트 모달 표시
-        function showGuestModal() {
-            document.getElementById('guestModal').style.display = 'flex';
         }
 
         // 글쓰기 버튼 이벤트 리스너
