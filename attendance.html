@@ -189,21 +189,26 @@
                 const data = await response.json();
                 
                 if (data.success) {
-                    document.getElementById('monthAttendance').textContent = `${data.monthAttendance}일`;
-                    document.getElementById('totalAttendance').textContent = `${data.totalAttendance}일`;
-                    document.getElementById('monthPoints').textContent = `${data.monthPoints}P`;
-                    document.getElementById('totalPoints').textContent = `${data.totalPoints}P`;
+                    document.getElementById('monthAttendance').textContent = `${data.monthAttendance || 0}일`;
+                    document.getElementById('totalAttendance').textContent = `${data.totalAttendance || 0}일`;
+                    document.getElementById('monthPoints').textContent = `${data.monthPoints || 0}P`;
+                    document.getElementById('totalPoints').textContent = `${data.totalPoints || 0}P`;
                     
                     // 달력 생성
-                    createCalendar(data.attendances);
+                    createCalendar(data.attendance || []);
                 }
             } catch (error) {
                 console.error('출석 현황 로드 오류:', error);
+                // 오류 발생 시 기본값 설정
+                document.getElementById('monthAttendance').textContent = '0일';
+                document.getElementById('totalAttendance').textContent = '0일';
+                document.getElementById('monthPoints').textContent = '0P';
+                document.getElementById('totalPoints').textContent = '0P';
             }
         }
 
         // 달력 생성
-        function createCalendar(attendances) {
+        function createCalendar(attendanceRecords) {
             const calendar = document.getElementById('calendar');
             calendar.innerHTML = '';
             
@@ -222,7 +227,7 @@
             const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0);
             
             // 출석한 날짜 Set 생성
-            const attendanceDates = new Set(attendances.map(a => a.date));
+            const attendanceDates = new Set(attendanceRecords.map(a => a.date));
 
             // 첫 주의 빈 날짜 채우기
             for (let i = 0; i < firstDay.getDay(); i++) {

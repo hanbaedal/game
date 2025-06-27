@@ -409,9 +409,30 @@ app.get('/api/attendance/:userId', async (req, res) => {
             .sort({ date: -1 })
             .limit(30);
         
+        // 이번달 출석 계산
+        const today = new Date();
+        const currentMonth = (today.getMonth() + 1).toString().padStart(2, '0');
+        const currentYear = today.getFullYear().toString();
+        
+        const thisMonthAttendance = await Attendance.find({
+            userId,
+            month: currentMonth,
+            year: currentYear
+        });
+        
+        // 이번달 포인트 계산
+        const thisMonthPoints = thisMonthAttendance.reduce((total, record) => total + (record.points || 0), 0);
+        
+        // 전체 출석 계산
+        const totalAttendance = await Attendance.countDocuments({ userId });
+        
         res.json({
             success: true,
             attendance: attendanceRecords,
+            totalPoints: user.points,
+            monthAttendance: thisMonthAttendance.length,
+            totalAttendance: totalAttendance,
+            monthPoints: thisMonthPoints,
             totalPoints: user.points
         });
     } catch (error) {
@@ -542,6 +563,113 @@ app.get('/api/invites', async (req, res) => {
             success: false, 
             message: '초대 리스트 조회 중 오류가 발생했습니다.',
             error: error.message 
+        });
+    }
+});
+
+// 전화번호 중복 확인 API
+app.post('/api/check-invite', async (req, res) => {
+    try {
+        const { phoneNumber } = req.body;
+        
+        if (!phoneNumber) {
+            return res.status(400).json({ 
+                success: false,
+                message: '전화번호를 입력해주세요.' 
+            });
+        }
+        
+        // 전화번호 형식 검증
+        const phoneRegex = /^01[0-9]{8,9}$/;
+        if (!phoneRegex.test(phoneNumber)) {
+            return res.status(400).json({ 
+                success: false,
+                message: '올바른 전화번호 형식이 아닙니다.' 
+            });
+        }
+        
+        // 기존 초대 내역 확인
+        const existingInvite = await Invite.findOne({ phoneNumber });
+        
+        res.json({
+            success: true,
+            exists: !!existingInvite,
+            message: existingInvite ? '이미 초대된 전화번호입니다.' : '초대 가능한 전화번호입니다.'
+        });
+    } catch (error) {
+        console.error('전화번호 중복 확인 오류:', error);
+        res.status(500).json({ 
+            success: false, 
+            message: '전화번호 확인 중 오류가 발생했습니다.' 
+        });
+    }
+});
+
+// 인증번호 전송 API (테스트용)
+app.post('/api/send-verification', async (req, res) => {
+    try {
+        const { phoneNumber } = req.body;
+        
+        if (!phoneNumber) {
+            return res.status(400).json({ 
+                success: false,
+                message: '전화번호를 입력해주세요.' 
+            });
+        }
+        
+        // 테스트용 인증번호 생성 (실제로는 SMS 서비스 사용)
+        const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
+        
+        // 실제 SMS 전송 대신 콘솔에 출력 (테스트용)
+        console.log(`인증번호 전송: ${phoneNumber} -> ${verificationCode}`);
+        
+        // 세션에 인증번호 저장 (실제로는 Redis 등 사용)
+        // 여기서는 간단히 전송된 인증번호를 반환
+        res.json({
+            success: true,
+            message: '인증번호가 전송되었습니다.',
+            code: verificationCode // 테스트용으로만 전송
+        });
+    } catch (error) {
+        console.error('인증번호 전송 오류:', error);
+        res.status(500).json({ 
+            success: false, 
+            message: '인증번호 전송 중 오류가 발생했습니다.' 
+        });
+    }
+});
+
+// 인증번호 확인 API (테스트용)
+app.post('/api/verify-code', async (req, res) => {
+    try {
+        const { phoneNumber, code } = req.body;
+        
+        if (!phoneNumber || !code) {
+            return res.status(400).json({ 
+                success: false,
+                message: '전화번호와 인증번호를 입력해주세요.' 
+            });
+        }
+        
+        // 테스트용으로는 모든 인증번호를 허용 (실제로는 저장된 인증번호와 비교)
+        // 실제 구현에서는 Redis나 세션에서 저장된 인증번호와 비교
+        
+        // 초대 내역 저장
+        const invite = new Invite({
+            phoneNumber,
+            status: 'pending'
+        });
+        await invite.save();
+        
+        res.json({
+            success: true,
+            message: '인증이 완료되었습니다. 초대 메시지가 전송되었습니다.'
+        });
+    } catch (error) {
+        console.error('인증번호 확인 오류:', error);
+        res.status(500).json({ 
+            success: false, 
+            message: '인증번호 확인 중 오류가 발생했습니다.' 
         });
     }
 }); 
