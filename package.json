@@ -2,10 +2,9 @@
   "name": "member-management-system",
   "version": "1.0.0",
   "description": "Member Management System with Node.js and MongoDB",
-  "main": "server-simple.js",
+  "main": "server.js",
   "scripts": {
-    "start": "node server-simple.js",
-    "dev": "nodemon server-simple.js",
+    "start": "node server.js",
     "build": "echo 'No build step required'",
     "test": "echo 'No tests specified'"
   },
@@ -13,16 +12,10 @@
     "cors": "^2.8.5",
     "dotenv": "^16.5.0",
     "express": "^4.21.2",
-    "mongodb-memory-server": "^10.1.4",
     "mongoose": "^8.12.1",
-    "mysql2": "^3.14.0",
-    "redis": "^4.7.0",
-    "twilio": "^5.5.2",
     "uuid": "^11.1.0"
   },
-  "devDependencies": {
-    "nodemon": "^3.1.9"
-  },
+  "devDependencies": {},
   "keywords": ["member-management", "nodejs", "mongodb", "express"],
   "author": "Your Name",
   "license": "ISC",

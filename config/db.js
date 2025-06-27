@@ -19,9 +19,10 @@ const connectDB = async () => {
             useUnifiedTopology: true,
             // CloudType 환경에서 안정적인 연결을 위한 옵션들
             maxPoolSize: 10,
-            serverSelectionTimeoutMS: 5000,
+            serverSelectionTimeoutMS: 10000,
             socketTimeoutMS: 45000,
-            bufferMaxEntries: 0
+            retryWrites: true,
+            w: 'majority'
         });
         
         console.log(`MongoDB 연결 성공: ${conn.connection.host}`);

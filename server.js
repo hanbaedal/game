@@ -3,14 +3,7 @@ const express = require('express');
 const cors = require('cors');
 const mongoose = require('mongoose');
 const path = require('path');
-const fs = require('fs');
-const { MongoClient } = require('mongodb');
-const { MongoMemoryServer } = require('mongodb-memory-server');
 const { v4: uuidv4 } = require('uuid');
-const twilio = require('twilio');
-const redis = require('redis');
-const mysql = require('mysql2/promise');
-const connectDB = require('./config/db');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -37,38 +30,12 @@ app.get('/list', (req, res) => {
     res.sendFile(path.join(__dirname, 'list.html'));
 });
 
-// Twilio 클라이언트 초기화 (주석 처리)
-// const twilioClient = twilio(
-//     process.env.TWILIO_ACCOUNT_SID,
-//     process.env.TWILIO_AUTH_TOKEN
-// );
-
-// Redis 클라이언트 초기화 (주석 처리)
-// const redisClient = Redis.createClient({
-//     url: `redis://${process.env.REDIS_HOST}:${process.env.REDIS_PORT}`,
-//     password: process.env.REDIS_PASSWORD
-// });
-
-// redisClient.on('error', (err) => console.error('Redis Client Error', err));
-// redisClient.connect();
-
-// MySQL 연결 풀 생성 (주석 처리)
-// const pool = mysql.createPool({
-//     host: process.env.DB_HOST || 'localhost',
-//     user: process.env.DB_USER || 'root',
-//     password: process.env.DB_PASSWORD || '',
-//     database: process.env.DB_NAME || 'baseball_fan',
-//     waitForConnections: true,
-//     connectionLimit: 10,
-//     queueLimit: 0
-// });
-
 // MongoDB 연결 설정 - Render 배포용
 const connectToMongoDB = async () => {
     try {
         console.log('MongoDB 연결 시도 중...');
         
-        // CloudType 환경에서 MongoDB 정보 가져오기
+        // 환경 변수에서 MongoDB 정보 가져오기
         const username = process.env.MONGODB_USERNAME || 'ppadun9_user';
         const password = process.env.MONGODB_PASSWORD || 'ppadun8267';
         const database = process.env.MONGODB_DATABASE || 'member-management';
@@ -84,11 +51,9 @@ const connectToMongoDB = async () => {
         await mongoose.connect(mongoURI, {
             useNewUrlParser: true,
             useUnifiedTopology: true,
-            // Render 환경에서 안정적인 연결을 위한 옵션들
             maxPoolSize: 10,
             serverSelectionTimeoutMS: 10000,
             socketTimeoutMS: 45000,
-            bufferMaxEntries: 0,
             retryWrites: true,
             w: 'majority'
         });
@@ -98,12 +63,11 @@ const connectToMongoDB = async () => {
         console.log(`사용자: ${username}`);
     } catch (error) {
         console.error('MongoDB 연결 실패:', error.message);
-        // MongoDB 연결 실패해도 서버는 시작
         console.log('MongoDB 연결 없이 서버를 시작합니다...');
     }
 };
 
-// 서버 시작 전 MongoDB 연결 확인
+// 서버 시작
 const startServer = async () => {
     try {
         console.log('서버 시작 중...');
@@ -114,7 +78,7 @@ const startServer = async () => {
         console.log('- MONGODB_DATABASE:', process.env.MONGODB_DATABASE);
         console.log('- MONGODB_URI 존재:', !!process.env.MONGODB_URI);
         
-        // MongoDB 연결 시도 (실패해도 서버는 시작)
+        // MongoDB 연결 시도
         await connectToMongoDB();
         
         // 서버 시작
@@ -150,13 +114,29 @@ app.get('/', (req, res) => {
     });
 });
 
-// 간단한 테스트 엔드포인트
+// 테스트 엔드포인트
 app.get('/test', (req, res) => {
     res.json({
         message: 'Server is working!',
         timestamp: new Date().toISOString(),
         uptime: process.uptime()
     });
+});
+
+// 헬스체크 엔드포인트 (Render 배포용)
+app.get('/health', (req, res) => {
+    const health = {
+        status: 'OK',
+        timestamp: new Date().toISOString(),
+        uptime: process.uptime(),
+        environment: process.env.NODE_ENV || 'development',
+        database: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected',
+        memory: process.memoryUsage(),
+        version: process.version
+    };
+    
+    const statusCode = health.database === 'connected' ? 200 : 503;
+    res.status(statusCode).json(health);
 });
 
 // 스키마 정의
@@ -172,7 +152,7 @@ const userSchema = new mongoose.Schema({
     createdAt: { type: Date, default: Date.now }
 });
 
-const User = mongoose.model('User', userSchema);
+const User = mongoose.model('User', userSchema, 'game-member');
 
 // 배팅 스키마 정의
 const betSchema = new mongoose.Schema({
@@ -186,8 +166,7 @@ const betSchema = new mongoose.Schema({
     createdAt: { type: Date, default: Date.now }
 });
 
-// 배팅 모델 생성
-const Bet = mongoose.model('Bet', betSchema, 'bets');
+const Bet = mongoose.model('Bet', betSchema, 'game-betting');
 
 // Donation 스키마 정의
 const donationSchema = new mongoose.Schema({
@@ -198,7 +177,7 @@ const donationSchema = new mongoose.Schema({
     source: { type: String, enum: ['direct', 'betting_win'], default: 'direct' }
 });
 
-const Donation = mongoose.model('Donation', donationSchema);
+const Donation = mongoose.model('Donation', donationSchema, 'game-donation');
 
 // 게임 기록 스키마 정의
 const gameRecordSchema = new mongoose.Schema({
@@ -211,8 +190,7 @@ const gameRecordSchema = new mongoose.Schema({
     createdAt: { type: Date, default: Date.now }
 });
 
-// 게임 기록 모델 생성
-const GameRecord = mongoose.model('GameRecord', gameRecordSchema, 'game_records');
+const GameRecord = mongoose.model('GameRecord', gameRecordSchema, 'game-records');
 
 // 기부 포인트 스키마 정의
 const donationPointsSchema = new mongoose.Schema({
@@ -223,8 +201,7 @@ const donationPointsSchema = new mongoose.Schema({
     createdAt: { type: Date, default: Date.now }
 });
 
-// 기부 포인트 모델 생성
-const DonationPoints = mongoose.model('DonationPoints', donationPointsSchema, 'donation_points');
+const DonationPoints = mongoose.model('DonationPoints', donationPointsSchema, 'game-donation');
 
 // 출석부 스키마 정의
 const attendanceSchema = new mongoose.Schema({
@@ -236,49 +213,64 @@ const attendanceSchema = new mongoose.Schema({
     createdAt: { type: Date, default: Date.now }
 });
 
-// 출석부 모델 생성
-const Attendance = mongoose.model('Attendance', attendanceSchema, 'attendances');
+const Attendance = mongoose.model('Attendance', attendanceSchema, 'game-attendance');
 
+// 게시판 스키마 정의
+const boardSchema = new mongoose.Schema({
+    title: { type: String, required: true },
+    content: { type: String, required: true },
+    author: { type: String, required: true },
+    createdAt: { type: Date, default: Date.now },
+    updatedAt: { type: Date, default: Date.now }
+});
+
+const Board = mongoose.model('Board', boardSchema, 'game-board');
+
+// 포인트 충전 스키마 정의
+const chargingSchema = new mongoose.Schema({
+    userId: { type: String, required: true },
+    amount: { type: Number, required: true },
+    paymentMethod: { type: String, required: true },
+    status: { type: String, enum: ['pending', 'completed', 'failed'], default: 'completed' },
+    createdAt: { type: Date, default: Date.now }
+});
+
+const Charging = mongoose.model('Charging', chargingSchema, 'game-charging');
+
+// 초대 스키마 정의
+const inviteSchema = new mongoose.Schema({
+    phoneNumber: { type: String, required: true },
+    inviteDate: { type: Date, default: Date.now },
+    status: { type: String, enum: ['pending', 'completed'], default: 'pending' }
+});
+
+const Invite = mongoose.model('Invite', inviteSchema, 'game-invite');
+
+// API 엔드포인트들
 // ID 중복 확인 API
 app.post('/api/check-id', async (req, res) => {
     const { userId } = req.body;
     
     try {
-        // 입력값 검증
         if (!userId) {
             return res.status(400).json({ 
                 success: false,
-                message: '아이디를 입력해주세요.' 
+                message: '사용자 ID를 입력해주세요.' 
             });
         }
-
-        // 아이디 길이 검사 (4~16자)
-        if (userId.length < 4 || userId.length > 16) {
-            return res.status(400).json({
-                success: false,
-                message: '아이디는 4~16자 사이여야 합니다.'
-            });
-        }
-
-        // 영문자와 숫자만 허용
-        if (!/^[a-zA-Z0-9]+$/.test(userId)) {
-            return res.status(400).json({
-                success: false,
-                message: '아이디는 영문자와 숫자만 사용 가능합니다.'
-            });
-        }
-
-        const exists = await User.exists({ userId });
+        
+        const existingUser = await User.findOne({ userId });
+        
         res.json({
             success: true,
-            available: !exists,
-            message: exists ? '이미 사용 중인 아이디입니다.' : '사용 가능한 아이디입니다.'
+            available: !existingUser,
+            message: existingUser ? '이미 사용 중인 ID입니다.' : '사용 가능한 ID입니다.'
         });
     } catch (error) {
         console.error('ID 중복 확인 오류:', error);
-        res.status(500).json({
-            success: false,
-            message: '서버 오류가 발생했습니다.'
+        res.status(500).json({ 
+            success: false, 
+            message: 'ID 중복 확인 중 오류가 발생했습니다.' 
         });
     }
 });
@@ -286,86 +278,53 @@ app.post('/api/check-id', async (req, res) => {
 // 회원가입 API
 app.post('/api/users', async (req, res) => {
     try {
-        const userData = req.body;
-
-        // 필수 필드 검증
-        const requiredFields = {
-            userId: '아이디',
-            password: '비밀번호',
-            name: '이름',
-            email: '이메일',
-            phone: '휴대폰 번호',
-            favoriteTeam: '응원하는 팀'
-        };
-
-        const missingFields = [];
-        for (const [field, fieldName] of Object.entries(requiredFields)) {
-            if (!userData[field]) {
-                missingFields.push(fieldName);
-            }
-        }
-
-        if (missingFields.length > 0) {
-            return res.status(400).json({
+        const { userId, password, name, email, phone, favoriteTeam } = req.body;
+        
+        // 입력값 검증
+        if (!userId || !password || !name || !email || !phone || !favoriteTeam) {
+            return res.status(400).json({ 
                 success: false,
-                message: `다음 항목을 입력해주세요: ${missingFields.join(', ')}`
+                message: '모든 필드를 입력해주세요.' 
             });
         }
-
+        
         // ID 중복 확인
-        const exists = await User.exists({ userId: userData.userId });
-        if (exists) {
-            return res.status(400).json({
+        const existingUser = await User.findOne({ userId });
+        if (existingUser) {
+            return res.status(400).json({ 
                 success: false,
-                message: '이미 사용 중인 아이디입니다.'
+                message: '이미 사용 중인 ID입니다.' 
             });
         }
-
-        // 비밀번호 유효성 검사 (8~16자, 영문/숫자/특수문자)
-        const passwordRegex = /^(?=.*[A-Za-z])(?=.*\d)(?=.*[@$!%*#?&])[A-Za-z\d@$!%*#?&]{8,16}$/;
-        if (!passwordRegex.test(userData.password)) {
-            return res.status(400).json({
-                success: false,
-                message: '비밀번호는 8~16자의 영문, 숫자, 특수문자를 포함해야 합니다.'
-            });
-        }
-
-        // 이메일 형식 검증
-        const emailRegex = /^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,6}$/;
-        if (!emailRegex.test(userData.email)) {
-            return res.status(400).json({
-                success: false,
-                message: '올바른 이메일 형식이 아닙니다.'
-            });
-        }
-
-        // 휴대폰 번호 형식 검증
-        const phoneRegex = /^010\d{8}$/;
-        const cleanPhone = userData.phone.replace(/-/g, '');
-        if (!phoneRegex.test(cleanPhone)) {
-            return res.status(400).json({
-                success: false,
-                message: '올바른 휴대폰 번호 형식이 아닙니다.'
-            });
-        }
-
+        
         // 새 사용자 생성
         const user = new User({
-            ...userData,
-            phone: cleanPhone.replace(/(\d{3})(\d{4})(\d{4})/, '$1-$2-$3')
+            userId,
+            password,
+            name,
+            email,
+            phone,
+            favoriteTeam,
+            points: 3000
         });
-
+        
         await user.save();
-
-        res.status(201).json({
+        
+        res.status(201).json({ 
             success: true,
-            message: '회원가입이 완료되었습니다.'
+            message: '회원가입이 완료되었습니다.',
+            user: {
+                userId: user.userId,
+                name: user.name,
+                email: user.email,
+                points: user.points
+            }
         });
     } catch (error) {
         console.error('회원가입 오류:', error);
-        res.status(500).json({
-            success: false,
-            message: '서버 오류가 발생했습니다.'
+        res.status(500).json({ 
+            success: false, 
+            message: '회원가입 중 오류가 발생했습니다.' 
         });
     }
 });
@@ -375,25 +334,22 @@ app.post('/api/login', async (req, res) => {
     try {
         const { userId, password } = req.body;
         
-        // 사용자 찾기
-        const user = await User.findOne({ userId });
+        if (!userId || !password) {
+            return res.status(400).json({ 
+                success: false,
+                message: 'ID와 비밀번호를 입력해주세요.' 
+            });
+        }
+        
+        const user = await User.findOne({ userId, password });
         
         if (!user) {
-            return res.json({ 
-                success: false, 
-                message: '아이디 또는 비밀번호가 일치하지 않습니다.' 
+            return res.status(401).json({ 
+                success: false,
+                message: 'ID 또는 비밀번호가 올바르지 않습니다.' 
             });
         }
         
-        // 비밀번호 확인
-        if (user.password !== password) {
-            return res.json({ 
-                success: false, 
-                message: '아이디 또는 비밀번호가 일치하지 않습니다.' 
-            });
-        }
-        
-        // 로그인 성공
         res.json({
             success: true,
             message: '로그인 성공',
@@ -401,15 +357,16 @@ app.post('/api/login', async (req, res) => {
                 userId: user.userId,
                 name: user.name,
                 email: user.email,
-                points: user.points,
-                favoriteTeam: user.favoriteTeam
+                phone: user.phone,
+                favoriteTeam: user.favoriteTeam,
+                points: user.points
             }
         });
     } catch (error) {
         console.error('로그인 오류:', error);
-        res.json({ 
+        res.status(500).json({ 
             success: false, 
-            message: '로그인 처리 중 오류가 발생했습니다.' 
+            message: '로그인 중 오류가 발생했습니다.' 
         });
     }
 });
@@ -417,25 +374,27 @@ app.post('/api/login', async (req, res) => {
 // 게스트 로그인 API
 app.post('/api/guest-login', async (req, res) => {
     try {
+        const guestId = `guest_${uuidv4().substring(0, 8)}`;
+        
         const guestUser = {
-            userId: 'guest_' + Date.now(),
+            userId: guestId,
             name: '게스트',
+            email: 'guest@example.com',
+            phone: '000-0000-0000',
+            favoriteTeam: '기타',
             points: 1000
         };
         
-        // 게스트 사용자 정보를 데이터베이스에 저장
-        const user = new User(guestUser);
-        await user.save();
-        
         res.json({
             success: true,
+            message: '게스트 로그인 성공',
             user: guestUser
         });
     } catch (error) {
         console.error('게스트 로그인 오류:', error);
-        res.json({ 
+        res.status(500).json({ 
             success: false, 
-            message: '게스트 로그인 처리 중 오류가 발생했습니다.' 
+            message: '게스트 로그인 중 오류가 발생했습니다.' 
         });
     }
 });
@@ -445,95 +404,105 @@ app.post('/api/update-points', async (req, res) => {
     try {
         const { userId, points } = req.body;
         
-        // 사용자 찾기 및 포인트 업데이트
         const user = await User.findOne({ userId });
         if (!user) {
-            return res.json({ success: false, message: '사용자를 찾을 수 없습니다.' });
+            return res.status(404).json({ 
+                success: false,
+                message: '사용자를 찾을 수 없습니다.' 
+            });
         }
         
         user.points = points;
         await user.save();
         
-        res.json({ success: true, message: '포인트가 업데이트되었습니다.' });
+        res.json({ 
+            success: true,
+            message: '포인트가 업데이트되었습니다.',
+            points: user.points
+        });
     } catch (error) {
         console.error('포인트 업데이트 오류:', error);
-        res.json({ success: false, message: '포인트 업데이트 중 오류가 발생했습니다.' });
+        res.status(500).json({ 
+            success: false, 
+            message: '포인트 업데이트 중 오류가 발생했습니다.' 
+        });
     }
 });
 
-// 리스트 API
+// 사용자 목록 조회 API
 app.get('/api/users', async (req, res) => {
     try {
-        const users = await User.find({}, { password: 0 }); // 비밀번호 제외
-        res.json({
+        const users = await User.find({}, { password: 0 });
+        res.json({ 
             success: true,
             users: users
         });
     } catch (error) {
-        console.error('리스트 조회 오류:', error);
-        res.status(500).json({
-            success: false,
-            message: '서버 오류가 발생했습니다.'
+        console.error('사용자 목록 조회 오류:', error);
+        res.status(500).json({ 
+            success: false, 
+            message: '사용자 목록 조회 중 오류가 발생했습니다.' 
         });
     }
 });
 
-// 단일 사용자 조회 API
+// 특정 사용자 조회 API
 app.get('/api/users/:userId', async (req, res) => {
     try {
         const { userId } = req.params;
-        const user = await User.findOne({ userId }, '-password');
-
+        const user = await User.findOne({ userId }, { password: 0 });
+        
         if (!user) {
-            return res.status(404).json({
+            return res.status(404).json({ 
                 success: false,
-                message: '사용자를 찾을 수 없습니다.'
+                message: '사용자를 찾을 수 없습니다.' 
             });
         }
-
-        res.json({
+        
+        res.json({ 
             success: true,
-            user
+            user: user
         });
     } catch (error) {
         console.error('사용자 조회 오류:', error);
-        res.status(500).json({
-            success: false,
-            message: '서버 오류가 발생했습니다.'
+        res.status(500).json({ 
+            success: false, 
+            message: '사용자 조회 중 오류가 발생했습니다.' 
         });
     }
 });
 
-// 아이디 찾기 API
+// ID 찾기 API
 app.post('/api/find-id', async (req, res) => {
     try {
-        const { name, phone } = req.body;
-
-        if (!name || !phone) {
-            return res.status(400).json({
+        const { name, email } = req.body;
+        
+        if (!name || !email) {
+            return res.status(400).json({ 
                 success: false,
-                message: '이름과 전화번호를 모두 입력해주세요.'
+                message: '이름과 이메일을 입력해주세요.' 
             });
         }
-
-        const user = await User.findOne({ name, phone });
+        
+        const user = await User.findOne({ name, email });
+        
         if (!user) {
-            return res.status(404).json({
+            return res.status(404).json({ 
                 success: false,
-                message: '일치하는 회원 정보를 찾을 수 없습니다.'
+                message: '일치하는 정보를 찾을 수 없습니다.' 
             });
         }
-
+        
         res.json({
             success: true,
-            userId: user.userId,
-            message: '아이디 찾기 성공'
+            message: 'ID 찾기 성공',
+            userId: user.userId
         });
     } catch (error) {
-        console.error('아이디 찾기 오류:', error);
-        res.status(500).json({
-            success: false,
-            message: '서버 오류가 발생했습니다.'
+        console.error('ID 찾기 오류:', error);
+        res.status(500).json({ 
+            success: false, 
+            message: 'ID 찾기 중 오류가 발생했습니다.' 
         });
     }
 });
@@ -541,293 +510,242 @@ app.post('/api/find-id', async (req, res) => {
 // 비밀번호 찾기 API
 app.post('/api/find-password', async (req, res) => {
     try {
-        const { userId, name, phone } = req.body;
-
-        if (!userId || !name || !phone) {
-            return res.status(400).json({
+        const { userId, email } = req.body;
+        
+        if (!userId || !email) {
+            return res.status(400).json({ 
                 success: false,
-                message: '아이디, 이름, 전화번호를 모두 입력해주세요.'
+                message: 'ID와 이메일을 입력해주세요.' 
             });
         }
-
-        const user = await User.findOne({ userId, name, phone });
+        
+        const user = await User.findOne({ userId, email });
+        
         if (!user) {
-            return res.status(404).json({
+            return res.status(404).json({ 
                 success: false,
-                message: '일치하는 회원 정보를 찾을 수 없습니다.'
+                message: '일치하는 정보를 찾을 수 없습니다.' 
             });
         }
-
-        // 비밀번호 마스킹 처리 (앞 4자리만 표시)
-        const maskedPassword = user.password.slice(0, 4) + '*'.repeat(user.password.length - 4);
-
+        
         res.json({
             success: true,
-            maskedPassword: maskedPassword,
-            message: '비밀번호 찾기 성공'
+            message: '비밀번호 찾기 성공',
+            password: user.password
         });
     } catch (error) {
         console.error('비밀번호 찾기 오류:', error);
-        res.status(500).json({
-            success: false,
-            message: '서버 오류가 발생했습니다.'
+        res.status(500).json({ 
+            success: false, 
+            message: '비밀번호 찾기 중 오류가 발생했습니다.' 
         });
     }
 });
 
-// 출석 체크 API
+// 출석체크 API
 app.post('/api/attendance', async (req, res) => {
     try {
-        const { userId, date } = req.body;
-        const today = new Date();
-        const month = today.getMonth() + 1;
-        const year = today.getFullYear();
-
-        if (!userId || !date) {
-            return res.status(400).json({
+        const { userId } = req.body;
+        
+        if (!userId) {
+            return res.status(400).json({ 
                 success: false,
-                message: '필수 정보가 누락되었습니다.'
+                message: '사용자 ID를 입력해주세요.' 
             });
         }
-
-        // 사용자 찾기
+        
         const user = await User.findOne({ userId });
         if (!user) {
-            return res.status(404).json({
+            return res.status(404).json({ 
                 success: false,
-                message: '사용자를 찾을 수 없습니다.'
+                message: '사용자를 찾을 수 없습니다.' 
             });
         }
-
-        // 이미 출석했는지 확인
-        const existingAttendance = await Attendance.findOne({ userId, date });
+        
+        const today = new Date();
+        const dateString = today.toISOString().split('T')[0];
+        const month = (today.getMonth() + 1).toString().padStart(2, '0');
+        const year = today.getFullYear().toString();
+        
+        // 오늘 이미 출석했는지 확인
+        const existingAttendance = await Attendance.findOne({
+            userId,
+            date: dateString
+        });
+        
         if (existingAttendance) {
-            return res.status(400).json({
+            return res.status(400).json({ 
                 success: false,
-                message: '이미 출석한 날짜입니다.'
+                message: '오늘 이미 출석체크를 하셨습니다.' 
             });
         }
-
-        // 출석 기록 저장
+        
+        // 출석 기록 생성
         const attendance = new Attendance({
             userId,
-            date,
-            points: 100,
-            month: month.toString(),
-            year: year.toString()
+            date: dateString,
+            month,
+            year,
+            points: 100
         });
         await attendance.save();
-
-        // 사용자 포인트 업데이트
-        user.points = (user.points || 0) + 100;
+        
+        // 사용자 포인트 증가
+        user.points += 100;
+        user.attendance.push(dateString);
         await user.save();
-
-        // 이번달 출석 현황 조회
-        const monthAttendance = await Attendance.find({
-            userId,
-            month: month.toString(),
-            year: year.toString()
-        });
-
-        // 전체 출석 현황 조회
-        const totalAttendance = await Attendance.find({ userId });
-
+        
         res.json({
             success: true,
-            message: '출석이 완료되었습니다.',
-            points: 100,
-            totalPoints: user.points,
-            monthAttendance: monthAttendance.length,
-            totalAttendance: totalAttendance.length,
-            monthPoints: monthAttendance.reduce((sum, record) => sum + record.points, 0),
-            totalPoints: totalAttendance.reduce((sum, record) => sum + record.points, 0)
+            message: '출석체크가 완료되었습니다!',
+            points: user.points,
+            attendanceDate: dateString
         });
     } catch (error) {
-        console.error('출석 체크 오류:', error);
-        res.status(500).json({
-            success: false,
-            message: '서버 오류가 발생했습니다.'
+        console.error('출석체크 오류:', error);
+        res.status(500).json({ 
+            success: false, 
+            message: '출석체크 중 오류가 발생했습니다.' 
         });
     }
 });
 
-// 출석 기록 조회 API
+// 출석 내역 조회 API
 app.get('/api/attendance/:userId', async (req, res) => {
     try {
         const { userId } = req.params;
-        const today = new Date();
-        const month = today.getMonth() + 1;
-        const year = today.getFullYear();
-
-        // 이번달 출석 기록 조회
-        const monthAttendance = await Attendance.find({
-            userId,
-            month: month.toString(),
-            year: year.toString()
-        });
-
-        // 전체 출석 기록 조회
-        const totalAttendance = await Attendance.find({ userId });
-
-        // 최근 30일 기록 조회
-        const recentAttendance = await Attendance.find({ userId })
+        
+        const user = await User.findOne({ userId });
+        if (!user) {
+            return res.status(404).json({ 
+                success: false,
+                message: '사용자를 찾을 수 없습니다.' 
+            });
+        }
+        
+        const attendanceRecords = await Attendance.find({ userId })
             .sort({ date: -1 })
             .limit(30);
-
+        
         res.json({
             success: true,
-            monthAttendance: monthAttendance.length,
-            totalAttendance: totalAttendance.length,
-            monthPoints: monthAttendance.reduce((sum, record) => sum + record.points, 0),
-            totalPoints: totalAttendance.reduce((sum, record) => sum + record.points, 0),
-            attendances: recentAttendance
+            attendance: attendanceRecords,
+            totalPoints: user.points
         });
     } catch (error) {
-        console.error('출석 기록 조회 오류:', error);
-        res.status(500).json({
-            success: false,
-            message: '서버 오류가 발생했습니다.'
+        console.error('출석 내역 조회 오류:', error);
+        res.status(500).json({ 
+            success: false, 
+            message: '출석 내역 조회 중 오류가 발생했습니다.' 
         });
     }
 });
 
-// KBO 배팅 설정
-const kboOdds = {
-    'first': { success: 260, odds: 3.8 },    // 1루타 확률 (약 260명 성공 예상)
-    'second': { success: 130, odds: 7.5 },   // 2루타 확률 (약 130명 성공 예상)
-    'third': { success: 65, odds: 15.0 },    // 3루타 확률 (약 65명 성공 예상)
-    'homerun': { success: 40, odds: 25.0 },  // 홈런 확률 (약 40명 성공 예상)
-    'out': { success: 500, odds: 1.8 }       // 아웃 확률 (약 500명 성공 예상)
-};
-
-// 배팅 처리 API
+// 배팅 API
 app.post('/api/bet', async (req, res) => {
     try {
-        const { userId, bettingPoints, matchId, gameType, bettingType } = req.body;
-        console.log('[배팅 요청]', { userId, bettingPoints, matchId, gameType, bettingType });
-
-        // 1. 사용자 조회
+        const { userId, matchId, gameType, bettingType, points } = req.body;
+        
+        if (!userId || !matchId || !gameType || !bettingType || !points) {
+            return res.status(400).json({ 
+                success: false,
+                message: '모든 필드를 입력해주세요.' 
+            });
+        }
+        
         const user = await User.findOne({ userId });
         if (!user) {
-            throw new Error(`사용자를 찾을 수 없습니다. (ID: ${userId})`);
-        }
-        console.log('[사용자 조회 완료]', user);
-
-        // 2. 포인트 검증
-        const numBettingPoints = parseInt(bettingPoints);
-        if (isNaN(numBettingPoints) || numBettingPoints <= 0) {
-            throw new Error('올바른 배팅 포인트를 입력해주세요.');
-        }
-
-        if (!user.points || user.points < numBettingPoints) {
-            throw new Error(`보유 포인트가 부족합니다. (보유: ${user.points}, 배팅: ${numBettingPoints})`);
-        }
-
-        // 3. 배팅 유형 검증
-        if (!kboOdds[bettingType]) {
-            throw new Error(`올바르지 않은 배팅 유형입니다. (${bettingType})`);
-        }
-
-        // 4. 배팅 포인트 차감
-        user.points -= numBettingPoints;
-
-        // 5. 승패 결정 (KBO 확률 기반)
-        const randomValue = Math.random() * 1000;
-        const isWin = randomValue < kboOdds[bettingType].success;
-        console.log('[승패 결정]', { randomValue, isWin, successRate: kboOdds[bettingType].success });
-
-        // 6. 승리 시 포인트 추가 및 자동 기부
-        let winPoints = 0;
-        let donatedPoints = 0;
-        if (isWin) {
-            winPoints = Math.floor(numBettingPoints * kboOdds[bettingType].odds);
-            user.points += winPoints;
-            
-            // 승리 금액의 10%를 자동 기부
-            donatedPoints = Math.floor(winPoints * 0.1);
-            user.points -= donatedPoints;
-
-            // 기부 기록 저장
-            const donation = new Donation({
-                userId: user.userId,
-                points: donatedPoints,
-                createdAt: new Date(),
-                type: 'auto_donate',
-                source: 'betting_win'
+            return res.status(404).json({ 
+                success: false,
+                message: '사용자를 찾을 수 없습니다.' 
             });
-            await donation.save();
-            console.log('[기부 기록 저장 완료]', donation);
         }
-
-        // 7. 데이터베이스 업데이트
-        await user.save();
-        console.log('[사용자 포인트 업데이트 완료]', { userId: user.userId, points: user.points });
-
-        // 8. 배팅 기록 저장
-        const bet = new Bet({
-            userId: user.userId,
-            matchId: matchId || 'default_match',
-            gameType: gameType || 'default_game',
-            bettingType: bettingType,
-            points: numBettingPoints,
-            status: isWin ? 'WIN' : 'LOSE',
-            winPoints: isWin ? winPoints : 0,
-            createdAt: new Date()
-        });
         
-        // 배팅 기록 저장
-        const savedBet = await bet.save();
-        console.log('[배팅 기록 저장 완료]', savedBet);
-
-        // 9. JSON 응답 전송
+        if (user.points < points) {
+            return res.status(400).json({ 
+                success: false,
+                message: '포인트가 부족합니다.' 
+            });
+        }
+        
+        // 배팅 기록 생성
+        const bet = new Bet({
+            userId,
+            matchId,
+            gameType,
+            bettingType,
+            points
+        });
+        await bet.save();
+        
+        // 사용자 포인트 차감
+        user.points -= points;
+        await user.save();
+        
         res.json({
             success: true,
-            message: isWin ? '배팅에 성공했습니다!' : '배팅에 실패했습니다.',
-            currentPoints: user.points,
-            winPoints: winPoints,
-            donatedPoints: donatedPoints,
-            status: isWin ? 'WIN' : 'LOSE',
-            bettingType: bettingType,
-            odds: kboOdds[bettingType].odds,
-            successRate: kboOdds[bettingType].success / 10
+            message: '배팅이 완료되었습니다.',
+            points: user.points,
+            betId: bet._id
         });
-
     } catch (error) {
-        console.error('[배팅 처리 오류]:', error);
-        res.status(400).json({
-            success: false,
-            message: error.message || '배팅 처리 중 오류가 발생했습니다.'
+        console.error('배팅 오류:', error);
+        res.status(500).json({ 
+            success: false, 
+            message: '배팅 중 오류가 발생했습니다.' 
         });
     }
 });
 
-// 기부 처리 API
+// 기부 API
 app.post('/api/donate', async (req, res) => {
     try {
-        const { userId, points, donationAmount } = req.body;
+        const { userId, points } = req.body;
         
-        // 사용자 찾기 및 포인트 업데이트
+        if (!userId || !points) {
+            return res.status(400).json({ 
+                success: false,
+                message: '사용자 ID와 기부 포인트를 입력해주세요.' 
+            });
+        }
+        
         const user = await User.findOne({ userId });
         if (!user) {
-            return res.json({ success: false, message: '사용자를 찾을 수 없습니다.' });
+            return res.status(404).json({ 
+                success: false,
+                message: '사용자를 찾을 수 없습니다.' 
+            });
         }
         
-        // 포인트 업데이트 및 기부 내역 저장
-        user.points = points;
-        if (!user.donations) {
-            user.donations = [];
+        if (user.points < points) {
+            return res.status(400).json({ 
+                success: false,
+                message: '포인트가 부족합니다.' 
+            });
         }
-        user.donations.push({
-            amount: donationAmount,
-            date: new Date()
+        
+        // 기부 기록 생성
+        const donation = new Donation({
+            userId,
+            points
         });
+        await donation.save();
         
+        // 사용자 포인트 차감
+        user.points -= points;
         await user.save();
         
-        res.json({ success: true, message: '기부가 처리되었습니다.' });
+        res.json({
+            success: true,
+            message: '기부가 완료되었습니다.',
+            points: user.points
+        });
     } catch (error) {
-        console.error('기부 처리 오류:', error);
-        res.json({ success: false, message: '기부 처리 중 오류가 발생했습니다.' });
+        console.error('기부 오류:', error);
+        res.status(500).json({ 
+            success: false, 
+            message: '기부 중 오류가 발생했습니다.' 
+        });
     }
 });
 
@@ -836,50 +754,53 @@ app.get('/api/donations', async (req, res) => {
     try {
         const donations = await Donation.find()
             .sort({ createdAt: -1 })
-            .limit(10);
+            .limit(50);
         
         res.json({
             success: true,
             donations: donations
         });
     } catch (error) {
-        console.error('[기부 내역 조회 오류]:', error);
-        res.status(500).json({
-            success: false,
-            message: '기부 내역 조회 중 오류가 발생했습니다.'
+        console.error('기부 내역 조회 오류:', error);
+        res.status(500).json({ 
+            success: false, 
+            message: '기부 내역 조회 중 오류가 발생했습니다.' 
         });
     }
 });
 
-// 게임 기록 저장 API
+// 게임 기록 API
 app.post('/api/game-record', async (req, res) => {
     try {
         const { userId, gameType, bettingType, bettingPoints, result, winPoints } = req.body;
-        console.log('[게임 기록 저장 요청]', { userId, gameType, bettingType, bettingPoints, result, winPoints });
-
+        
+        if (!userId || !gameType || !bettingType || !bettingPoints || !result) {
+            return res.status(400).json({ 
+                success: false,
+                message: '필수 필드를 입력해주세요.' 
+            });
+        }
+        
         const gameRecord = new GameRecord({
             userId,
             gameType,
             bettingType,
             bettingPoints,
             result,
-            winPoints: result === 'WIN' ? winPoints : 0,
-            createdAt: new Date()
+            winPoints: result === 'WIN' ? winPoints : 0
         });
-
-        const savedRecord = await gameRecord.save();
-        console.log('[게임 기록 저장 완료]', savedRecord);
-
+        await gameRecord.save();
+        
         res.json({
             success: true,
             message: '게임 기록이 저장되었습니다.',
-            record: savedRecord
+            recordId: gameRecord._id
         });
     } catch (error) {
-        console.error('[게임 기록 저장 오류]:', error);
-        res.status(400).json({
-            success: false,
-            message: error.message || '게임 기록 저장 중 오류가 발생했습니다.'
+        console.error('게임 기록 저장 오류:', error);
+        res.status(500).json({ 
+            success: false, 
+            message: '게임 기록 저장 중 오류가 발생했습니다.' 
         });
     }
 });
@@ -888,94 +809,85 @@ app.post('/api/game-record', async (req, res) => {
 app.get('/api/game-records/:userId', async (req, res) => {
     try {
         const { userId } = req.params;
+        
         const records = await GameRecord.find({ userId })
             .sort({ createdAt: -1 })
-            .limit(10);
-
+            .limit(50);
+        
         res.json({
             success: true,
             records: records
         });
     } catch (error) {
-        console.error('[게임 기록 조회 오류]:', error);
-        res.status(500).json({
-            success: false,
-            message: '게임 기록 조회 중 오류가 발생했습니다.'
+        console.error('게임 기록 조회 오류:', error);
+        res.status(500).json({ 
+            success: false, 
+            message: '게임 기록 조회 중 오류가 발생했습니다.' 
         });
     }
 });
 
-// 기부 포인트 저장 API
+// 기부 포인트 기록 API
 app.post('/api/donation-points', async (req, res) => {
     try {
         const { userId, donationAmount, originalPoints, remainingPoints } = req.body;
-        console.log('[기부 포인트 저장 요청]', { userId, donationAmount, originalPoints, remainingPoints });
-
+        
+        if (!userId || !donationAmount || !originalPoints || !remainingPoints) {
+            return res.status(400).json({ 
+                success: false,
+                message: '모든 필드를 입력해주세요.' 
+            });
+        }
+        
         const donationPoints = new DonationPoints({
             userId,
             donationAmount,
             originalPoints,
-            remainingPoints,
-            createdAt: new Date()
+            remainingPoints
         });
-
-        const savedDonation = await donationPoints.save();
-        console.log('[기부 포인트 저장 완료]', savedDonation);
-
+        await donationPoints.save();
+        
         res.json({
             success: true,
-            message: '기부 포인트가 저장되었습니다.',
-            donation: savedDonation
+            message: '기부 포인트 기록이 저장되었습니다.'
         });
     } catch (error) {
-        console.error('[기부 포인트 저장 오류]:', error);
-        res.status(400).json({
-            success: false,
-            message: error.message || '기부 포인트 저장 중 오류가 발생했습니다.'
+        console.error('기부 포인트 기록 오류:', error);
+        res.status(500).json({ 
+            success: false, 
+            message: '기부 포인트 기록 중 오류가 발생했습니다.' 
         });
     }
 });
 
-// 기부 포인트 조회 API
+// 기부 포인트 내역 조회 API
 app.get('/api/donation-points/:userId', async (req, res) => {
     try {
         const { userId } = req.params;
-        const donations = await DonationPoints.find({ userId })
+        
+        const donationPoints = await DonationPoints.find({ userId })
             .sort({ createdAt: -1 })
-            .limit(10);
-
+            .limit(50);
+        
         res.json({
             success: true,
-            donations: donations
+            donationPoints: donationPoints
         });
     } catch (error) {
-        console.error('[기부 포인트 조회 오류]:', error);
-        res.status(500).json({
-            success: false,
-            message: '기부 포인트 조회 중 오류가 발생했습니다.'
+        console.error('기부 포인트 내역 조회 오류:', error);
+        res.status(500).json({ 
+            success: false, 
+            message: '기부 포인트 내역 조회 중 오류가 발생했습니다.' 
         });
     }
 });
-
-// 게시판 스키마 정의
-const boardSchema = new mongoose.Schema({
-    title: { type: String, required: true },
-    content: { type: String, required: true },
-    authorId: { type: String, required: true },
-    authorName: { type: String, required: true },
-    createdAt: { type: Date, default: Date.now },
-    updatedAt: { type: Date, default: Date.now }
-});
-
-// 게시판 모델 생성
-const Board = mongoose.model('Board', boardSchema, 'boards');
 
 // 게시판 목록 조회 API
 app.get('/api/boards', async (req, res) => {
     try {
         const boards = await Board.find()
             .sort({ createdAt: -1 })
-            .select('title authorName createdAt');
+            .limit(100);
         
         res.json({
             success: true,
@@ -983,9 +895,9 @@ app.get('/api/boards', async (req, res) => {
         });
     } catch (error) {
         console.error('게시판 목록 조회 오류:', error);
-        res.status(500).json({
-            success: false,
-            message: '서버 오류가 발생했습니다.'
+        res.status(500).json({ 
+            success: false, 
+            message: '게시판 목록 조회 중 오류가 발생했습니다.' 
         });
     }
 });
@@ -993,131 +905,58 @@ app.get('/api/boards', async (req, res) => {
 // 게시판 상세 조회 API
 app.get('/api/boards/:boardId', async (req, res) => {
     try {
-        const board = await Board.findById(req.params.boardId);
+        const { boardId } = req.params;
+        
+        const board = await Board.findById(boardId);
         if (!board) {
-            return res.status(404).json({
+            return res.status(404).json({ 
                 success: false,
-                message: '게시글을 찾을 수 없습니다.'
+                message: '게시글을 찾을 수 없습니다.' 
             });
         }
+        
         res.json({
             success: true,
             board: board
         });
     } catch (error) {
         console.error('게시판 상세 조회 오류:', error);
-        res.status(500).json({
-            success: false,
-            message: '서버 오류가 발생했습니다.'
+        res.status(500).json({ 
+            success: false, 
+            message: '게시판 상세 조회 중 오류가 발생했습니다.' 
         });
     }
 });
 
-// 게시판 작성 API
+// 게시판 글쓰기 API
 app.post('/api/boards', async (req, res) => {
     try {
-        const { title, content, userId, userName } = req.body;
-
-        if (!title || !content || !userId || !userName) {
-            return res.status(400).json({
+        const { title, content, author } = req.body;
+        
+        if (!title || !content || !author) {
+            return res.status(400).json({ 
                 success: false,
-                message: '필수 정보가 누락되었습니다.'
+                message: '제목, 내용, 작성자를 입력해주세요.' 
             });
         }
-
+        
         const board = new Board({
             title,
             content,
-            authorId: userId,
-            authorName: userName
+            author
         });
-
         await board.save();
-
-        res.json({
+        
+        res.status(201).json({
             success: true,
             message: '게시글이 작성되었습니다.',
-            board: board
+            boardId: board._id
         });
     } catch (error) {
-        console.error('게시판 작성 오류:', error);
-        res.status(500).json({
-            success: false,
-            message: '서버 오류가 발생했습니다.'
-        });
-    }
-});
-
-// 게시판 수정 API
-app.put('/api/boards/:boardId', async (req, res) => {
-    try {
-        const { title, content, userId } = req.body;
-        const board = await Board.findById(req.params.boardId);
-
-        if (!board) {
-            return res.status(404).json({
-                success: false,
-                message: '게시글을 찾을 수 없습니다.'
-            });
-        }
-
-        if (board.authorId !== userId) {
-            return res.status(403).json({
-                success: false,
-                message: '게시글을 수정할 권한이 없습니다.'
-            });
-        }
-
-        board.title = title;
-        board.content = content;
-        board.updatedAt = new Date();
-        await board.save();
-
-        res.json({
-            success: true,
-            message: '게시글이 수정되었습니다.',
-            board: board
-        });
-    } catch (error) {
-        console.error('게시판 수정 오류:', error);
-        res.status(500).json({
-            success: false,
-            message: '서버 오류가 발생했습니다.'
-        });
-    }
-});
-
-// 게시판 삭제 API
-app.delete('/api/boards/:boardId', async (req, res) => {
-    try {
-        const { userId } = req.body;
-        const board = await Board.findById(req.params.boardId);
-
-        if (!board) {
-            return res.status(404).json({
-                success: false,
-                message: '게시글을 찾을 수 없습니다.'
-            });
-        }
-
-        if (board.authorId !== userId) {
-            return res.status(403).json({
-                success: false,
-                message: '게시글을 삭제할 권한이 없습니다.'
-            });
-        }
-
-        await board.deleteOne();
-
-        res.json({
-            success: true,
-            message: '게시글이 삭제되었습니다.'
-        });
-    } catch (error) {
-        console.error('게시판 삭제 오류:', error);
-        res.status(500).json({
-            success: false,
-            message: '서버 오류가 발생했습니다.'
+        console.error('게시판 글쓰기 오류:', error);
+        res.status(500).json({ 
+            success: false, 
+            message: '게시판 글쓰기 중 오류가 발생했습니다.' 
         });
     }
 });
@@ -1125,18 +964,36 @@ app.delete('/api/boards/:boardId', async (req, res) => {
 // 포인트 충전 API
 app.post('/api/charge-points', async (req, res) => {
     try {
-        const { userId, points } = req.body;
+        const { userId, amount, paymentMethod } = req.body;
         
-        // 사용자 찾기
+        if (!userId || !amount || !paymentMethod) {
+            return res.status(400).json({ 
+                success: false,
+                message: '모든 필드를 입력해주세요.' 
+            });
+        }
+        
         const user = await User.findOne({ userId });
         if (!user) {
-            return res.status(404).json({ success: false, message: '사용자를 찾을 수 없습니다.' });
+            return res.status(404).json({ 
+                success: false,
+                message: '사용자를 찾을 수 없습니다.' 
+            });
         }
-
-        // 포인트 업데이트
-        user.points += points;
+        
+        // 포인트 충전
+        user.points += amount;
         await user.save();
-
+        
+        // 충전 기록 생성
+        const charging = new Charging({
+            userId,
+            amount,
+            paymentMethod,
+            status: 'completed'
+        });
+        await charging.save();
+        
         res.json({ 
             success: true, 
             message: '포인트가 충전되었습니다.',
@@ -1147,9 +1004,6 @@ app.post('/api/charge-points', async (req, res) => {
         res.status(500).json({ success: false, message: '포인트 충전 중 오류가 발생했습니다.' });
     }
 });
-
-// 인증번호 저장을 위한 임시 객체
-const verificationCodes = {};
 
 // 인증번호 전송 API
 app.post('/api/send-verification', async (req, res) => {
@@ -1176,7 +1030,7 @@ app.post('/api/send-verification', async (req, res) => {
         await invite.save();
         
         res.json({ 
-            success: true, 
+            success: true,
             code,
             message: '인증번호가 전송되었습니다.' 
         });
@@ -1229,16 +1083,13 @@ app.post('/api/add-invite', async (req, res) => {
     try {
         const { phoneNumber, inviteDate } = req.body;
         
-        // const connection = await pool.getConnection();
-        try {
-            // await connection.execute(
-            //     'CALL sp_add_friend_invite(?, ?)',
-            //     [phoneNumber, inviteDate]
-            // );
-            res.json({ success: true });
-        } finally {
-            // connection.release();
-        }
+        const invite = new Invite({
+            phoneNumber,
+            inviteDate: inviteDate || new Date()
+        });
+        await invite.save();
+        
+        res.json({ success: true });
     } catch (error) {
         console.error('초대 데이터 저장 오류:', error);
         res.status(500).json({ success: false, error: '초대 데이터 저장 중 오류가 발생했습니다.' });
@@ -1248,15 +1099,6 @@ app.post('/api/add-invite', async (req, res) => {
 // 초대 리스트 조회 API
 app.get('/api/invites', async (req, res) => {
     try {
-        // MongoDB 연결 확인
-        if (mongoose.connection.readyState !== 1) {
-            console.error('MongoDB 연결이 끊어졌습니다. 재연결을 시도합니다...');
-            await mongoose.connect('mongodb://localhost:27017/baseball_fan', {
-                useNewUrlParser: true,
-                useUnifiedTopology: true
-            });
-        }
-
         // 모든 초대 내역 조회
         const invites = await Invite.find()
             .sort({ inviteDate: -1 })
@@ -1304,30 +1146,4 @@ app.post('/api/check-invite', async (req, res) => {
             message: '초대 중복 확인 중 오류가 발생했습니다.' 
         });
     }
-});
-
-// 초대 스키마 정의
-const inviteSchema = new mongoose.Schema({
-    phoneNumber: { type: String, required: true },
-    inviteDate: { type: Date, default: Date.now },
-    status: { type: String, enum: ['pending', 'completed'], default: 'pending' }
-});
-
-// 초대 모델 생성
-const Invite = mongoose.model('Invite', inviteSchema, 'invites');
-
-// 헬스체크 엔드포인트 (Render 배포용)
-app.get('/health', (req, res) => {
-    const health = {
-        status: 'OK',
-        timestamp: new Date().toISOString(),
-        uptime: process.uptime(),
-        environment: process.env.NODE_ENV || 'development',
-        database: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected',
-        memory: process.memoryUsage(),
-        version: process.version
-    };
-    
-    const statusCode = health.database === 'connected' ? 200 : 503;
-    res.status(statusCode).json(health);
-});
+}); 
