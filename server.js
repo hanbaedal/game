@@ -20,6 +20,23 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname)));
 
+// 정적 파일 라우팅
+app.get('/index.html', (req, res) => {
+    res.sendFile(path.join(__dirname, 'index.html'));
+});
+
+app.get('/login.html', (req, res) => {
+    res.sendFile(path.join(__dirname, 'login.html'));
+});
+
+app.get('/register.html', (req, res) => {
+    res.sendFile(path.join(__dirname, 'register.html'));
+});
+
+app.get('/list', (req, res) => {
+    res.sendFile(path.join(__dirname, 'list.html'));
+});
+
 // Twilio 클라이언트 초기화 (주석 처리)
 // const twilioClient = twilio(
 //     process.env.TWILIO_ACCOUNT_SID,
@@ -86,19 +103,15 @@ connectToMongoDB();
 
 // 기본 라우팅
 app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'index.html'));
-});
-
-app.get('/login.html', (req, res) => {
-    res.sendFile(path.join(__dirname, 'login.html'));
-});
-
-app.get('/register.html', (req, res) => {
-    res.sendFile(path.join(__dirname, 'register.html'));
-});
-
-app.get('/list', (req, res) => {
-    res.sendFile(path.join(__dirname, 'list.html'));
+    res.json({
+        message: 'Member Management System API',
+        status: 'running',
+        timestamp: new Date().toISOString(),
+        endpoints: {
+            health: '/health',
+            api: '/api/*'
+        }
+    });
 });
 
 // 스키마 정의
@@ -1258,19 +1271,42 @@ const inviteSchema = new mongoose.Schema({
 // 초대 모델 생성
 const Invite = mongoose.model('Invite', inviteSchema, 'invites');
 
-// 헬스체크 엔드포인트 (CloudType 배포용)
+// 헬스체크 엔드포인트 (Render 배포용)
 app.get('/health', (req, res) => {
-    res.status(200).json({
+    const health = {
         status: 'OK',
         timestamp: new Date().toISOString(),
         uptime: process.uptime(),
-        database: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected'
-    });
+        environment: process.env.NODE_ENV || 'development',
+        database: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected',
+        memory: process.memoryUsage(),
+        version: process.version
+    };
+    
+    const statusCode = health.database === 'connected' ? 200 : 503;
+    res.status(statusCode).json(health);
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-    console.log(`서버가 포트 ${PORT}에서 실행 중입니다.`);
-    console.log(`환경: ${process.env.NODE_ENV || 'development'}`);
-    console.log(`MongoDB 상태: ${mongoose.connection.readyState === 1 ? '연결됨' : '연결 안됨'}`);
-});
+
+// 서버 시작 전 MongoDB 연결 확인
+const startServer = async () => {
+    try {
+        // MongoDB 연결 대기
+        await connectToMongoDB();
+        
+        // 서버 시작
+        app.listen(PORT, '0.0.0.0', () => {
+            console.log(`서버가 포트 ${PORT}에서 실행 중입니다.`);
+            console.log(`환경: ${process.env.NODE_ENV || 'development'}`);
+            console.log(`MongoDB 상태: ${mongoose.connection.readyState === 1 ? '연결됨' : '연결 안됨'}`);
+            console.log(`서버 URL: http://localhost:${PORT}`);
+        });
+    } catch (error) {
+        console.error('서버 시작 실패:', error);
+        process.exit(1);
+    }
+};
+
+// 서버 시작
+startServer();
