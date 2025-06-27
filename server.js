@@ -168,6 +168,9 @@ const boardSchema = new mongoose.Schema({
     title: { type: String, required: true },
     content: { type: String, required: true },
     author: { type: String, required: true },
+    authorName: { type: String, required: true },
+    authorId: { type: String, required: true },
+    views: { type: Number, default: 0 },
     createdAt: { type: Date, default: Date.now },
     updatedAt: { type: Date, default: Date.now }
 });
@@ -193,6 +196,17 @@ const inviteSchema = new mongoose.Schema({
 });
 
 const Invite = mongoose.model('Invite', inviteSchema, 'game-invite');
+
+// 댓글 스키마 정의
+const commentSchema = new mongoose.Schema({
+    boardId: { type: mongoose.Schema.Types.ObjectId, ref: 'Board', required: true },
+    content: { type: String, required: true },
+    authorId: { type: String, required: true },
+    authorName: { type: String, required: true },
+    createdAt: { type: Date, default: Date.now }
+});
+
+const Comment = mongoose.model('Comment', commentSchema, 'game-comment');
 
 // API 엔드포인트들
 // ID 중복 확인 API
@@ -489,13 +503,65 @@ app.post('/api/charge-points', async (req, res) => {
 // 게시판 목록 조회 API
 app.get('/api/boards', async (req, res) => {
     try {
-        const boards = await Board.find()
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 10;
+        const search = req.query.search || '';
+        const type = req.query.type || 'title';
+        
+        const skip = (page - 1) * limit;
+        
+        // 검색 조건 구성
+        let searchCondition = {};
+        if (search) {
+            switch (type) {
+                case 'title':
+                    searchCondition.title = { $regex: search, $options: 'i' };
+                    break;
+                case 'content':
+                    searchCondition.content = { $regex: search, $options: 'i' };
+                    break;
+                case 'author':
+                    searchCondition.authorName = { $regex: search, $options: 'i' };
+                    break;
+                default:
+                    searchCondition = {
+                        $or: [
+                            { title: { $regex: search, $options: 'i' } },
+                            { content: { $regex: search, $options: 'i' } },
+                            { authorName: { $regex: search, $options: 'i' } }
+                        ]
+                    };
+            }
+        }
+        
+        // 전체 게시글 수 조회
+        const total = await Board.countDocuments(searchCondition);
+        
+        // 게시글 목록 조회
+        const boards = await Board.find(searchCondition)
             .sort({ createdAt: -1 })
-            .limit(100);
+            .skip(skip)
+            .limit(limit)
+            .lean();
+        
+        // 각 게시글의 댓글 수 조회
+        const boardsWithComments = await Promise.all(
+            boards.map(async (board) => {
+                const commentCount = await Comment.countDocuments({ boardId: board._id });
+                return {
+                    ...board,
+                    comments: commentCount
+                };
+            })
+        );
         
         res.json({
             success: true,
-            boards: boards
+            boards: boardsWithComments,
+            total: total,
+            page: page,
+            limit: limit,
+            totalPages: Math.ceil(total / limit)
         });
     } catch (error) {
         console.error('게시판 목록 조회 오류:', error);
@@ -509,9 +575,9 @@ app.get('/api/boards', async (req, res) => {
 // 게시판 글쓰기 API
 app.post('/api/boards', async (req, res) => {
     try {
-        const { title, content, author } = req.body;
+        const { title, content, userName, userId } = req.body;
         
-        if (!title || !content || !author) {
+        if (!title || !content || !userName) {
             return res.status(400).json({ 
                 success: false,
                 message: '제목, 내용, 작성자를 입력해주세요.' 
@@ -521,7 +587,9 @@ app.post('/api/boards', async (req, res) => {
         const board = new Board({
             title,
             content,
-            author
+            author: userName,
+            authorName: userName,
+            authorId: userId
         });
         await board.save();
         
@@ -535,6 +603,225 @@ app.post('/api/boards', async (req, res) => {
         res.status(500).json({ 
             success: false, 
             message: '게시판 글쓰기 중 오류가 발생했습니다.' 
+        });
+    }
+});
+
+// 게시판 상세 조회 API
+app.get('/api/boards/:boardId', async (req, res) => {
+    try {
+        const { boardId } = req.params;
+        
+        const board = await Board.findById(boardId);
+        if (!board) {
+            return res.status(404).json({ 
+                success: false,
+                message: '게시글을 찾을 수 없습니다.' 
+            });
+        }
+        
+        // 조회수 증가
+        board.views = (board.views || 0) + 1;
+        await board.save();
+        
+        res.json({
+            success: true,
+            board: board
+        });
+    } catch (error) {
+        console.error('게시판 상세 조회 오류:', error);
+        res.status(500).json({ 
+            success: false, 
+            message: '게시판 상세 조회 중 오류가 발생했습니다.' 
+        });
+    }
+});
+
+// 게시판 수정 API
+app.put('/api/boards/:boardId', async (req, res) => {
+    try {
+        const { boardId } = req.params;
+        const { title, content, userId } = req.body;
+        
+        if (!title || !content) {
+            return res.status(400).json({ 
+                success: false,
+                message: '제목과 내용을 입력해주세요.' 
+            });
+        }
+        
+        const board = await Board.findById(boardId);
+        if (!board) {
+            return res.status(404).json({ 
+                success: false,
+                message: '게시글을 찾을 수 없습니다.' 
+            });
+        }
+        
+        // 작성자 확인
+        if (board.authorId !== userId) {
+            return res.status(403).json({ 
+                success: false,
+                message: '수정 권한이 없습니다.' 
+            });
+        }
+        
+        board.title = title;
+        board.content = content;
+        board.updatedAt = new Date();
+        await board.save();
+        
+        res.json({
+            success: true,
+            message: '게시글이 수정되었습니다.'
+        });
+    } catch (error) {
+        console.error('게시판 수정 오류:', error);
+        res.status(500).json({ 
+            success: false, 
+            message: '게시판 수정 중 오류가 발생했습니다.' 
+        });
+    }
+});
+
+// 게시판 삭제 API
+app.delete('/api/boards/:boardId', async (req, res) => {
+    try {
+        const { boardId } = req.params;
+        const { userId } = req.body;
+        
+        const board = await Board.findById(boardId);
+        if (!board) {
+            return res.status(404).json({ 
+                success: false,
+                message: '게시글을 찾을 수 없습니다.' 
+            });
+        }
+        
+        // 작성자 확인
+        if (board.authorId !== userId) {
+            return res.status(403).json({ 
+                success: false,
+                message: '삭제 권한이 없습니다.' 
+            });
+        }
+        
+        // 게시글과 관련된 댓글도 함께 삭제
+        await Comment.deleteMany({ boardId });
+        await Board.findByIdAndDelete(boardId);
+        
+        res.json({
+            success: true,
+            message: '게시글이 삭제되었습니다.'
+        });
+    } catch (error) {
+        console.error('게시판 삭제 오류:', error);
+        res.status(500).json({ 
+            success: false, 
+            message: '게시판 삭제 중 오류가 발생했습니다.' 
+        });
+    }
+});
+
+// 댓글 목록 조회 API
+app.get('/api/boards/:boardId/comments', async (req, res) => {
+    try {
+        const { boardId } = req.params;
+        
+        const comments = await Comment.find({ boardId })
+            .sort({ createdAt: 1 })
+            .lean();
+        
+        res.json({
+            success: true,
+            comments: comments
+        });
+    } catch (error) {
+        console.error('댓글 목록 조회 오류:', error);
+        res.status(500).json({ 
+            success: false, 
+            message: '댓글 목록 조회 중 오류가 발생했습니다.' 
+        });
+    }
+});
+
+// 댓글 작성 API
+app.post('/api/boards/:boardId/comments', async (req, res) => {
+    try {
+        const { boardId } = req.params;
+        const { content, userId, userName } = req.body;
+        
+        if (!content || !userId || !userName) {
+            return res.status(400).json({ 
+                success: false,
+                message: '댓글 내용과 사용자 정보를 입력해주세요.' 
+            });
+        }
+        
+        // 게시글 존재 확인
+        const board = await Board.findById(boardId);
+        if (!board) {
+            return res.status(404).json({ 
+                success: false,
+                message: '게시글을 찾을 수 없습니다.' 
+            });
+        }
+        
+        const comment = new Comment({
+            boardId,
+            content,
+            authorId: userId,
+            authorName: userName
+        });
+        await comment.save();
+        
+        res.status(201).json({
+            success: true,
+            message: '댓글이 작성되었습니다.',
+            comment: comment
+        });
+    } catch (error) {
+        console.error('댓글 작성 오류:', error);
+        res.status(500).json({ 
+            success: false, 
+            message: '댓글 작성 중 오류가 발생했습니다.' 
+        });
+    }
+});
+
+// 댓글 삭제 API
+app.delete('/api/comments/:commentId', async (req, res) => {
+    try {
+        const { commentId } = req.params;
+        const { userId } = req.body;
+        
+        const comment = await Comment.findById(commentId);
+        if (!comment) {
+            return res.status(404).json({ 
+                success: false,
+                message: '댓글을 찾을 수 없습니다.' 
+            });
+        }
+        
+        // 작성자 확인
+        if (comment.authorId !== userId) {
+            return res.status(403).json({ 
+                success: false,
+                message: '삭제 권한이 없습니다.' 
+            });
+        }
+        
+        await Comment.findByIdAndDelete(commentId);
+        
+        res.json({
+            success: true,
+            message: '댓글이 삭제되었습니다.'
+        });
+    } catch (error) {
+        console.error('댓글 삭제 오류:', error);
+        res.status(500).json({ 
+            success: false, 
+            message: '댓글 삭제 중 오류가 발생했습니다.' 
         });
     }
 });
