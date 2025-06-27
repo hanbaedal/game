@@ -13,7 +13,7 @@ const mysql = require('mysql2/promise');
 const connectDB = require('./config/db');
 
 const app = express();
-const port = process.env.PORT || 3000;
+const PORT = process.env.PORT || 3000;
 
 // 미들웨어 설정
 app.use(cors());
@@ -63,7 +63,7 @@ app.get('/list', (req, res) => {
 //     queueLimit: 0
 // });
 
-// MongoDB 연결 설정 - CloudType 배포용
+// MongoDB 연결 설정 - Render 배포용
 const connectToMongoDB = async () => {
     try {
         console.log('MongoDB 연결 시도 중...');
@@ -75,31 +75,65 @@ const connectToMongoDB = async () => {
         const host = process.env.MONGODB_HOST || 'mongodb';
         const port = process.env.MONGODB_PORT || '27017';
         
-        // MongoDB URI 구성 (CloudType 환경)
+        // MongoDB URI 구성 (Render 환경)
         const mongoURI = process.env.MONGODB_URI || 
             `mongodb://${username}:${password}@${host}:${port}/${database}`;
+        
+        console.log('MongoDB URI:', mongoURI.replace(password, '***'));
         
         await mongoose.connect(mongoURI, {
             useNewUrlParser: true,
             useUnifiedTopology: true,
-            // CloudType 환경에서 안정적인 연결을 위한 옵션들
+            // Render 환경에서 안정적인 연결을 위한 옵션들
             maxPoolSize: 10,
-            serverSelectionTimeoutMS: 5000,
+            serverSelectionTimeoutMS: 10000,
             socketTimeoutMS: 45000,
-            bufferMaxEntries: 0
+            bufferMaxEntries: 0,
+            retryWrites: true,
+            w: 'majority'
         });
         
         console.log('MongoDB 연결 성공!');
         console.log(`데이터베이스: ${mongoose.connection.name}`);
         console.log(`사용자: ${username}`);
     } catch (error) {
-        console.error('MongoDB 연결 실패:', error);
+        console.error('MongoDB 연결 실패:', error.message);
+        // MongoDB 연결 실패해도 서버는 시작
+        console.log('MongoDB 연결 없이 서버를 시작합니다...');
+    }
+};
+
+// 서버 시작 전 MongoDB 연결 확인
+const startServer = async () => {
+    try {
+        console.log('서버 시작 중...');
+        console.log('환경 변수 확인:');
+        console.log('- NODE_ENV:', process.env.NODE_ENV);
+        console.log('- PORT:', process.env.PORT);
+        console.log('- MONGODB_USERNAME:', process.env.MONGODB_USERNAME);
+        console.log('- MONGODB_DATABASE:', process.env.MONGODB_DATABASE);
+        console.log('- MONGODB_URI 존재:', !!process.env.MONGODB_URI);
+        
+        // MongoDB 연결 시도 (실패해도 서버는 시작)
+        await connectToMongoDB();
+        
+        // 서버 시작
+        app.listen(PORT, '0.0.0.0', () => {
+            console.log('✅ 서버가 성공적으로 시작되었습니다!');
+            console.log(`📍 포트: ${PORT}`);
+            console.log(`🌍 환경: ${process.env.NODE_ENV || 'development'}`);
+            console.log(`🗄️ MongoDB 상태: ${mongoose.connection.readyState === 1 ? '연결됨' : '연결 안됨'}`);
+            console.log(`🔗 서버 URL: http://localhost:${PORT}`);
+            console.log(`🏥 헬스체크: http://localhost:${PORT}/health`);
+        });
+    } catch (error) {
+        console.error('❌ 서버 시작 실패:', error);
         process.exit(1);
     }
 };
 
-// 서버 시작 시 MongoDB 연결
-connectToMongoDB();
+// 서버 시작
+startServer();
 
 // 기본 라우팅
 app.get('/', (req, res) => {
@@ -107,10 +141,21 @@ app.get('/', (req, res) => {
         message: 'Member Management System API',
         status: 'running',
         timestamp: new Date().toISOString(),
+        environment: process.env.NODE_ENV || 'development',
         endpoints: {
             health: '/health',
+            test: '/test',
             api: '/api/*'
         }
+    });
+});
+
+// 간단한 테스트 엔드포인트
+app.get('/test', (req, res) => {
+    res.json({
+        message: 'Server is working!',
+        timestamp: new Date().toISOString(),
+        uptime: process.uptime()
     });
 });
 
@@ -1286,27 +1331,3 @@ app.get('/health', (req, res) => {
     const statusCode = health.database === 'connected' ? 200 : 503;
     res.status(statusCode).json(health);
 });
-
-const PORT = process.env.PORT || 3000;
-
-// 서버 시작 전 MongoDB 연결 확인
-const startServer = async () => {
-    try {
-        // MongoDB 연결 대기
-        await connectToMongoDB();
-        
-        // 서버 시작
-        app.listen(PORT, '0.0.0.0', () => {
-            console.log(`서버가 포트 ${PORT}에서 실행 중입니다.`);
-            console.log(`환경: ${process.env.NODE_ENV || 'development'}`);
-            console.log(`MongoDB 상태: ${mongoose.connection.readyState === 1 ? '연결됨' : '연결 안됨'}`);
-            console.log(`서버 URL: http://localhost:${PORT}`);
-        });
-    } catch (error) {
-        console.error('서버 시작 실패:', error);
-        process.exit(1);
-    }
-};
-
-// 서버 시작
-startServer();
