@@ -158,6 +158,15 @@
                 </div>
             </div>
 
+            <!-- 게스트 알림 모달 -->
+            <div id="guestModal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center z-50">
+                <div class="bg-gray-800 p-6 rounded-lg max-w-sm w-full mx-4">
+                    <div class="text-center">
+                        <p class="text-lg font-bold mb-4 text-red-500">게스트는 해당사항이 아닙니다.</p>
+                    </div>
+                </div>
+            </div>
+
             <!-- 게스트 승리 모달 -->
             <div id="guestWinModal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center z-50">
                 <div class="bg-gray-800 p-6 rounded-lg max-w-sm w-full mx-4">
@@ -183,15 +192,6 @@
                     <button id="donationCompleteBtn" class="w-full bg-blue-500 px-6 py-2 rounded hover:bg-blue-600">
                         확인
                     </button>
-                </div>
-            </div>
-
-            <!-- 게스트 알림 모달 -->
-            <div id="guestModal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center z-50">
-                <div class="bg-gray-800 p-6 rounded-lg max-w-sm w-full mx-4">
-                    <div class="text-center">
-                        <p class="text-lg font-bold mb-4 text-red-500">게스트는 해당사항이 아닙니다.</p>
-                    </div>
                 </div>
             </div>
         </div>
@@ -554,22 +554,8 @@
                 return;
             }
 
-            // 게스트 체크
-            if (currentUser.isGuest) {
-                showGuestModal();
-                return;
-            }
-
-            // 로그인한 회원은 출석부 화면으로 이동
+            // 모든 사용자(게스트 포함)가 출석부 화면으로 이동
             window.location.href = '/attendance.html';
-        }
-
-        // 게스트 모달 표시 함수
-        function showGuestModal() {
-            document.getElementById('guestModal').style.display = 'flex';
-            setTimeout(() => {
-                document.getElementById('guestModal').style.display = 'none';
-            }, 2000);
         }
     </script>
 

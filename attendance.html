@@ -112,14 +112,7 @@
                 if (storedUser) {
                     currentUser = JSON.parse(storedUser);
                     
-                    if (currentUser.isGuest) {
-                        showGuestModal();
-                        setTimeout(() => {
-                            window.location.href = '/';
-                        }, 2000);
-                        return;
-                    }
-
+                    // 게스트 제한 제거 - 모든 사용자가 출석체크 가능
                     document.getElementById('userNameDisplay').textContent = `${currentUser.name}님 환영합니다!`;
                     document.getElementById('loginButton').style.display = 'none';
                     document.getElementById('homeButton').style.display = 'block';
