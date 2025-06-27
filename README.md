@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Member Management System
 
 Node.js와 MongoDB를 사용한 회원 관리 시스템입니다.
@@ -121,3 +122,6 @@ Node.js와 MongoDB를 사용한 회원 관리 시스템입니다.
 ## 라이선스
 
 ISC License 
+=======
+# game
+>>>>>>> ab715ec001381efd39ec1968fcfc37044c1d9db3
