@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>포인트 충전</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+</head>
+<body class="bg-black text-white">
+    <!-- 상단 네비게이션 -->
+    <header class="flex justify-between items-center px-6 py-4 border-b border-gray-700">
+        <div class="flex items-center space-x-3">
+            <a href="index.html" class="cursor-pointer">
+                <img src="/img/logo.png" width="40" height="8" alt="PPADUN 로고">
+            </a>
+            <span id="userNameDisplay" class="text-xs font-bold text-blue-200"></span>
+        </div>
+        <div class="flex space-x-6">
+            <div id="loginButton" class="text-center cursor-pointer" onclick="location.href='/login.html'" style="display: block;">
+                <i class="fas fa-sign-in-alt text-2xl"></i>
+                <p class="text-sm mt-1">로그인</p>
+            </div>
+            <div id="homeButton" class="text-center cursor-pointer" onclick="location.href='/'" style="display: none;">
+                <i class="fas fa-home text-2xl"></i>
+                <p class="text-[0.4rem] mt-1">홈</p>
+            </div>
+        </div>
+    </header>
+
+    <!-- 메인 컨테이너 -->
+    <main class="p-4">
+        <div class="bg-gray-800 max-w-lg mx-auto p-6 rounded-lg">
+            <h2 class="text-xl font-bold mb-6">포인트 충전</h2>
+            
+            <!-- 현재 포인트 -->
+            <div class="bg-gray-700 p-4 rounded-lg mb-6">
+                <h3 class="text-sm font-bold mb-2">현재 보유 포인트</h3>
+                <p class="text-2xl font-bold" id="currentPoints">0P</p>
+            </div>
+
+            <!-- 충전 금액 선택 -->
+            <div class="space-y-4 mb-6">
+                <h3 class="text-sm font-bold">충전할 금액</h3>
+                <div class="grid grid-cols-3 gap-4">
+                    <div class="bg-gray-700 p-4 rounded-lg text-center cursor-pointer hover:bg-gray-600" onclick="selectAmount(1000)">
+                        <p class="text-lg font-bold">100원</p>
+                        <p class="text-sm text-blue-400">1,000P</p>
+                    </div>
+                    <div class="bg-gray-700 p-4 rounded-lg text-center cursor-pointer hover:bg-gray-600" onclick="selectAmount(6000)">
+                        <p class="text-lg font-bold">500원</p>
+                        <p class="text-sm text-blue-400">6,000P</p>
+                    </div>
+                    <div class="bg-gray-700 p-4 rounded-lg text-center cursor-pointer hover:bg-gray-600" onclick="selectAmount(15000)">
+                        <p class="text-lg font-bold">1,000원</p>
+                        <p class="text-sm text-blue-400">15,000P</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 결제 수단 -->
+            <div class="space-y-4 mb-6">
+                <h3 class="text-sm font-bold">결제 수단</h3>
+                <div class="bg-gray-700 p-4 rounded-lg">
+                    <label class="flex items-center space-x-3 cursor-pointer">
+                        <input type="radio" name="payment" value="phone" checked class="form-radio text-blue-500">
+                        <span>휴대폰 결제</span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- 충전 버튼 -->
+            <button onclick="chargePoints()" class="w-full bg-blue-500 text-white py-3 rounded-lg font-bold hover:bg-blue-600">
+                충전하기
+            </button>
+        </div>
+    </main>
+
+    <!-- 하단 네비게이션 -->
+    <nav class="w-full bg-black text-white py-3 border-t border-gray-700">
+        <div class="flex justify-evenly">
+            <div class="text-center cursor-pointer" onclick="location.href='invite.html'">
+                <i class="fas fa-user-plus text-2xl"></i>
+                <p class="text-[0.4rem]">초대</p>
+            </div>
+            <div class="text-center cursor-pointer" onclick="location.href='attendance.html'">
+                <i class="fas fa-calendar-alt text-2xl"></i>
+                <p class="text-[0.4rem]">출석부</p>
+            </div>
+            <div class="text-center cursor-pointer" onclick="location.href='board.html'">
+                <i class="fas fa-clipboard text-2xl"></i>
+                <p class="text-[0.4rem]">게시판</p>
+            </div>
+            <div class="text-center cursor-pointer" onclick="location.href='charge.html'">
+                <i class="fas fa-coins text-2xl"></i>
+                <p class="text-[0.4rem]">포인트충전</p>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 게스트 알림 모달 -->
+    <div id="guestModal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center z-50">
+        <div class="bg-gray-800 p-6 rounded-lg max-w-sm w-full mx-4">
+            <div class="text-center">
+                <p class="text-lg font-bold mb-4 text-red-500">게스트는 해당사항이 아닙니다.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- 포인트 초과 알림 모달 -->
+    <div id="pointsExceedModal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center z-50">
+        <div class="bg-gray-800 p-6 rounded-lg max-w-sm w-full mx-4">
+            <div class="text-center">
+                <p class="text-lg font-bold mb-4 text-red-500">포인트 충전을 다음에 해주세요!</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentUser = null;
+        let selectedAmount = 0;
+
+        // 페이지 로드 시 사용자 정보 가져오기
+        document.addEventListener('DOMContentLoaded', async () => {
+            try {
+                const storedUser = localStorage.getItem('currentUser');
+                if (storedUser) {
+                    currentUser = JSON.parse(storedUser);
+                    
+                    if (currentUser.isGuest) {
+                        showGuestModal();
+                        setTimeout(() => {
+                            window.location.href = '/';
+                        }, 2000);
+                        return;
+                    }
+
+                    document.getElementById('userNameDisplay').textContent = `${currentUser.name}님 환영합니다!`;
+                    document.getElementById('loginButton').style.display = 'none';
+                    document.getElementById('homeButton').style.display = 'block';
+                    document.getElementById('currentPoints').textContent = `${currentUser.points}P`;
+
+                    // 보유 포인트가 500을 초과하는 경우 경고 모달 표시
+                    if (currentUser.points > 500) {
+                        showPointsExceedModal();
+                    }
+                } else {
+                    window.location.href = '/login.html';
+                }
+            } catch (error) {
+                console.error('사용자 정보 로드 실패:', error);
+                window.location.href = '/login.html';
+            }
+        });
+
+        // 로그아웃 함수
+        function logout() {
+            localStorage.removeItem('currentUser');
+            window.location.href = '/login.html';
+        }
+
+        // 충전 금액 선택
+        function selectAmount(points) {
+            selectedAmount = points;
+            // 선택된 금액 하이라이트
+            document.querySelectorAll('.bg-gray-700').forEach(el => {
+                el.classList.remove('border-2', 'border-blue-500');
+            });
+            event.currentTarget.classList.add('border-2', 'border-blue-500');
+        }
+
+        // 포인트 충전
+        async function chargePoints() {
+            try {
+                // 보유 포인트가 500을 초과하는 경우 경고 모달 표시
+                if (currentUser.points > 500) {
+                    showPointsExceedModal();
+                    return;
+                }
+
+                // 테스트 버전에서는 무조건 3000포인트 충전
+                const points = 3000;
+                
+                const response = await fetch('/api/charge-points', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        userId: currentUser.userId,
+                        points: points
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (data.success) {
+                    currentUser.points = data.points;
+                    localStorage.setItem('currentUser', JSON.stringify(currentUser));
+                    document.getElementById('currentPoints').textContent = `${currentUser.points}P`;
+                    alert(`${points}포인트가 충전되었습니다!`);
+                } else {
+                    alert(data.message);
+                }
+            } catch (error) {
+                console.error('포인트 충전 오류:', error);
+                alert('포인트 충전 중 오류가 발생했습니다.');
+            }
+        }
+
+        // 게스트 모달 표시
+        function showGuestModal() {
+            document.getElementById('guestModal').style.display = 'flex';
+        }
+
+        // 포인트 초과 모달 표시
+        function showPointsExceedModal() {
+            document.getElementById('pointsExceedModal').style.display = 'flex';
+            setTimeout(() => {
+                document.getElementById('pointsExceedModal').style.display = 'none';
+                window.location.href = 'index.html';
+            }, 2000);
+        }
+    </script>
+</body>
+</html> 

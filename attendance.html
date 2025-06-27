@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>출석부</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+</head>
+<body class="bg-black text-white">
+    <!-- 상단 네비게이션 -->
+    <header class="flex justify-between items-center px-6 py-4 border-b border-gray-700">
+        <div class="flex items-center space-x-3">
+            <a href="index.html" class="cursor-pointer">
+                <img src="/img/logo.png" width="40" height="8" alt="PPADUN 로고">
+            </a>
+            <span id="userNameDisplay" class="text-xs font-bold text-blue-200"></span>
+        </div>
+        <div class="flex space-x-6">
+            <div id="loginButton" class="text-center cursor-pointer" onclick="location.href='/login.html'" style="display: block;">
+                <i class="fas fa-sign-in-alt text-2xl"></i>
+                <p class="text-sm mt-1">로그인</p>
+            </div>
+            <div id="homeButton" class="text-center cursor-pointer" onclick="location.href='/'" style="display: none;">
+                <i class="fas fa-home text-2xl"></i>
+                <p class="text-[0.4rem] mt-1">홈</p>
+            </div>
+        </div>
+    </header>
+
+    <!-- 메인 컨테이너 -->
+    <main class="p-4">
+        <div class="bg-gray-800 max-w-lg mx-auto p-6 rounded-lg">
+            <h2 class="text-xl font-bold mb-4">출석부</h2>
+            
+            <!-- 출석체크 버튼 -->
+            <div class="text-center mb-6">
+                <button id="checkAttendanceBtn" class="bg-blue-500 text-white px-6 py-3 rounded-lg font-bold mb-2">
+                    출석체크
+                </button>
+                <p class="text-blue-400 text-sm">출석 시 100포인트 지급</p>
+            </div>
+
+            <!-- 출석 현황 -->
+            <div class="grid grid-cols-2 gap-4 mb-6">
+                <div class="bg-gray-700 p-4 rounded-lg">
+                    <h3 class="text-sm font-bold mb-2">이번달 출석</h3>
+                    <p class="text-2xl font-bold" id="monthAttendance">0일</p>
+                </div>
+                <div class="bg-gray-700 p-4 rounded-lg">
+                    <h3 class="text-sm font-bold mb-2">전체 출석</h3>
+                    <p class="text-2xl font-bold" id="totalAttendance">0일</p>
+                </div>
+                <div class="bg-gray-700 p-4 rounded-lg">
+                    <h3 class="text-sm font-bold mb-2">이번달 포인트</h3>
+                    <p class="text-2xl font-bold" id="monthPoints">0P</p>
+                </div>
+                <div class="bg-gray-700 p-4 rounded-lg">
+                    <h3 class="text-sm font-bold mb-2">전체 포인트</h3>
+                    <p class="text-2xl font-bold" id="totalPoints">0P</p>
+                </div>
+            </div>
+
+            <!-- 달력 -->
+            <div class="bg-gray-700 p-4 rounded-lg">
+                <h3 class="text-sm font-bold mb-4">이번달 출석 현황</h3>
+                <div id="calendar" class="grid grid-cols-7 gap-1">
+                    <!-- 달력 내용은 JavaScript로 동적 생성 -->
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- 하단 네비게이션 -->
+    <nav class="w-full bg-black text-white py-3 border-t border-gray-700">
+        <div class="flex justify-evenly">
+            <div class="text-center cursor-pointer" onclick="location.href='invite.html'">
+                <i class="fas fa-user-plus text-2xl"></i>
+                <p class="text-[0.4rem]">초대</p>
+            </div>
+            <div class="text-center cursor-pointer" onclick="location.href='attendance.html'">
+                <i class="fas fa-calendar-alt text-2xl"></i>
+                <p class="text-[0.4rem]">출석부</p>
+            </div>
+            <div class="text-center cursor-pointer" onclick="location.href='board.html'">
+                <i class="fas fa-clipboard text-2xl"></i>
+                <p class="text-[0.4rem]">게시판</p>
+            </div>
+            <div class="text-center cursor-pointer" onclick="location.href='charge.html'">
+                <i class="fas fa-coins text-2xl"></i>
+                <p class="text-[0.4rem]">포인트충전</p>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 게스트 알림 모달 -->
+    <div id="guestModal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center z-50">
+        <div class="bg-gray-800 p-6 rounded-lg max-w-sm w-full mx-4">
+            <div class="text-center">
+                <p class="text-lg font-bold mb-4">게스트는 해당사항이 아닙니다.</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentUser = null;
+
+        // 페이지 로드 시 사용자 정보 가져오기
+        document.addEventListener('DOMContentLoaded', async () => {
+            try {
+                const storedUser = localStorage.getItem('currentUser');
+                if (storedUser) {
+                    currentUser = JSON.parse(storedUser);
+                    
+                    if (currentUser.isGuest) {
+                        showGuestModal();
+                        setTimeout(() => {
+                            window.location.href = '/';
+                        }, 2000);
+                        return;
+                    }
+
+                    document.getElementById('userNameDisplay').textContent = `${currentUser.name}님 환영합니다!`;
+                    document.getElementById('loginButton').style.display = 'none';
+                    document.getElementById('homeButton').style.display = 'block';
+
+                    // 출석 현황 로드
+                    loadAttendanceData();
+                } else {
+                    window.location.href = '/login.html';
+                }
+            } catch (error) {
+                console.error('사용자 정보 로드 실패:', error);
+                window.location.href = '/login.html';
+            }
+        });
+
+        // 게스트 모달 표시
+        function showGuestModal() {
+            document.getElementById('guestModal').style.display = 'flex';
+        }
+
+        // 출석체크 함수
+        async function checkAttendance() {
+            try {
+                const today = new Date().toISOString().split('T')[0];
+                const response = await fetch('/api/attendance', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        userId: currentUser.userId,
+                        date: today
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (data.success) {
+                    currentUser.points = data.totalPoints;
+                    localStorage.setItem('currentUser', JSON.stringify(currentUser));
+                    alert(`${data.points}포인트가 지급되었습니다!`);
+                    loadAttendanceData(); // 출석 현황 새로고침
+                } else {
+                    alert(data.message);
+                }
+            } catch (error) {
+                console.error('출석체크 오류:', error);
+                alert('출석체크 중 오류가 발생했습니다.');
+            }
+        }
+
+        // 출석 현황 로드
+        async function loadAttendanceData() {
+            try {
+                const response = await fetch(`/api/attendance/${currentUser.userId}`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    document.getElementById('monthAttendance').textContent = `${data.monthAttendance}일`;
+                    document.getElementById('totalAttendance').textContent = `${data.totalAttendance}일`;
+                    document.getElementById('monthPoints').textContent = `${data.monthPoints}P`;
+                    document.getElementById('totalPoints').textContent = `${data.totalPoints}P`;
+                    
+                    // 달력 생성
+                    createCalendar(data.attendances);
+                }
+            } catch (error) {
+                console.error('출석 현황 로드 오류:', error);
+            }
+        }
+
+        // 달력 생성
+        function createCalendar(attendances) {
+            const calendar = document.getElementById('calendar');
+            calendar.innerHTML = '';
+            
+            // 요일 헤더
+            const weekdays = ['일', '월', '화', '수', '목', '금', '토'];
+            weekdays.forEach(day => {
+                const dayElement = document.createElement('div');
+                dayElement.className = 'text-center text-sm font-bold';
+                dayElement.textContent = day;
+                calendar.appendChild(dayElement);
+            });
+
+            // 날짜 채우기
+            const today = new Date();
+            const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+            const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+            
+            // 출석한 날짜 Set 생성
+            const attendanceDates = new Set(attendances.map(a => a.date));
+
+            // 첫 주의 빈 날짜 채우기
+            for (let i = 0; i < firstDay.getDay(); i++) {
+                const emptyDay = document.createElement('div');
+                emptyDay.className = 'h-8';
+                calendar.appendChild(emptyDay);
+            }
+
+            // 날짜 채우기
+            for (let i = 1; i <= lastDay.getDate(); i++) {
+                const dateElement = document.createElement('div');
+                dateElement.className = 'text-center h-8 flex items-center justify-center';
+                
+                const date = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
+                if (attendanceDates.has(date)) {
+                    dateElement.className += ' bg-blue-500 rounded-full w-8 h-8 flex items-center justify-center';
+                }
+                
+                dateElement.textContent = i;
+                calendar.appendChild(dateElement);
+            }
+        }
+
+        // 출석체크 버튼 이벤트 리스너
+        document.getElementById('checkAttendanceBtn').addEventListener('click', checkAttendance);
+    </script>
+</body>
+</html> 
