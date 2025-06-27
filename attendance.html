@@ -154,15 +154,13 @@
                     return;
                 }
 
-                const today = new Date().toISOString().split('T')[0];
                 const response = await fetch('/api/attendance', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({
-                        userId: currentUser.userId,
-                        date: today
+                        userId: currentUser.userId
                     })
                 });
 
@@ -174,7 +172,7 @@
                     alert(`${data.points}포인트가 지급되었습니다!`);
                     loadAttendanceData(); // 출석 현황 새로고침
                 } else {
-                    alert(data.message);
+                    alert(data.message || '출석체크에 실패했습니다.');
                 }
             } catch (error) {
                 console.error('출석체크 오류:', error);
@@ -196,6 +194,14 @@
                     
                     // 달력 생성
                     createCalendar(data.attendance || []);
+                } else {
+                    console.error('출석 현황 로드 실패:', data.message);
+                    // 실패 시 기본값 설정
+                    document.getElementById('monthAttendance').textContent = '0일';
+                    document.getElementById('totalAttendance').textContent = '0일';
+                    document.getElementById('monthPoints').textContent = '0P';
+                    document.getElementById('totalPoints').textContent = '0P';
+                    createCalendar([]);
                 }
             } catch (error) {
                 console.error('출석 현황 로드 오류:', error);
@@ -204,6 +210,7 @@
                 document.getElementById('totalAttendance').textContent = '0일';
                 document.getElementById('monthPoints').textContent = '0P';
                 document.getElementById('totalPoints').textContent = '0P';
+                createCalendar([]);
             }
         }
 
@@ -221,10 +228,12 @@
                 calendar.appendChild(dayElement);
             });
 
-            // 날짜 채우기
-            const today = new Date();
-            const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
-            const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+            // 한국 시간대 기준으로 날짜 계산 (UTC 기반)
+            const now = new Date();
+            const utcNow = new Date(now.getTime() + (now.getTimezoneOffset() * 60000));
+            const koreaTime = new Date(utcNow.getTime() + (9 * 60 * 60 * 1000));
+            const firstDay = new Date(koreaTime.getUTCFullYear(), koreaTime.getUTCMonth(), 1);
+            const lastDay = new Date(koreaTime.getUTCFullYear(), koreaTime.getUTCMonth() + 1, 0);
             
             // 출석한 날짜 Set 생성
             const attendanceDates = new Set(attendanceRecords.map(a => a.date));
@@ -241,7 +250,7 @@
                 const dateElement = document.createElement('div');
                 dateElement.className = 'text-center h-8 flex items-center justify-center';
                 
-                const date = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
+                const date = `${koreaTime.getUTCFullYear()}-${String(koreaTime.getUTCMonth() + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
                 if (attendanceDates.has(date)) {
                     dateElement.className += ' bg-blue-500 rounded-full w-8 h-8 flex items-center justify-center';
                 }
