@@ -202,6 +202,18 @@ const commentSchema = new mongoose.Schema({
 
 const Comment = mongoose.model('Comment', commentSchema, 'game-comment');
 
+// 공지사항 스키마 정의
+const noticeSchema = new mongoose.Schema({
+    title: { type: String, required: true },
+    content: { type: String, required: true },
+    author: { type: String, required: true },
+    isImportant: { type: Boolean, default: false },
+    createdAt: { type: Date, default: Date.now },
+    updatedAt: { type: Date, default: Date.now }
+});
+
+const Notice = mongoose.model('Notice', noticeSchema, 'notices');
+
 // 게임 기록 스키마 정의
 const gameRecordSchema = new mongoose.Schema({
     userId: { type: String, required: true },
@@ -970,6 +982,28 @@ app.get('/api/user/:userId', async (req, res) => {
     } catch (error) {
         console.error('사용자 정보 조회 오류:', error);
         res.status(500).json({ error: '서버 오류가 발생했습니다.' });
+    }
+});
+
+// 공지사항 목록 조회
+app.get('/api/notices', async (req, res) => {
+    try {
+        // MongoDB 연결 상태 확인
+        if (mongoose.connection.readyState !== 1) {
+            console.log('MongoDB 연결 안됨, 기본 응답 반환');
+            return res.json({ notices: [] });
+        }
+        
+        // 모든 공지사항 조회 (중요한 것 먼저, 그 다음 날짜순)
+        const notices = await Notice.find({})
+            .sort({ isImportant: -1, createdAt: -1 });
+        
+        console.log('조회된 공지사항:', notices);
+        res.json({ notices });
+    } catch (error) {
+        console.error('공지사항 목록 조회 오류:', error);
+        // 오류 발생 시에도 빈 배열 반환
+        res.json({ notices: [] });
     }
 });
 
