@@ -214,6 +214,23 @@ const noticeSchema = new mongoose.Schema({
 
 const Notice = mongoose.model('Notice', noticeSchema, 'notices');
 
+// 고객센터 문의 스키마 정의
+const inquirySchema = new mongoose.Schema({
+    userId: { type: String, required: true },
+    userName: { type: String, required: true },
+    title: { type: String, required: true },
+    content: { type: String, required: true },
+    category: { type: String, required: true },
+    status: { type: String, enum: ['pending', 'answered', 'closed'], default: 'pending' },
+    answer: { type: String, default: '' },
+    answeredAt: { type: Date },
+    answeredBy: { type: String, default: '' },
+    createdAt: { type: Date, default: Date.now },
+    updatedAt: { type: Date, default: Date.now }
+});
+
+const Inquiry = mongoose.model('Inquiry', inquirySchema, 'customer-inquiries');
+
 // 게임 기록 스키마 정의
 const gameRecordSchema = new mongoose.Schema({
     userId: { type: String, required: true },
@@ -1004,6 +1021,74 @@ app.get('/api/notices', async (req, res) => {
         console.error('공지사항 목록 조회 오류:', error);
         // 오류 발생 시에도 빈 배열 반환
         res.json({ notices: [] });
+    }
+});
+
+// 고객센터 문의 목록 조회
+app.get('/api/inquiries', async (req, res) => {
+    try {
+        const { userId } = req.query;
+        
+        if (!userId) {
+            return res.status(400).json({ error: '사용자 ID가 필요합니다.' });
+        }
+        
+        // MongoDB 연결 상태 확인
+        if (mongoose.connection.readyState !== 1) {
+            console.log('MongoDB 연결 안됨, 기본 응답 반환');
+            return res.json({ inquiries: [] });
+        }
+        
+        // 특정 사용자의 문의 목록 조회
+        const inquiries = await Inquiry.find({ userId }).sort({ createdAt: -1 });
+        
+        console.log(`사용자 ${userId}의 문의 목록:`, inquiries);
+        res.json({ inquiries });
+    } catch (error) {
+        console.error('문의 목록 조회 오류:', error);
+        res.json({ inquiries: [] });
+    }
+});
+
+// 고객센터 문의 작성
+app.post('/api/inquiry', async (req, res) => {
+    try {
+        const { userId, userName, title, content, category } = req.body;
+        
+        if (!userId || !userName || !title || !content || !category) {
+            return res.status(400).json({ error: '모든 필드를 입력해주세요.' });
+        }
+        
+        const inquiry = new Inquiry({
+            userId,
+            userName,
+            title,
+            content,
+            category
+        });
+        
+        await inquiry.save();
+        res.status(201).json({ message: '문의가 등록되었습니다.' });
+    } catch (error) {
+        console.error('문의 작성 오류:', error);
+        res.status(500).json({ error: '서버 오류가 발생했습니다.' });
+    }
+});
+
+// 고객센터 문의 상세 조회
+app.get('/api/inquiry/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        
+        const inquiry = await Inquiry.findById(id);
+        if (!inquiry) {
+            return res.status(404).json({ error: '문의를 찾을 수 없습니다.' });
+        }
+        
+        res.json({ inquiry });
+    } catch (error) {
+        console.error('문의 상세 조회 오류:', error);
+        res.status(500).json({ error: '서버 오류가 발생했습니다.' });
     }
 });
 
