@@ -24,16 +24,21 @@ const connectToMongoDB = async () => {
             return false;
         }
         
+        console.log('🔗 연결 문자열 확인:', mongoURI.substring(0, 20) + '...');
+        
         await mongoose.connect(mongoURI, {
             maxPoolSize: 10,
             serverSelectionTimeoutMS: 10000,
-            socketTimeoutMS: 45000
+            socketTimeoutMS: 45000,
+            dbName: 'test'  // MongoDB Atlas의 데이터베이스 이름을 명시
         });
         
         console.log('✅ MongoDB 연결 성공!');
+        console.log('📊 데이터베이스:', mongoose.connection.db.databaseName);
         return true;
     } catch (error) {
         console.error('❌ MongoDB 연결 실패:', error.message);
+        console.error('🔍 상세 오류:', error);
         return false;
     }
 };
@@ -185,16 +190,25 @@ app.get('/api/debug/users', async (req, res) => {
     try {
         const dbStatus = {
             connection: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected',
+            databaseName: mongoose.connection.db ? mongoose.connection.db.databaseName : 'unknown',
             userCount: 0,
-            sampleUsers: []
+            sampleUsers: [],
+            collections: []
         };
         
         if (mongoose.connection.readyState === 1) {
-            const userCount = await User.countDocuments();
-            const sampleUsers = await User.find({}, { userId: 1, name: 1 }).limit(3);
-            
-            dbStatus.userCount = userCount;
-            dbStatus.sampleUsers = sampleUsers;
+            try {
+                const userCount = await User.countDocuments();
+                const sampleUsers = await User.find({}, { userId: 1, name: 1 }).limit(3);
+                const collections = await mongoose.connection.db.listCollections().toArray();
+                
+                dbStatus.userCount = userCount;
+                dbStatus.sampleUsers = sampleUsers;
+                dbStatus.collections = collections.map(col => col.name);
+            } catch (dbError) {
+                console.error('데이터베이스 쿼리 오류:', dbError);
+                dbStatus.error = dbError.message;
+            }
         }
         
         res.json(dbStatus);
