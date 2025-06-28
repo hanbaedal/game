@@ -119,7 +119,7 @@ app.get('/health', (req, res) => {
             .catch(error => {
                 console.error('컬렉션 목록 조회 오류:', error);
                 const statusCode = health.database.status === 'connected' ? 200 : 503;
-                res.status(statusCode).json(health);
+    res.status(statusCode).json(health);
             });
     } else {
         const statusCode = health.database.status === 'connected' ? 200 : 503;
@@ -1092,6 +1092,46 @@ app.get('/api/inquiry/:id', async (req, res) => {
     }
 });
 
+// 회원정보 수정
+app.put('/api/users/:userId', async (req, res) => {
+    try {
+        const { userId } = req.params;
+        const { name, email, phone, favoriteTeam } = req.body;
+        
+        if (!name || !email || !phone || !favoriteTeam) {
+            return res.status(400).json({ error: '모든 필드를 입력해주세요.' });
+        }
+        
+        const user = await User.findOne({ userId });
+        if (!user) {
+            return res.status(404).json({ error: '사용자를 찾을 수 없습니다.' });
+        }
+        
+        // 회원정보 업데이트
+        user.name = name;
+        user.email = email;
+        user.phone = phone;
+        user.favoriteTeam = favoriteTeam;
+        
+        await user.save();
+        
+        res.json({ 
+            message: '회원정보가 수정되었습니다.',
+            user: {
+                userId: user.userId,
+                name: user.name,
+                email: user.email,
+                phone: user.phone,
+                favoriteTeam: user.favoriteTeam,
+                points: user.points
+            }
+        });
+    } catch (error) {
+        console.error('회원정보 수정 오류:', error);
+        res.status(500).json({ error: '서버 오류가 발생했습니다.' });
+    }
+});
+
 // 에러 핸들링
 app.use((err, req, res, next) => {
     console.error('서버 오류:', err);
@@ -1101,4 +1141,4 @@ app.use((err, req, res, next) => {
 // 404 핸들링
 app.use((req, res) => {
     res.status(404).json({ error: '요청한 리소스를 찾을 수 없습니다.' });
-});
+}); 
