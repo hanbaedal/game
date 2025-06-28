@@ -121,6 +121,11 @@
         const itemsPerPage = 10;
         let totalItems = 0;
 
+        // 페이지 로드 시 초기화
+        document.addEventListener('DOMContentLoaded', () => {
+            loadInvites();
+        });
+
         // 카카오톡 초대하기
         function showKakaoInvite() {
             if (!Kakao.isInitialized()) {
@@ -166,26 +171,29 @@
                 
                 const data = await response.json();
                 
-                if (!data.success) {
-                    throw new Error(data.message || '초대 리스트를 불러오는데 실패했습니다.');
-                }
-                
                 // 총 건수 표시
-                totalCount.textContent = `총 ${data.totalCount}건`;
+                totalCount.textContent = `총 ${data.invites ? data.invites.length : 0}건`;
                 
                 inviteListItems.innerHTML = '';
                 
                 if (data.invites && data.invites.length > 0) {
                     data.invites.forEach(invite => {
                         const inviteItem = document.createElement('div');
-                        inviteItem.className = 'bg-gray-700 p-3 rounded-lg flex justify-between items-center';
+                        inviteItem.className = 'bg-gray-700 p-3 rounded-lg mb-2';
                         inviteItem.innerHTML = `
-                            <div class="flex-1">
-                                <div class="text-sm font-bold">${formatPhoneNumber(invite.phoneNumber)}</div>
-                                <div class="text-xs text-gray-400">${formatDate(invite.inviteDate)}</div>
+                            <div class="flex justify-between items-start mb-2">
+                                <div class="flex-1">
+                                    <div class="text-sm font-bold text-blue-300">${invite.memberName || 'N/A'}</div>
+                                    <div class="text-xs text-gray-400">ID: ${invite.memberId || 'N/A'}</div>
+                                </div>
+                                <div class="text-xs ${invite.status === 'pending' ? 'text-yellow-400' : 'text-green-400'}">
+                                    ${invite.status === 'pending' ? '대기중' : '완료'}
+                                </div>
                             </div>
-                            <div class="text-xs ${invite.status === 'pending' ? 'text-yellow-400' : 'text-green-400'}">
-                                ${invite.status === 'pending' ? '대기중' : '완료'}
+                            <div class="text-xs text-gray-300 space-y-1">
+                                <div>회원 전화번호: ${formatPhoneNumber(invite.memberPhone || 'N/A')}</div>
+                                <div>초청자 전화번호: ${formatPhoneNumber(invite.inviterPhone || 'N/A')}</div>
+                                <div class="text-gray-400">초청일자: ${formatDate(invite.inviteDate)}</div>
                             </div>
                         `;
                         inviteListItems.appendChild(inviteItem);
@@ -278,7 +286,7 @@
             }
 
             try {
-                const response = await fetch('/api/send-verification', {
+                const response = await fetch('/api/invite/send-code', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
@@ -287,9 +295,12 @@
                 });
                 
                 const data = await response.json();
-                if (data.success) {
+                if (data.verificationCode) {
+                    // 인증번호 저장
+                    verificationCode = data.verificationCode;
+                    
                     // 인증번호 입력 필드에 자동으로 입력
-                    document.getElementById('verificationCode').value = data.code;
+                    document.getElementById('verificationCode').value = data.verificationCode;
                     document.getElementById('verificationCode').readOnly = false;
                     
                     // 인증번호 전송 성공 모달 표시
@@ -302,7 +313,7 @@
                     }, 1000);
                 } else {
                     const warningDiv = document.getElementById('phoneNumberWarning');
-                    warningDiv.textContent = data.message || '인증번호 전송 중 오류가 발생했습니다.';
+                    warningDiv.textContent = data.error || '인증번호 전송 중 오류가 발생했습니다.';
                     warningDiv.classList.remove('hidden');
                 }
             } catch (error) {
@@ -324,20 +335,33 @@
                 return;
             }
 
+            // 현재 사용자 정보 가져오기
+            const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
+            if (!currentUser.userId) {
+                alert('로그인이 필요합니다.');
+                window.location.href = '/login.html';
+                return;
+            }
+
             try {
-                const response = await fetch('/api/verify-code', {
+                const response = await fetch('/api/invite/verify-code', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({
                         phoneNumber: cleanedPhone,
-                        code: code
+                        verificationCode: verificationCode,
+                        inputCode: code,
+                        memberName: currentUser.name || 'Unknown',
+                        memberId: currentUser.userId,
+                        memberPhone: currentUser.phone || cleanedPhone,
+                        inviterPhone: cleanedPhone
                     })
                 });
                 
                 const data = await response.json();
-                if (data.success) {
+                if (data.message) {
                     // 인증 성공 시 입력 필드 초기화
                     document.getElementById('phoneNumber').value = '';
                     document.getElementById('verificationCode').value = '';
@@ -352,13 +376,13 @@
                     }, 2000);
                     
                     // 초대 리스트 새로고침
-                    await loadInvites();
+                    loadInvites();
                 } else {
-                    alert(data.message || '인증번호가 일치하지 않습니다.');
+                    alert(data.error || '인증에 실패했습니다.');
                 }
             } catch (error) {
                 console.error('인증번호 확인 중 오류:', error);
-                alert('인증번호 확인 중 오류가 발생했습니다.');
+                alert('인증 중 오류가 발생했습니다.');
             }
         }
 

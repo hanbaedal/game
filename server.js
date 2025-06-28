@@ -137,9 +137,12 @@ const Charging = mongoose.model('Charging', chargingSchema, 'game-charging');
 
 // 초대 스키마 정의
 const inviteSchema = new mongoose.Schema({
-    phoneNumber: { type: String, required: true },
-    inviteDate: { type: Date, default: Date.now },
-    status: { type: String, enum: ['pending', 'completed'], default: 'pending' }
+    memberName: { type: String, required: true },
+    memberId: { type: String, required: true },
+    memberPhone: { type: String, required: true },
+    inviterPhone: { type: String, required: true },
+    status: { type: String, enum: ['pending', 'completed'], default: 'pending' },
+    inviteDate: { type: Date, default: Date.now }
 });
 
 const Invite = mongoose.model('Invite', inviteSchema, 'game-invite');
@@ -166,6 +169,100 @@ const gameRecordSchema = new mongoose.Schema({
 const GameRecord = mongoose.model('GameRecord', gameRecordSchema, 'game-record');
 
 // API 라우트
+
+// 초대 목록 조회
+app.get('/api/invites', async (req, res) => {
+    try {
+        // MongoDB 연결 상태 확인
+        if (mongoose.connection.readyState !== 1) {
+            console.log('MongoDB 연결 안됨, 기본 응답 반환');
+            return res.json({ invites: [] });
+        }
+        
+        // 모든 초대 데이터 조회
+        const invites = await Invite.find({}).sort({ inviteDate: -1 });
+        
+        console.log('조회된 초대 데이터:', invites);
+        res.json({ invites });
+    } catch (error) {
+        console.error('초대 목록 조회 오류:', error);
+        // 오류 발생 시에도 빈 배열 반환
+        res.json({ invites: [] });
+    }
+});
+
+// 초대 전화번호 인증번호 전송
+app.post('/api/invite/send-code', async (req, res) => {
+    try {
+        const { phoneNumber } = req.body;
+        
+        if (!phoneNumber) {
+            return res.status(400).json({ error: '전화번호를 입력해주세요.' });
+        }
+        
+        const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
+        
+        res.json({ 
+            message: '인증번호가 전송되었습니다.',
+            verificationCode: verificationCode
+        });
+    } catch (error) {
+        console.error('인증번호 전송 오류:', error);
+        res.status(500).json({ error: '서버 오류가 발생했습니다.' });
+    }
+});
+
+// 초대 전화번호 인증번호 확인
+app.post('/api/invite/verify-code', async (req, res) => {
+    try {
+        const { phoneNumber, verificationCode, inputCode, memberName, memberId, memberPhone, inviterPhone } = req.body;
+        
+        if (!phoneNumber || !verificationCode || !inputCode || !memberName || !memberId || !memberPhone || !inviterPhone) {
+            return res.status(400).json({ error: '모든 필드를 입력해주세요.' });
+        }
+        
+        if (verificationCode === inputCode) {
+            const invite = new Invite({
+                memberName,
+                memberId,
+                memberPhone,
+                inviterPhone,
+                status: 'completed'
+            });
+            
+            await invite.save();
+            res.json({ message: '인증이 완료되었습니다.' });
+        } else {
+            res.status(400).json({ error: '인증번호가 올바르지 않습니다.' });
+        }
+    } catch (error) {
+        console.error('인증번호 확인 오류:', error);
+        res.status(500).json({ error: '서버 오류가 발생했습니다.' });
+    }
+});
+
+// 전화번호 중복 체크
+app.post('/api/check-invite', async (req, res) => {
+    try {
+        const { phoneNumber } = req.body;
+        
+        if (!phoneNumber) {
+            return res.status(400).json({ error: '전화번호를 입력해주세요.' });
+        }
+        
+        const existingInvite = await Invite.findOne({
+            $or: [
+                { memberPhone: phoneNumber },
+                { inviterPhone: phoneNumber }
+            ]
+        });
+        
+        res.json({ exists: !!existingInvite });
+    } catch (error) {
+        console.error('전화번호 중복 체크 오류:', error);
+        res.status(500).json({ error: '서버 오류가 발생했습니다.' });
+    }
+});
 
 // 회원가입
 app.post('/api/register', async (req, res) => {
@@ -561,53 +658,6 @@ app.post('/api/comment', async (req, res) => {
         res.status(201).json({ message: '댓글이 작성되었습니다.' });
     } catch (error) {
         console.error('댓글 작성 오류:', error);
-        res.status(500).json({ error: '서버 오류가 발생했습니다.' });
-    }
-});
-
-// 초대 전화번호 인증번호 전송
-app.post('/api/invite/send-code', async (req, res) => {
-    try {
-        const { phoneNumber } = req.body;
-        
-        if (!phoneNumber) {
-            return res.status(400).json({ error: '전화번호를 입력해주세요.' });
-        }
-        
-        const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
-        
-        res.json({ 
-            message: '인증번호가 전송되었습니다.',
-            verificationCode: verificationCode
-        });
-    } catch (error) {
-        console.error('인증번호 전송 오류:', error);
-        res.status(500).json({ error: '서버 오류가 발생했습니다.' });
-    }
-});
-
-// 초대 전화번호 인증번호 확인
-app.post('/api/invite/verify-code', async (req, res) => {
-    try {
-        const { phoneNumber, verificationCode, inputCode } = req.body;
-        
-        if (!phoneNumber || !verificationCode || !inputCode) {
-            return res.status(400).json({ error: '모든 필드를 입력해주세요.' });
-        }
-        
-        if (verificationCode === inputCode) {
-            const invite = new Invite({
-                phoneNumber,
-                status: 'completed'
-            });
-            
-            await invite.save();
-            res.json({ message: '인증이 완료되었습니다.' });
-        } else {
-            res.status(400).json({ error: '인증번호가 올바르지 않습니다.' });
-        }
-    } catch (error) {
-        console.error('인증번호 확인 오류:', error);
         res.status(500).json({ error: '서버 오류가 발생했습니다.' });
     }
 });
