@@ -26,19 +26,15 @@ const connectToMongoDB = async () => {
         
         console.log('🔗 연결 문자열 확인:', mongoURI.substring(0, 20) + '...');
         
-        // 연결 문자열에서 데이터베이스 이름 추출
-        const dbNameFromURI = mongoURI.split('/').pop().split('?')[0];
-        console.log('🔍 연결 문자열의 데이터베이스 이름:', dbNameFromURI);
-        
-        // 데이터베이스 이름 결정 (연결 문자열에 있으면 사용, 없으면 기본값)
-        const finalDbName = dbNameFromURI && dbNameFromURI !== 'mongodb.net' ? dbNameFromURI : 'member-management';
-        console.log('🎯 사용할 데이터베이스 이름:', finalDbName);
+        // 항상 member-management 데이터베이스 사용
+        const dbName = 'member-management';
+        console.log('🎯 사용할 데이터베이스 이름:', dbName);
         
         await mongoose.connect(mongoURI, {
             maxPoolSize: 10,
             serverSelectionTimeoutMS: 10000,
             socketTimeoutMS: 45000,
-            dbName: finalDbName  // 동적으로 결정된 데이터베이스 이름 사용
+            dbName: dbName  // 명시적으로 member-management 데이터베이스 사용
         });
         
         console.log('✅ MongoDB 연결 성공!');
