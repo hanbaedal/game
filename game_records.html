@@ -136,7 +136,7 @@
     <script>
         async function loadGameRecords() {
             try {
-                const response = await fetch('http://localhost:3000/game-records-all');
+                const response = await fetch('/game-records-all');
                 const contentType = response.headers.get('content-type');
                 
                 if (!response.ok) {

@@ -163,7 +163,17 @@ const gameRecordSchema = new mongoose.Schema({
     userId: { type: String, required: true },
     gameType: { type: String, required: true },
     score: { type: Number, required: true },
-    date: { type: Date, default: Date.now }
+    date: { type: Date, default: Date.now },
+    teamSelection: { type: String, default: '-' },
+    bettingType: { type: String, default: '-' },
+    result: { type: String, enum: ['win', 'lose'], required: true },
+    currentPoints: { type: Number, default: 0 },
+    chargeAmount: { type: Number, default: 0 },
+    chargePoints: { type: Number, default: 0 },
+    attendancePoints: { type: Number, default: 0 },
+    victoryPoints: { type: Number, default: 0 },
+    donationPoints: { type: Number, default: 0 },
+    totalPoints: { type: Number, default: 0 }
 });
 
 const GameRecord = mongoose.model('GameRecord', gameRecordSchema, 'game-record');
@@ -688,16 +698,40 @@ app.post('/api/comment', async (req, res) => {
 // 게임 기록 저장
 app.post('/api/game-record', async (req, res) => {
     try {
-        const { userId, gameType, score } = req.body;
+        const { 
+            userId, 
+            gameType, 
+            score, 
+            teamSelection, 
+            bettingType, 
+            result, 
+            currentPoints, 
+            chargeAmount, 
+            chargePoints, 
+            attendancePoints, 
+            victoryPoints, 
+            donationPoints, 
+            totalPoints 
+        } = req.body;
         
-        if (!userId || !gameType || score === undefined) {
-            return res.status(400).json({ error: '모든 필드를 입력해주세요.' });
+        if (!userId || !gameType || score === undefined || !result) {
+            return res.status(400).json({ error: '필수 필드를 입력해주세요.' });
         }
         
         const gameRecord = new GameRecord({
             userId,
             gameType,
-            score
+            score,
+            teamSelection: teamSelection || '-',
+            bettingType: bettingType || '-',
+            result,
+            currentPoints: currentPoints || 0,
+            chargeAmount: chargeAmount || 0,
+            chargePoints: chargePoints || 0,
+            attendancePoints: attendancePoints || 0,
+            victoryPoints: victoryPoints || 0,
+            donationPoints: donationPoints || 0,
+            totalPoints: totalPoints || 0
         });
         
         await gameRecord.save();
@@ -725,6 +759,36 @@ app.get('/api/game-record/:userId', async (req, res) => {
     }
 });
 
+// 모든 게임 기록 조회 (관리자용)
+app.get('/game-records-all', async (req, res) => {
+    try {
+        const gameRecords = await GameRecord.find()
+            .populate('userId', 'userId name')
+            .sort({ date: -1 });
+        
+        const formattedRecords = gameRecords.map(record => ({
+            game_date: record.date,
+            user_name: record.userId ? record.userId.name : 'Unknown',
+            team_selection: record.teamSelection || '-',
+            game_type: record.gameType,
+            betting_type: record.bettingType || '-',
+            result: record.result,
+            current_points: record.currentPoints || 0,
+            charge_amount: record.chargeAmount || 0,
+            charge_points: record.chargePoints || 0,
+            attendance_points: record.attendancePoints || 0,
+            victory_points: record.victoryPoints || 0,
+            donation_points: record.donationPoints || 0,
+            total_points: record.totalPoints || 0
+        }));
+        
+        res.json(formattedRecords);
+    } catch (error) {
+        console.error('전체 게임 기록 조회 오류:', error);
+        res.status(500).json({ error: '서버 오류가 발생했습니다.' });
+    }
+});
+
 // 사용자 정보 조회
 app.get('/api/user/:userId', async (req, res) => {
     try {
@@ -744,6 +808,56 @@ app.get('/api/user/:userId', async (req, res) => {
         });
     } catch (error) {
         console.error('사용자 정보 조회 오류:', error);
+        res.status(500).json({ error: '서버 오류가 발생했습니다.' });
+    }
+});
+
+// 아이디 찾기
+app.post('/api/find-id', async (req, res) => {
+    try {
+        const { name, email } = req.body;
+        
+        if (!name || !email) {
+            return res.status(400).json({ error: '이름과 이메일을 입력해주세요.' });
+        }
+        
+        const user = await User.findOne({ name, email });
+        if (!user) {
+            return res.status(404).json({ error: '해당 정보로 가입된 사용자를 찾을 수 없습니다.' });
+        }
+        
+        res.json({ 
+            message: '아이디 찾기 성공',
+            userId: user.userId 
+        });
+    } catch (error) {
+        console.error('아이디 찾기 오류:', error);
+        res.status(500).json({ error: '서버 오류가 발생했습니다.' });
+    }
+});
+
+// 비밀번호 찾기
+app.post('/api/find-password', async (req, res) => {
+    try {
+        const { userId, email } = req.body;
+        
+        if (!userId || !email) {
+            return res.status(400).json({ error: '아이디와 이메일을 입력해주세요.' });
+        }
+        
+        const user = await User.findOne({ userId, email });
+        if (!user) {
+            return res.status(404).json({ error: '해당 정보로 가입된 사용자를 찾을 수 없습니다.' });
+        }
+        
+        // 실제 구현에서는 이메일로 임시 비밀번호를 발송해야 합니다.
+        // 여기서는 간단히 성공 메시지만 반환합니다.
+        res.json({ 
+            message: '비밀번호 재설정 이메일이 발송되었습니다.',
+            note: '실제 구현에서는 이메일로 임시 비밀번호를 발송합니다.'
+        });
+    } catch (error) {
+        console.error('비밀번호 찾기 오류:', error);
         res.status(500).json({ error: '서버 오류가 발생했습니다.' });
     }
 });
