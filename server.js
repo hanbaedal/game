@@ -26,19 +26,35 @@ const connectToMongoDB = async () => {
         
         console.log('🔗 연결 문자열 확인:', mongoURI.substring(0, 20) + '...');
         
-        // 항상 member-management 데이터베이스 사용
+        // 명시적으로 member-management 데이터베이스 사용
         const dbName = 'member-management';
         console.log('🎯 사용할 데이터베이스 이름:', dbName);
         
-        await mongoose.connect(mongoURI, {
+        // 연결 옵션 설정
+        const connectionOptions = {
             maxPoolSize: 10,
             serverSelectionTimeoutMS: 10000,
             socketTimeoutMS: 45000,
-            dbName: dbName  // 명시적으로 member-management 데이터베이스 사용
-        });
+            dbName: dbName,  // 명시적으로 member-management 데이터베이스 사용
+            retryWrites: true,
+            w: 'majority'
+        };
+        
+        console.log('🔧 연결 옵션:', connectionOptions);
+        
+        await mongoose.connect(mongoURI, connectionOptions);
         
         console.log('✅ MongoDB 연결 성공!');
-        console.log('📊 데이터베이스:', mongoose.connection.db.databaseName);
+        console.log('📊 실제 연결된 데이터베이스:', mongoose.connection.db.databaseName);
+        
+        // 데이터베이스 이름 재확인
+        if (mongoose.connection.db.databaseName !== dbName) {
+            console.warn('⚠️ 경고: 연결된 데이터베이스가 예상과 다릅니다.');
+            console.warn(`   예상: ${dbName}, 실제: ${mongoose.connection.db.databaseName}`);
+        } else {
+            console.log('✅ 올바른 데이터베이스에 연결되었습니다.');
+        }
+        
         return true;
     } catch (error) {
         console.error('❌ MongoDB 연결 실패:', error.message);
@@ -85,11 +101,30 @@ app.get('/health', (req, res) => {
         status: 'OK',
         timestamp: new Date().toISOString(),
         uptime: process.uptime(),
-        database: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected'
+        database: {
+            status: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected',
+            name: mongoose.connection.db ? mongoose.connection.db.databaseName : 'unknown',
+            collections: []
+        }
     };
     
-    const statusCode = health.database === 'connected' ? 200 : 503;
-    res.status(statusCode).json(health);
+    // 연결된 경우 컬렉션 목록 가져오기
+    if (mongoose.connection.readyState === 1 && mongoose.connection.db) {
+        mongoose.connection.db.listCollections().toArray()
+            .then(collections => {
+                health.database.collections = collections.map(col => col.name);
+                const statusCode = health.database.status === 'connected' ? 200 : 503;
+                res.status(statusCode).json(health);
+            })
+            .catch(error => {
+                console.error('컬렉션 목록 조회 오류:', error);
+                const statusCode = health.database.status === 'connected' ? 200 : 503;
+                res.status(statusCode).json(health);
+            });
+    } else {
+        const statusCode = health.database.status === 'connected' ? 200 : 503;
+        res.status(statusCode).json(health);
+    }
 });
 
 // 스키마 정의
@@ -188,85 +223,6 @@ const gameRecordSchema = new mongoose.Schema({
 const GameRecord = mongoose.model('GameRecord', gameRecordSchema, 'game-record');
 
 // API 라우트
-
-// 간단한 DB 진단 API
-app.get('/api/debug/users', async (req, res) => {
-    try {
-        const dbStatus = {
-            connection: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected',
-            databaseName: mongoose.connection.db ? mongoose.connection.db.databaseName : 'unknown',
-            userCount: 0,
-            sampleUsers: [],
-            collections: []
-        };
-        
-        if (mongoose.connection.readyState === 1) {
-            try {
-                const userCount = await User.countDocuments();
-                const sampleUsers = await User.find({}, { userId: 1, name: 1 }).limit(3);
-                const collections = await mongoose.connection.db.listCollections().toArray();
-                
-                dbStatus.userCount = userCount;
-                dbStatus.sampleUsers = sampleUsers;
-                dbStatus.collections = collections.map(col => col.name);
-            } catch (dbError) {
-                console.error('데이터베이스 쿼리 오류:', dbError);
-                dbStatus.error = dbError.message;
-            }
-        }
-        
-        res.json(dbStatus);
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-});
-
-// 로그인 디버그 API (사용자 존재 여부 확인)
-app.post('/api/debug/login-check', async (req, res) => {
-    try {
-        const { userId, password } = req.body;
-        
-        if (!userId || !password) {
-            return res.status(400).json({ error: 'ID와 비밀번호를 입력해주세요.' });
-        }
-        
-        const debugInfo = {
-            connection: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected',
-            databaseName: mongoose.connection.db ? mongoose.connection.db.databaseName : 'unknown',
-            searchedUserId: userId,
-            userExists: false,
-            passwordMatch: false,
-            collections: []
-        };
-        
-        if (mongoose.connection.readyState === 1) {
-            try {
-                // 컬렉션 목록 확인
-                const collections = await mongoose.connection.db.listCollections().toArray();
-                debugInfo.collections = collections.map(col => col.name);
-                
-                // 사용자 존재 여부 확인
-                const user = await User.findOne({ userId });
-                debugInfo.userExists = !!user;
-                
-                if (user) {
-                    debugInfo.passwordMatch = user.password === password;
-                    debugInfo.userInfo = {
-                        userId: user.userId,
-                        name: user.name,
-                        email: user.email
-                    };
-                }
-            } catch (dbError) {
-                debugInfo.error = dbError.message;
-            }
-        }
-        
-        res.json(debugInfo);
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-});
 
 // 초대 목록 조회
 app.get('/api/invites', async (req, res) => {
@@ -440,6 +396,7 @@ app.post('/api/login', async (req, res) => {
         }
         
         const user = await User.findOne({ userId, password });
+        
         if (!user) {
             return res.status(401).json({ error: 'ID 또는 비밀번호가 올바르지 않습니다.' });
         }
@@ -456,6 +413,80 @@ app.post('/api/login', async (req, res) => {
     } catch (error) {
         console.error('로그인 오류:', error);
         res.status(500).json({ error: '서버 오류가 발생했습니다.' });
+    }
+});
+
+// 아이디 찾기
+app.post('/api/find-id', async (req, res) => {
+    try {
+        const { name, phone } = req.body;
+        
+        if (!name || !phone) {
+            return res.status(400).json({ 
+                success: false, 
+                message: '이름과 전화번호를 입력해주세요.' 
+            });
+        }
+        
+        const user = await User.findOne({ name, phone });
+        if (!user) {
+            return res.status(404).json({ 
+                success: false, 
+                message: '해당 정보로 가입된 사용자를 찾을 수 없습니다.' 
+            });
+        }
+        
+        res.json({ 
+            success: true,
+            message: '아이디 찾기 성공',
+            userId: user.userId 
+        });
+    } catch (error) {
+        console.error('아이디 찾기 오류:', error);
+        res.status(500).json({ 
+            success: false, 
+            message: '서버 오류가 발생했습니다.' 
+        });
+    }
+});
+
+// 비밀번호 찾기
+app.post('/api/find-password', async (req, res) => {
+    try {
+        const { userId, name, phone } = req.body;
+        
+        if (!userId || !name || !phone) {
+            return res.status(400).json({ 
+                success: false, 
+                message: '아이디, 이름, 전화번호를 모두 입력해주세요.' 
+            });
+        }
+        
+        const user = await User.findOne({ userId, name, phone });
+        if (!user) {
+            return res.status(404).json({ 
+                success: false, 
+                message: '해당 정보로 가입된 사용자를 찾을 수 없습니다.' 
+            });
+        }
+        
+        // 비밀번호 마스킹 처리 (보안을 위해 일부만 표시)
+        const password = user.password;
+        const maskedPassword = password.length > 2 
+            ? password.substring(0, 2) + '*'.repeat(password.length - 2)
+            : '*'.repeat(password.length);
+        
+        res.json({ 
+            success: true,
+            message: '비밀번호 찾기 성공',
+            maskedPassword: maskedPassword
+        });
+    } catch (error) {
+        console.error('비밀번호 찾기 오류:', error);
+        res.status(500).json({ 
+            success: false, 
+            message: '서버 오류가 발생했습니다.' 
+        });
     }
 });
 
@@ -796,6 +827,29 @@ app.post('/api/comment', async (req, res) => {
     }
 });
 
+// 댓글 삭제
+app.delete('/api/comment/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { author } = req.body;
+        
+        const comment = await Comment.findById(id);
+        if (!comment) {
+            return res.status(404).json({ error: '댓글을 찾을 수 없습니다.' });
+        }
+        
+        if (comment.author !== author) {
+            return res.status(403).json({ error: '삭제 권한이 없습니다.' });
+        }
+        
+        await Comment.findByIdAndDelete(id);
+        res.json({ message: '댓글이 삭제되었습니다.' });
+    } catch (error) {
+        console.error('댓글 삭제 오류:', error);
+        res.status(500).json({ error: '서버 오류가 발생했습니다.' });
+    }
+});
+
 // 게임 기록 저장
 app.post('/api/game-record', async (req, res) => {
     try {
@@ -861,7 +915,7 @@ app.get('/api/game-record/:userId', async (req, res) => {
 });
 
 // 모든 게임 기록 조회 (관리자용)
-app.get('/game-records-all', async (req, res) => {
+app.get('/api/game-records-all', async (req, res) => {
     try {
         const gameRecords = await GameRecord.find()
             .populate('userId', 'userId name')
@@ -913,56 +967,6 @@ app.get('/api/user/:userId', async (req, res) => {
     }
 });
 
-// 아이디 찾기
-app.post('/api/find-id', async (req, res) => {
-    try {
-        const { name, email } = req.body;
-        
-        if (!name || !email) {
-            return res.status(400).json({ error: '이름과 이메일을 입력해주세요.' });
-        }
-        
-        const user = await User.findOne({ name, email });
-        if (!user) {
-            return res.status(404).json({ error: '해당 정보로 가입된 사용자를 찾을 수 없습니다.' });
-        }
-        
-        res.json({ 
-            message: '아이디 찾기 성공',
-            userId: user.userId 
-        });
-    } catch (error) {
-        console.error('아이디 찾기 오류:', error);
-        res.status(500).json({ error: '서버 오류가 발생했습니다.' });
-    }
-});
-
-// 비밀번호 찾기
-app.post('/api/find-password', async (req, res) => {
-    try {
-        const { userId, email } = req.body;
-        
-        if (!userId || !email) {
-            return res.status(400).json({ error: '아이디와 이메일을 입력해주세요.' });
-        }
-        
-        const user = await User.findOne({ userId, email });
-        if (!user) {
-            return res.status(404).json({ error: '해당 정보로 가입된 사용자를 찾을 수 없습니다.' });
-        }
-        
-        // 실제 구현에서는 이메일로 임시 비밀번호를 발송해야 합니다.
-        // 여기서는 간단히 성공 메시지만 반환합니다.
-        res.json({ 
-            message: '비밀번호 재설정 이메일이 발송되었습니다.',
-            note: '실제 구현에서는 이메일로 임시 비밀번호를 발송합니다.'
-        });
-    } catch (error) {
-        console.error('비밀번호 찾기 오류:', error);
-        res.status(500).json({ error: '서버 오류가 발생했습니다.' });
-    }
-});
-
 // 에러 핸들링
 app.use((err, req, res, next) => {
     console.error('서버 오류:', err);
@@ -972,4 +976,4 @@ app.use((err, req, res, next) => {
 // 404 핸들링
 app.use((req, res) => {
     res.status(404).json({ error: '요청한 리소스를 찾을 수 없습니다.' });
-}); 
+});
