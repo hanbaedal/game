@@ -170,6 +170,29 @@ const GameRecord = mongoose.model('GameRecord', gameRecordSchema, 'game-record')
 
 // API 라우트
 
+// 간단한 DB 진단 API
+app.get('/api/debug/users', async (req, res) => {
+    try {
+        const dbStatus = {
+            connection: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected',
+            userCount: 0,
+            sampleUsers: []
+        };
+        
+        if (mongoose.connection.readyState === 1) {
+            const userCount = await User.countDocuments();
+            const sampleUsers = await User.find({}, { userId: 1, name: 1 }).limit(3);
+            
+            dbStatus.userCount = userCount;
+            dbStatus.sampleUsers = sampleUsers;
+        }
+        
+        res.json(dbStatus);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
 // 초대 목록 조회
 app.get('/api/invites', async (req, res) => {
     try {
