@@ -26,11 +26,19 @@ const connectToMongoDB = async () => {
         
         console.log('🔗 연결 문자열 확인:', mongoURI.substring(0, 20) + '...');
         
+        // 연결 문자열에서 데이터베이스 이름 추출
+        const dbNameFromURI = mongoURI.split('/').pop().split('?')[0];
+        console.log('🔍 연결 문자열의 데이터베이스 이름:', dbNameFromURI);
+        
+        // 데이터베이스 이름 결정 (연결 문자열에 있으면 사용, 없으면 기본값)
+        const finalDbName = dbNameFromURI && dbNameFromURI !== 'mongodb.net' ? dbNameFromURI : 'member-management';
+        console.log('🎯 사용할 데이터베이스 이름:', finalDbName);
+        
         await mongoose.connect(mongoURI, {
             maxPoolSize: 10,
             serverSelectionTimeoutMS: 10000,
             socketTimeoutMS: 45000,
-            dbName: 'test'  // MongoDB Atlas의 데이터베이스 이름을 명시
+            dbName: finalDbName  // 동적으로 결정된 데이터베이스 이름 사용
         });
         
         console.log('✅ MongoDB 연결 성공!');
@@ -212,6 +220,53 @@ app.get('/api/debug/users', async (req, res) => {
         }
         
         res.json(dbStatus);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// 로그인 디버그 API (사용자 존재 여부 확인)
+app.post('/api/debug/login-check', async (req, res) => {
+    try {
+        const { userId, password } = req.body;
+        
+        if (!userId || !password) {
+            return res.status(400).json({ error: 'ID와 비밀번호를 입력해주세요.' });
+        }
+        
+        const debugInfo = {
+            connection: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected',
+            databaseName: mongoose.connection.db ? mongoose.connection.db.databaseName : 'unknown',
+            searchedUserId: userId,
+            userExists: false,
+            passwordMatch: false,
+            collections: []
+        };
+        
+        if (mongoose.connection.readyState === 1) {
+            try {
+                // 컬렉션 목록 확인
+                const collections = await mongoose.connection.db.listCollections().toArray();
+                debugInfo.collections = collections.map(col => col.name);
+                
+                // 사용자 존재 여부 확인
+                const user = await User.findOne({ userId });
+                debugInfo.userExists = !!user;
+                
+                if (user) {
+                    debugInfo.passwordMatch = user.password === password;
+                    debugInfo.userInfo = {
+                        userId: user.userId,
+                        name: user.name,
+                        email: user.email
+                    };
+                }
+            } catch (dbError) {
+                debugInfo.error = dbError.message;
+            }
+        }
+        
+        res.json(debugInfo);
     } catch (error) {
         res.status(500).json({ error: error.message });
     }

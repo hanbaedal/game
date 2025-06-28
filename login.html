@@ -208,6 +208,9 @@
                 <button type="submit" id="loginButton">로그인</button>
                 <button type="button" id="guestLogin" onclick="handleGuestLogin()">게스트 로그인</button>
             </div>
+            <div style="text-align: center; margin-top: 10px;">
+                <button type="button" onclick="debugLogin()" style="background-color: #ffc107; color: #333; padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">디버그</button>
+            </div>
             <div class="find-links">
                 <a href="find-id.html">아이디 찾기</a>
                 <span>|</span>
@@ -281,6 +284,49 @@
             
             localStorage.setItem('currentUser', JSON.stringify(guestUser));
             window.location.href = '/index.html';
+        }
+
+        async function debugLogin() {
+            const userId = document.getElementById('userId').value;
+            const password = document.getElementById('password').value;
+            
+            if (!userId || !password) {
+                alert('아이디와 비밀번호를 입력한 후 디버그를 실행해주세요.');
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/debug/login-check', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ userId, password })
+                });
+
+                const data = await response.json();
+                
+                let debugMessage = `데이터베이스 상태:\n`;
+                debugMessage += `연결: ${data.connection}\n`;
+                debugMessage += `데이터베이스: ${data.databaseName}\n`;
+                debugMessage += `컬렉션: ${data.collections.join(', ')}\n`;
+                debugMessage += `검색한 ID: ${data.searchedUserId}\n`;
+                debugMessage += `사용자 존재: ${data.userExists ? '예' : '아니오'}\n`;
+                debugMessage += `비밀번호 일치: ${data.passwordMatch ? '예' : '아니오'}\n`;
+                
+                if (data.error) {
+                    debugMessage += `오류: ${data.error}\n`;
+                }
+                
+                if (data.userInfo) {
+                    debugMessage += `사용자 정보: ${JSON.stringify(data.userInfo, null, 2)}\n`;
+                }
+                
+                alert(debugMessage);
+            } catch (error) {
+                console.error('디버그 오류:', error);
+                alert('디버그 실행 중 오류가 발생했습니다: ' + error.message);
+            }
         }
     </script>
 </body>
