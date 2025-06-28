@@ -233,10 +233,16 @@ app.get('/api/invites', async (req, res) => {
             return res.json({ invites: [] });
         }
         
-        // 모든 초대 데이터 조회
-        const invites = await Invite.find({}).sort({ inviteDate: -1 });
+        const { userId } = req.query;
         
-        console.log('조회된 초대 데이터:', invites);
+        if (!userId) {
+            return res.status(400).json({ error: '사용자 ID가 필요합니다.' });
+        }
+        
+        // 특정 사용자가 초대한 데이터만 조회
+        const invites = await Invite.find({ memberId: userId }).sort({ inviteDate: -1 });
+        
+        console.log(`사용자 ${userId}의 초대 데이터:`, invites);
         res.json({ invites });
     } catch (error) {
         console.error('초대 목록 조회 오류:', error);

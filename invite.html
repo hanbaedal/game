@@ -20,9 +20,14 @@
             <a href="index.html" class="cursor-pointer">
                 <img src="/img/logo.png" width="40" height="8" alt="PPADUN 로고">
             </a>
+            <span id="userNameDisplay" class="text-xs font-bold text-blue-200"></span>
         </div>
         <div class="flex space-x-6">
-            <div class="text-center cursor-pointer" onclick="location.href='/'">
+            <div id="loginButton" class="text-center cursor-pointer" onclick="location.href='/login.html'" style="display: block;">
+                <i class="fas fa-sign-in-alt text-2xl"></i>
+                <p class="text-sm mt-1">로그인</p>
+            </div>
+            <div id="homeButton" class="text-center cursor-pointer" onclick="location.href='/'" style="display: none;">
                 <i class="fas fa-home text-2xl"></i>
                 <p class="text-[0.4rem] mt-1">홈</p>
             </div>
@@ -123,8 +128,37 @@
 
         // 페이지 로드 시 초기화
         document.addEventListener('DOMContentLoaded', () => {
+            loadUserInfo();
             loadInvites();
         });
+
+        // 사용자 정보 로드 및 표시
+        function loadUserInfo() {
+            try {
+                const storedUser = localStorage.getItem('currentUser');
+                if (storedUser) {
+                    const currentUser = JSON.parse(storedUser);
+                    
+                    // 사용자 이름 표시
+                    document.getElementById('userNameDisplay').textContent = `${currentUser.name}님 환영합니다!`;
+                    
+                    // 로그인/홈 버튼 상태 변경
+                    document.getElementById('loginButton').style.display = 'none';
+                    document.getElementById('homeButton').style.display = 'block';
+                } else {
+                    // 로그인하지 않은 경우
+                    document.getElementById('userNameDisplay').textContent = '';
+                    document.getElementById('loginButton').style.display = 'block';
+                    document.getElementById('homeButton').style.display = 'none';
+                }
+            } catch (error) {
+                console.error('사용자 정보 로드 오류:', error);
+                // 오류 발생 시 로그인 상태로 설정
+                document.getElementById('userNameDisplay').textContent = '';
+                document.getElementById('loginButton').style.display = 'block';
+                document.getElementById('homeButton').style.display = 'none';
+            }
+        }
 
         // 카카오톡 초대하기
         function showKakaoInvite() {
@@ -164,7 +198,15 @@
                 inviteListItems.innerHTML = '<div class="text-center text-gray-400 py-4">초대 리스트를 불러오는 중...</div>';
                 totalCount.textContent = '총 0건';
                 
-                const response = await fetch('/api/invites');
+                // 현재 사용자 정보 가져오기
+                const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
+                if (!currentUser.userId) {
+                    inviteListItems.innerHTML = '<div class="text-center text-gray-400 py-4">로그인이 필요합니다.</div>';
+                    totalCount.textContent = '총 0건';
+                    return;
+                }
+                
+                const response = await fetch(`/api/invites?userId=${currentUser.userId}`);
                 if (!response.ok) {
                     throw new Error(`HTTP error! status: ${response.status}`);
                 }
@@ -191,9 +233,8 @@
                                 </div>
                             </div>
                             <div class="text-xs text-gray-300 space-y-1">
-                                <div>회원 전화번호: ${formatPhoneNumber(invite.memberPhone || 'N/A')}</div>
-                                <div>초청자 전화번호: ${formatPhoneNumber(invite.inviterPhone || 'N/A')}</div>
-                                <div class="text-gray-400">초청일자: ${formatDate(invite.inviteDate)}</div>
+                                <div>초대 전화번호: ${formatPhoneNumber(invite.inviterPhone || 'N/A')}</div>
+                                <div class="text-gray-400">초대일자: ${formatDate(invite.inviteDate)}</div>
                             </div>
                         `;
                         inviteListItems.appendChild(inviteItem);
@@ -324,6 +365,32 @@
             }
         }
 
+        // 현재 사용자 정보를 서버에서 가져오기
+        async function getCurrentUserInfo() {
+            try {
+                const storedUser = localStorage.getItem('currentUser');
+                if (!storedUser) {
+                    return null;
+                }
+                
+                const currentUser = JSON.parse(storedUser);
+                if (!currentUser.userId) {
+                    return null;
+                }
+                
+                const response = await fetch(`/api/user/${currentUser.userId}`);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const userData = await response.json();
+                return userData;
+            } catch (error) {
+                console.error('사용자 정보 가져오기 오류:', error);
+                return null;
+            }
+        }
+
         // 인증번호 확인
         async function verifyCode() {
             const phoneNumber = document.getElementById('phoneNumber').value;
@@ -343,6 +410,13 @@
                 return;
             }
 
+            // 서버에서 현재 사용자의 상세 정보 가져오기
+            const userInfo = await getCurrentUserInfo();
+            if (!userInfo) {
+                alert('사용자 정보를 가져올 수 없습니다.');
+                return;
+            }
+
             try {
                 const response = await fetch('/api/invite/verify-code', {
                     method: 'POST',
@@ -355,8 +429,8 @@
                         inputCode: code,
                         memberName: currentUser.name || 'Unknown',
                         memberId: currentUser.userId,
-                        memberPhone: currentUser.phone || cleanedPhone,
-                        inviterPhone: cleanedPhone
+                        memberPhone: cleanedPhone,
+                        inviterPhone: userInfo.phone || currentUser.phone || 'Unknown'
                     })
                 });
                 
