@@ -12,7 +12,7 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname)));
 
-// MongoDB 연결 (Render 전용)
+// MongoDB 연결
 const connectToMongoDB = async () => {
     try {
         console.log('MongoDB 연결 시도 중...');
@@ -79,7 +79,7 @@ app.get('/', (req, res) => {
     });
 });
 
-// 헬스체크 엔드포인트 (Render 배포용)
+// 헬스체크 엔드포인트
 app.get('/health', (req, res) => {
     const health = {
         status: 'OK',
@@ -387,6 +387,42 @@ app.post('/api/register', async (req, res) => {
         });
         
         await user.save();
+        res.status(201).json({ message: '회원가입이 완료되었습니다.' });
+    } catch (error) {
+        console.error('회원가입 오류:', error);
+        res.status(500).json({ error: '서버 오류가 발생했습니다.' });
+    }
+});
+
+// 회원가입 (클라이언트 호환용)
+app.post('/api/users', async (req, res) => {
+    try {
+        const { userId, password, name, email, phone, favoriteTeam, regDate } = req.body;
+        
+        console.log('회원가입 요청 데이터:', { userId, name, email, phone, favoriteTeam, regDate });
+        
+        if (!userId || !password || !name || !email || !phone || !favoriteTeam) {
+            return res.status(400).json({ error: '모든 필드를 입력해주세요.' });
+        }
+        
+        const existingUser = await User.findOne({ userId });
+        if (existingUser) {
+            return res.status(400).json({ error: '이미 존재하는 ID입니다.' });
+        }
+        
+        const user = new User({
+            userId,
+            password,
+            name,
+            email,
+            phone,
+            favoriteTeam,
+            points: 3000,
+            createdAt: regDate ? new Date(regDate) : new Date()
+        });
+        
+        await user.save();
+        console.log('새 사용자 저장됨:', user.userId);
         res.status(201).json({ message: '회원가입이 완료되었습니다.' });
     } catch (error) {
         console.error('회원가입 오류:', error);
