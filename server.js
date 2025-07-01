@@ -593,7 +593,8 @@ app.post('/api/attendance', async (req, res) => {
         res.json({ 
             success: true, 
             message: '출석체크가 완료되었습니다. 100포인트가 적립되었습니다.',
-            points: updatedUser.points
+            points: 100,
+            totalPoints: updatedUser.points
         });
     } catch (error) {
         console.error('출석체크 오류:', error);
