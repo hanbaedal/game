@@ -347,10 +347,9 @@
                     // 인증번호 전송 성공 모달 표시
                     document.getElementById('verificationSentModal').style.display = 'flex';
                     
-                    // 1초 후 자동으로 인증 실행
+                    // 1초 후 모달 닫기 (자동 인증 제거)
                     setTimeout(() => {
                         document.getElementById('verificationSentModal').style.display = 'none';
-                        verifyCode();
                     }, 1000);
                 } else {
                     const warningDiv = document.getElementById('phoneNumberWarning');
