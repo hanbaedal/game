@@ -340,8 +340,8 @@ app.post('/api/invite/verify-code', async (req, res) => {
             const invite = new Invite({
                 memberName,
                 memberId,
-                memberPhone,
-                inviterPhone: actualInviterPhone,
+                memberPhone: actualInviterPhone,  // 로그인한 회원 (초대한 사람)의 전화번호
+                inviterPhone: phoneNumber,        // 초대당한 회원의 전화번호
                 status: 'completed'
             });
             
