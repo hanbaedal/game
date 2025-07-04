@@ -354,11 +354,6 @@
                     document.getElementById('viewContent').textContent = data.board.content;
                     document.getElementById('viewViews').textContent = data.board.views || 0;
                     
-                    // 조회수 업데이트 후 목록 새로고침 (조회수 반영)
-                    setTimeout(() => {
-                        loadBoards();
-                    }, 100);
-                    
                     // 수정/삭제 버튼 표시 (작성자만)
                     const boardActions = document.getElementById('boardActions');
                     boardActions.innerHTML = '';
@@ -387,7 +382,8 @@
         // 댓글 로드 (게시글 상세 조회 시 이미 댓글이 포함되어 있음)
         async function loadComments(boardId) {
             try {
-                const response = await fetch(`/api/board/${boardId}`);
+                // 조회수 증가 없이 댓글만 조회하는 별도 API 사용
+                const response = await fetch(`/api/comments/${boardId}`);
                 const data = await response.json();
                 
                 const commentsList = document.getElementById('commentsList');
@@ -452,10 +448,6 @@
                 if (response.ok) {
                     document.getElementById('commentInput').value = '';
                     loadComments(currentBoard._id);
-                    // 댓글 수 업데이트를 위해 목록 새로고침
-                    setTimeout(() => {
-                        loadBoards();
-                    }, 100);
                 } else {
                     alert(data.error || '댓글 작성 중 오류가 발생했습니다.');
                 }
@@ -483,10 +475,6 @@
                 const data = await response.json();
                 if (response.ok) {
                     loadComments(currentBoard._id);
-                    // 댓글 수 업데이트를 위해 목록 새로고침
-                    setTimeout(() => {
-                        loadBoards();
-                    }, 100);
                 } else {
                     alert(data.error || '댓글 삭제 중 오류가 발생했습니다.');
                 }

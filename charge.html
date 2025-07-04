@@ -39,33 +39,24 @@
                 <p class="text-2xl font-bold" id="currentPoints">0P</p>
             </div>
 
-            <!-- 충전 금액 선택 -->
-            <div class="space-y-4 mb-6">
-                <h3 class="text-sm font-bold">충전할 금액</h3>
-                <div class="grid grid-cols-3 gap-4">
-                    <div class="bg-gray-700 p-4 rounded-lg text-center cursor-pointer hover:bg-gray-600" onclick="selectAmount(1000)">
-                        <p class="text-lg font-bold">100원</p>
-                        <p class="text-sm text-blue-400">1,000P</p>
-                    </div>
-                    <div class="bg-gray-700 p-4 rounded-lg text-center cursor-pointer hover:bg-gray-600" onclick="selectAmount(6000)">
-                        <p class="text-lg font-bold">500원</p>
-                        <p class="text-sm text-blue-400">6,000P</p>
-                    </div>
-                    <div class="bg-gray-700 p-4 rounded-lg text-center cursor-pointer hover:bg-gray-600" onclick="selectAmount(15000)">
-                        <p class="text-lg font-bold">1,000원</p>
-                        <p class="text-sm text-blue-400">15,000P</p>
-                    </div>
-                </div>
-            </div>
 
-            <!-- 결제 수단 -->
+
+            <!-- 동영상 광고 메뉴 -->
             <div class="space-y-4 mb-6">
-                <h3 class="text-sm font-bold">결제 수단</h3>
-                <div class="bg-gray-700 p-4 rounded-lg">
-                    <label class="flex items-center space-x-3 cursor-pointer">
-                        <input type="radio" name="payment" value="phone" checked class="form-radio text-blue-500">
-                        <span>휴대폰 결제</span>
-                    </label>
+                <h3 class="text-sm font-bold">동영상 광고 시청</h3>
+                <div class="grid grid-cols-1 gap-4">
+                    <div class="bg-gray-700 p-4 rounded-lg text-center cursor-pointer hover:bg-gray-600" onclick="watchAd(10, 1000)">
+                        <p class="text-lg font-bold">10초 광고 시청</p>
+                        <p class="text-sm text-blue-400">1,000P 획득</p>
+                    </div>
+                    <div class="bg-gray-700 p-4 rounded-lg text-center cursor-pointer hover:bg-gray-600" onclick="watchAd(20, 2000)">
+                        <p class="text-lg font-bold">20초 광고 시청</p>
+                        <p class="text-sm text-blue-400">2,000P 획득</p>
+                    </div>
+                    <div class="bg-gray-700 p-4 rounded-lg text-center cursor-pointer hover:bg-gray-600" onclick="watchAd(30, 3000)">
+                        <p class="text-lg font-bold">30초 광고 시청</p>
+                        <p class="text-sm text-blue-400">3,000P 획득</p>
+                    </div>
                 </div>
             </div>
 
@@ -116,9 +107,32 @@
         </div>
     </div>
 
+    <!-- 동영상 광고 모달 -->
+    <div id="adModal" class="fixed inset-0 bg-black bg-opacity-90 hidden flex items-center justify-center z-50">
+        <div class="bg-gray-800 p-6 rounded-lg max-w-2xl w-full mx-4">
+            <div class="text-center">
+                <h3 class="text-xl font-bold mb-4" id="adTitle">동영상 광고</h3>
+                <div class="bg-gray-900 p-4 rounded-lg mb-4">
+                    <div class="text-center text-gray-400 mb-4">
+                        <i class="fas fa-play-circle text-6xl mb-4"></i>
+                        <p class="text-lg">광고 재생 중...</p>
+                        <p class="text-sm text-gray-500" id="adTimer">남은 시간: <span id="countdown">0</span>초</p>
+                    </div>
+                </div>
+                <div class="flex justify-center space-x-4">
+                    <button id="skipAdBtn" class="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600" style="display: none;">
+                        건너뛰기
+                    </button>
+                    <button id="closeAdBtn" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600" style="display: none;">
+                        완료
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script>
         let currentUser = null;
-        let selectedAmount = 0;
 
         // 페이지 로드 시 사용자 정보 가져오기
         document.addEventListener('DOMContentLoaded', async () => {
@@ -167,15 +181,7 @@
             window.location.href = '/login.html';
         }
 
-        // 충전 금액 선택
-        function selectAmount(points) {
-            selectedAmount = points;
-            // 선택된 금액 하이라이트
-            document.querySelectorAll('.bg-gray-700').forEach(el => {
-                el.classList.remove('border-2', 'border-blue-500');
-            });
-            event.currentTarget.classList.add('border-2', 'border-blue-500');
-        }
+
 
         // 포인트 충전
         async function chargePoints() {
@@ -229,6 +235,94 @@
                 document.getElementById('pointsExceedModal').style.display = 'none';
                 window.location.href = 'index.html';
             }, 2000);
+        }
+
+        // 동영상 광고 시청
+        async function watchAd(duration, points) {
+            if (!currentUser) {
+                alert('로그인 후 광고 시청을 이용해주세요.');
+                window.location.href = '/login.html';
+                return;
+            }
+
+            // 광고 모달 표시
+            const adModal = document.getElementById('adModal');
+            const adTitle = document.getElementById('adTitle');
+            const countdown = document.getElementById('countdown');
+            const skipAdBtn = document.getElementById('skipAdBtn');
+            const closeAdBtn = document.getElementById('closeAdBtn');
+
+            adTitle.textContent = `${duration}초 광고 시청`;
+            adModal.style.display = 'flex';
+            skipAdBtn.style.display = 'none';
+            closeAdBtn.style.display = 'none';
+
+            // 카운트다운 시작
+            let timeLeft = duration;
+            countdown.textContent = timeLeft;
+
+            const countdownInterval = setInterval(() => {
+                timeLeft--;
+                countdown.textContent = timeLeft;
+
+                if (timeLeft <= 0) {
+                    clearInterval(countdownInterval);
+                    // 광고 완료
+                    completeAd(points);
+                }
+            }, 1000);
+
+            // 건너뛰기 버튼 (5초 후 표시)
+            setTimeout(() => {
+                skipAdBtn.style.display = 'inline-block';
+                skipAdBtn.onclick = () => {
+                    clearInterval(countdownInterval);
+                    adModal.style.display = 'none';
+                    alert('광고 시청을 취소했습니다.');
+                };
+            }, 5000);
+        }
+
+        // 광고 완료 처리
+        async function completeAd(points) {
+            const adModal = document.getElementById('adModal');
+            const closeAdBtn = document.getElementById('closeAdBtn');
+            const countdown = document.getElementById('countdown');
+
+            countdown.textContent = '0';
+            closeAdBtn.style.display = 'inline-block';
+            closeAdBtn.onclick = async () => {
+                try {
+                    // 서버에 포인트 업데이트 요청
+                    const response = await fetch('/api/update-points', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            userId: currentUser.userId,
+                            points: points
+                        })
+                    });
+
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        // 로컬 스토리지 업데이트
+                        currentUser.points = data.points;
+                        localStorage.setItem('currentUser', JSON.stringify(currentUser));
+                        document.getElementById('currentPoints').textContent = `${currentUser.points}P`;
+                        
+                        adModal.style.display = 'none';
+                        alert(`${points}포인트를 획득했습니다!`);
+                    } else {
+                        alert(data.message || '포인트 업데이트에 실패했습니다.');
+                    }
+                } catch (error) {
+                    console.error('포인트 업데이트 오류:', error);
+                    alert('포인트 업데이트 중 오류가 발생했습니다.');
+                }
+            };
         }
     </script>
 </body>

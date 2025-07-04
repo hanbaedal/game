@@ -1163,6 +1163,19 @@ app.delete('/api/board/:id', async (req, res) => {
     }
 });
 
+// 댓글 목록 조회 (조회수 증가 없음)
+app.get('/api/comments/:boardId', async (req, res) => {
+    try {
+        const { boardId } = req.params;
+        
+        const comments = await Comment.find({ boardId }).sort({ createdAt: 1 });
+        res.json({ comments });
+    } catch (error) {
+        console.error('댓글 목록 조회 오류:', error);
+        res.status(500).json({ error: '서버 오류가 발생했습니다.' });
+    }
+});
+
 // 댓글 작성
 app.post('/api/comment', async (req, res) => {
     try {
@@ -1415,6 +1428,64 @@ app.get('/api/inquiry/:id', async (req, res) => {
         res.json({ inquiry });
     } catch (error) {
         console.error('문의 상세 조회 오류:', error);
+        res.status(500).json({ error: '서버 오류가 발생했습니다.' });
+    }
+});
+
+// 포인트 업데이트 (광고 시청 후)
+app.post('/api/update-points', async (req, res) => {
+    try {
+        const { userId, points } = req.body;
+        
+        if (!userId || !points) {
+            return res.status(400).json({ error: '사용자 ID와 포인트가 필요합니다.' });
+        }
+        
+        const user = await User.findOne({ userId });
+        if (!user) {
+            return res.status(404).json({ error: '사용자를 찾을 수 없습니다.' });
+        }
+        
+        // 포인트 추가
+        user.points += points;
+        await user.save();
+        
+        res.json({ 
+            success: true,
+            message: `${points}포인트가 추가되었습니다.`,
+            points: user.points
+        });
+    } catch (error) {
+        console.error('포인트 업데이트 오류:', error);
+        res.status(500).json({ error: '서버 오류가 발생했습니다.' });
+    }
+});
+
+// 포인트 충전
+app.post('/api/charge-points', async (req, res) => {
+    try {
+        const { userId, points } = req.body;
+        
+        if (!userId || !points) {
+            return res.status(400).json({ error: '사용자 ID와 포인트가 필요합니다.' });
+        }
+        
+        const user = await User.findOne({ userId });
+        if (!user) {
+            return res.status(404).json({ error: '사용자를 찾을 수 없습니다.' });
+        }
+        
+        // 포인트 추가
+        user.points += points;
+        await user.save();
+        
+        res.json({ 
+            success: true,
+            message: `${points}포인트가 충전되었습니다.`,
+            points: user.points
+        });
+    } catch (error) {
+        console.error('포인트 충전 오류:', error);
         res.status(500).json({ error: '서버 오류가 발생했습니다.' });
     }
 });
