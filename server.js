@@ -1058,10 +1058,21 @@ app.get('/api/board', async (req, res) => {
             .skip(skip)
             .limit(parseInt(limit));
         
+        // 각 게시글의 댓글 수 조회
+        const boardsWithCommentCount = await Promise.all(
+            boards.map(async (board) => {
+                const commentCount = await Comment.countDocuments({ boardId: board._id });
+                return {
+                    ...board.toObject(),
+                    commentCount
+                };
+            })
+        );
+        
         const total = await Board.countDocuments(query);
         
         res.json({
-            boards,
+            boards: boardsWithCommentCount,
             total,
             page: parseInt(page),
             totalPages: Math.ceil(total / limit)
@@ -1077,6 +1088,7 @@ app.get('/api/board/:id', async (req, res) => {
     try {
         const { id } = req.params;
         
+        // 조회수 증가는 실제 상세 조회 시에만
         const board = await Board.findByIdAndUpdate(
             id,
             { $inc: { views: 1 } },

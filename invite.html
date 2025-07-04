@@ -430,8 +430,8 @@
                         inputCode: code,
                         memberName: currentUser.name || 'Unknown',
                         memberId: currentUser.userId,
-                        memberPhone: cleanedPhone,
-                        inviterPhone: userInfo?.phone || currentUser?.phone || 'Unknown'
+                        memberPhone: userInfo?.phone || currentUser?.phone || 'Unknown',
+                        inviterPhone: cleanedPhone
                     })
                 });
                 

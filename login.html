@@ -192,10 +192,103 @@
             background-color: #0056b3;
             transform: translateY(-2px);
         }
+
+        /* 로그인 상태 표시 스타일 */
+        .login-status {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+
+        .status-content {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .status-icon {
+            font-size: 48px;
+            color: #007bff;
+        }
+
+        .status-info {
+            flex: 1;
+        }
+
+        .status-info h3 {
+            color: #333;
+            margin-bottom: 5px;
+            font-size: 20px;
+            font-weight: 600;
+        }
+
+        .status-info p {
+            color: #666;
+            font-size: 14px;
+            margin: 0;
+        }
+
+        .logout-button {
+            padding: 10px 20px;
+            background-color: #dc3545;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .logout-button:hover {
+            background-color: #c82333;
+            transform: translateY(-2px);
+        }
+
+        /* 로그인 성공 애니메이션 */
+        .login-success {
+            animation: fadeInUp 0.5s ease-out;
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* 로그인 폼 숨김 애니메이션 */
+        .login-form.hidden {
+            display: none;
+        }
     </style>
 </head>
 <body>
     <div class="container">
+        <!-- 로그인 상태 표시 -->
+        <div id="loginStatus" class="login-status" style="display: none;">
+            <div class="status-content">
+                <i class="fas fa-user-circle status-icon"></i>
+                <div class="status-info">
+                    <h3 id="statusUserName">사용자명</h3>
+                    <p id="statusUserInfo">로그인 정보</p>
+                </div>
+                <button onclick="handleLogout()" class="logout-button">
+                    <i class="fas fa-sign-out-alt"></i> 로그아웃
+                </button>
+            </div>
+        </div>
+
+        <!-- 로그인 폼 -->
         <form id="loginForm" class="login-form" onsubmit="return handleLogin(event)">
             <h2>로그인</h2>
             <div class="input-group">
@@ -225,6 +318,11 @@
     </div>
 
     <script>
+        // 페이지 로드 시 로그인 상태 확인
+        document.addEventListener('DOMContentLoaded', () => {
+            checkLoginStatus();
+        });
+
         function showModal(message) {
             document.getElementById('errorMessage').textContent = message;
             document.getElementById('errorModal').style.display = 'block';
@@ -232,6 +330,97 @@
 
         function closeModal() {
             document.getElementById('errorModal').style.display = 'none';
+        }
+
+        // 로그인 상태 확인 및 표시
+        function checkLoginStatus() {
+            const storedUser = localStorage.getItem('currentUser');
+            const loginStatus = document.getElementById('loginStatus');
+            const loginForm = document.getElementById('loginForm');
+
+            if (storedUser) {
+                try {
+                    const user = JSON.parse(storedUser);
+                    updateLoginStatus(user);
+                    
+                    // 로그인 상태 표시, 폼 숨김
+                    loginStatus.style.display = 'block';
+                    loginForm.classList.add('hidden');
+                    
+                    // 3초 후 자동으로 메인 페이지로 이동
+                    setTimeout(() => {
+                        window.location.href = 'index.html';
+                    }, 3000);
+                } catch (error) {
+                    console.error('사용자 정보 파싱 오류:', error);
+                    localStorage.removeItem('currentUser');
+                }
+            } else {
+                // 로그인 폼 표시, 상태 숨김
+                loginStatus.style.display = 'none';
+                loginForm.classList.remove('hidden');
+            }
+        }
+
+        // 로그인 상태 업데이트
+        function updateLoginStatus(user) {
+            const statusUserName = document.getElementById('statusUserName');
+            const statusUserInfo = document.getElementById('statusUserInfo');
+            const loginStatus = document.getElementById('loginStatus');
+
+            if (user.isGuest) {
+                statusUserName.textContent = '게스트 사용자';
+                statusUserInfo.textContent = '게스트 모드로 로그인되었습니다.';
+            } else {
+                statusUserName.textContent = `${user.name}님 환영합니다!`;
+                statusUserInfo.textContent = `아이디: ${user.userId} | 포인트: ${user.points || 0}P`;
+            }
+
+            // 애니메이션 효과 추가
+            loginStatus.classList.add('login-success');
+        }
+
+        // 로그아웃 처리
+        async function handleLogout() {
+            const storedUser = localStorage.getItem('currentUser');
+            
+            if (storedUser) {
+                try {
+                    const user = JSON.parse(storedUser);
+                    
+                    // 게스트가 아닌 경우 서버에 로그아웃 요청
+                    if (!user.isGuest) {
+                        try {
+                            await fetch('/api/logout', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json'
+                                },
+                                body: JSON.stringify({ userId: user.userId })
+                            });
+                        } catch (error) {
+                            console.error('로그아웃 API 오류:', error);
+                        }
+                    }
+                } catch (error) {
+                    console.error('사용자 정보 파싱 오류:', error);
+                }
+            }
+
+            // 로컬 스토리지에서 사용자 정보 제거
+            localStorage.removeItem('currentUser');
+            
+            // 로그인 폼으로 돌아가기
+            const loginStatus = document.getElementById('loginStatus');
+            const loginForm = document.getElementById('loginForm');
+            
+            loginStatus.style.display = 'none';
+            loginForm.classList.remove('hidden');
+            
+            // 입력 필드 초기화
+            document.getElementById('userId').value = '';
+            document.getElementById('password').value = '';
+            document.getElementById('userId').focus();
         }
 
         async function handleLogin(event) {
@@ -261,12 +450,22 @@
                     if (data.user) {
                         localStorage.setItem('currentUser', JSON.stringify(data.user));
                         console.log('사용자 정보를 로컬 스토리지에 저장:', data.user);
+                        
+                        // 로그인 상태 업데이트
+                        updateLoginStatus(data.user);
+                        
+                        // 로그인 폼 숨기고 상태 표시
+                        const loginStatus = document.getElementById('loginStatus');
+                        const loginForm = document.getElementById('loginForm');
+                        
+                        loginStatus.style.display = 'block';
+                        loginForm.classList.add('hidden');
+                        
+                        // 3초 후 메인 페이지로 이동
+                        setTimeout(() => {
+                            window.location.href = 'index.html';
+                        }, 3000);
                     }
-                    
-                    // 로그인 성공 시 메인 페이지로 이동
-                    setTimeout(() => {
-                        window.location.href = 'index.html';
-                    }, 1500);
                 } else {
                     showModal(data.message || '아이디 또는 비밀번호가 일치하지 않습니다');
                     document.getElementById('password').value = '';
@@ -293,7 +492,19 @@
             };
             
             localStorage.setItem('currentUser', JSON.stringify(guestUser));
-            window.location.href = 'index.html';
+            updateLoginStatus(guestUser);
+            
+            // 로그인 폼 숨기고 상태 표시
+            const loginStatus = document.getElementById('loginStatus');
+            const loginForm = document.getElementById('loginForm');
+            
+            loginStatus.style.display = 'block';
+            loginForm.classList.add('hidden');
+            
+            // 3초 후 메인 페이지로 이동
+            setTimeout(() => {
+                window.location.href = 'index.html';
+            }, 3000);
         }
     </script>
 </body>
