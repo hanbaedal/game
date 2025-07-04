@@ -236,18 +236,43 @@
                 adModal.style.display = 'none';
                 localStorage.setItem('adWatched_' + duration, Date.now().toString());
                 renderAdMenu();
-                // 포인트 지급
-                fetch('/api/update-points', {
+                
+                // 동영상 시청 기록과 포인트 지급을 함께 처리
+                fetch('/api/video-watch-complete', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ userId: currentUser.userId, points })
+                    body: JSON.stringify({ 
+                        userId: currentUser.userId, 
+                        userName: currentUser.name,
+                        points: points,
+                        videoDuration: duration,
+                        videoType: 'advertisement',
+                        videoTitle: `${duration}초 광고 시청`,
+                        watchDate: new Date().toISOString(),
+                        completed: true
+                    })
                 }).then(res => res.json()).then(data => {
                     if (data.success) {
                         currentUser.points = data.points;
                         localStorage.setItem('currentUser', JSON.stringify(currentUser));
+                        console.log('동영상 시청 기록이 저장되었습니다:', data);
                     }
                     // index.html로 이동
                     window.location.href = 'index.html';
+                }).catch(error => {
+                    console.error('동영상 시청 기록 저장 오류:', error);
+                    // 오류가 발생해도 포인트는 지급
+                    fetch('/api/update-points', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ userId: currentUser.userId, points })
+                    }).then(res => res.json()).then(data => {
+                        if (data.success) {
+                            currentUser.points = data.points;
+                            localStorage.setItem('currentUser', JSON.stringify(currentUser));
+                        }
+                        window.location.href = 'index.html';
+                    });
                 });
             }
             // 영상이 끝나면

@@ -448,7 +448,7 @@
                 if (response.ok && data.success) {
                     // 로그인 성공 시 사용자 정보를 로컬 스토리지에 저장
                     if (data.user) {
-                        localStorage.setItem('currentUser', JSON.stringify(data.user));
+                    localStorage.setItem('currentUser', JSON.stringify(data.user));
                         console.log('사용자 정보를 로컬 스토리지에 저장:', data.user);
                         
                         // 로그인 상태 업데이트

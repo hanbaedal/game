@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>경기 관리</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+</head>
+<body class="bg-black text-white">
+    <!-- 상단 네비게이션 -->
+    <header class="flex justify-between items-center px-6 py-4 border-b border-gray-700">
+        <div class="flex items-center space-x-3">
+            <a href="index.html" class="cursor-pointer">
+                <img src="/img/logo.png" width="40" height="8" alt="PPADUN 로고">
+            </a>
+            <span class="text-xs font-bold text-red-200">관리자 페이지</span>
+        </div>
+        <div class="flex space-x-6">
+            <div class="text-center cursor-pointer" onclick="location.href='/'">
+                <i class="fas fa-home text-2xl"></i>
+                <p class="text-[0.4rem] mt-1">홈</p>
+            </div>
+        </div>
+    </header>
+
+    <!-- 메인 컨테이너 -->
+    <main class="p-4">
+        <div class="bg-gray-800 max-w-4xl mx-auto p-6 rounded-lg">
+            <h2 class="text-xl font-bold mb-6">오늘의 경기 관리</h2>
+            
+            <!-- 경기 추가 폼 -->
+            <div class="mb-8 p-4 bg-gray-700 rounded-lg">
+                <h3 class="text-lg font-bold mb-4">새 경기 추가</h3>
+                <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
+                    <div>
+                        <label class="block text-sm font-bold mb-2">경기 번호</label>
+                        <select id="gameNumber" class="w-full p-2 rounded bg-gray-600 text-white">
+                            <option value="1">1경기</option>
+                            <option value="2">2경기</option>
+                            <option value="3">3경기</option>
+                            <option value="4">4경기</option>
+                            <option value="5">5경기</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-bold mb-2">홈팀</label>
+                        <input type="text" id="homeTeam" class="w-full p-2 rounded bg-gray-600 text-white" placeholder="홈팀명">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-bold mb-2">원정팀</label>
+                        <input type="text" id="awayTeam" class="w-full p-2 rounded bg-gray-600 text-white" placeholder="원정팀명">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-bold mb-2">경기 시간</label>
+                        <input type="time" id="gameTime" class="w-full p-2 rounded bg-gray-600 text-white">
+                    </div>
+                    <div class="flex items-end">
+                        <button onclick="addGame()" class="w-full bg-blue-500 hover:bg-blue-600 px-4 py-2 rounded">
+                            경기 추가
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 경기 목록 -->
+            <div>
+                <h3 class="text-lg font-bold mb-4">오늘의 경기 목록</h3>
+                <div id="gamesList" class="space-y-3">
+                    <!-- 경기 목록이 여기에 동적으로 추가됨 -->
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- 경기 상태 변경 모달 -->
+    <div id="statusModal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center z-50">
+        <div class="bg-gray-800 p-6 rounded-lg max-w-sm w-full mx-4">
+            <h3 class="text-lg font-bold mb-4">경기 상태 변경</h3>
+            <div class="space-y-3">
+                <button onclick="updateGameStatus('before')" class="w-full bg-yellow-500 hover:bg-yellow-600 text-black px-4 py-2 rounded">
+                    경기전
+                </button>
+                <button onclick="updateGameStatus('during')" class="w-full bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded">
+                    경기중
+                </button>
+                <button onclick="updateGameStatus('after')" class="w-full bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded">
+                    경기후
+                </button>
+                <button onclick="closeStatusModal()" class="w-full bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded">
+                    취소
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentGameNumber = null;
+
+        // 페이지 로드 시 초기화
+        document.addEventListener('DOMContentLoaded', () => {
+            loadGames();
+        });
+
+        // 경기 목록 로드
+        async function loadGames() {
+            const gamesList = document.getElementById('gamesList');
+            
+            try {
+                // 로딩 상태 표시
+                gamesList.innerHTML = '<div class="text-center text-gray-400 py-4">경기 정보를 불러오는 중...</div>';
+                
+                const response = await fetch('/api/daily-games');
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                
+                gamesList.innerHTML = '';
+                
+                if (data.games && data.games.length > 0) {
+                    data.games.forEach(game => {
+                        const gameItem = document.createElement('div');
+                        gameItem.className = `border rounded-lg p-4 ${getGameStatusClass(game.status)}`;
+                        
+                        const statusText = getStatusText(game.status);
+                        
+                        gameItem.innerHTML = `
+                            <div class="flex justify-between items-center">
+                                <div class="flex-1">
+                                    <div class="text-lg font-bold">${game.homeTeam} vs ${game.awayTeam}</div>
+                                    <div class="text-sm text-gray-400">경기 ${game.gameNumber} • ${game.gameTime}</div>
+                                    <div class="text-xs text-gray-500">상태: ${statusText}</div>
+                                </div>
+                                <div class="flex items-center space-x-2">
+                                    <button onclick="openStatusModal(${game.gameNumber})" class="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded text-sm">
+                                        상태 변경
+                                    </button>
+                                    <button onclick="deleteGame(${game.gameNumber})" class="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded text-sm">
+                                        삭제
+                                    </button>
+                                </div>
+                            </div>
+                        `;
+                        gamesList.appendChild(gameItem);
+                    });
+                } else {
+                    gamesList.innerHTML = '<div class="text-center text-gray-400 py-4">오늘의 경기가 없습니다.</div>';
+                }
+            } catch (error) {
+                console.error('경기 정보 로드 중 오류:', error);
+                gamesList.innerHTML = `
+                    <div class="text-center text-red-400 py-4">
+                        <p>경기 정보를 불러오는 중 오류가 발생했습니다.</p>
+                        <p class="text-xs mt-2">${error.message}</p>
+                        <button onclick="loadGames()" class="mt-2 px-4 py-2 bg-blue-500 rounded hover:bg-blue-600">
+                            다시 시도
+                        </button>
+                    </div>
+                `;
+            }
+        }
+
+        // 경기 상태에 따른 CSS 클래스 반환
+        function getGameStatusClass(status) {
+            switch (status) {
+                case 'before':
+                    return 'border-yellow-500 bg-yellow-900 bg-opacity-20';
+                case 'during':
+                    return 'border-green-500 bg-green-900 bg-opacity-20';
+                case 'after':
+                    return 'border-gray-500 bg-gray-600';
+                default:
+                    return 'border-gray-600 bg-gray-700';
+            }
+        }
+
+        // 경기 상태 텍스트 반환
+        function getStatusText(status) {
+            switch (status) {
+                case 'before':
+                    return '경기전';
+                case 'during':
+                    return '경기중';
+                case 'after':
+                    return '경기후';
+                default:
+                    return '알 수 없음';
+            }
+        }
+
+        // 경기 추가
+        async function addGame() {
+            const gameNumber = document.getElementById('gameNumber').value;
+            const homeTeam = document.getElementById('homeTeam').value;
+            const awayTeam = document.getElementById('awayTeam').value;
+            const gameTime = document.getElementById('gameTime').value;
+            
+            if (!homeTeam || !awayTeam || !gameTime) {
+                alert('모든 필드를 입력해주세요.');
+                return;
+            }
+            
+            const today = new Date().toISOString().split('T')[0];
+            
+            try {
+                const response = await fetch('/api/daily-games', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        gameNumber: parseInt(gameNumber),
+                        homeTeam,
+                        awayTeam,
+                        gameDate: today,
+                        gameTime
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.message) {
+                    alert('경기가 추가되었습니다.');
+                    // 폼 초기화
+                    document.getElementById('homeTeam').value = '';
+                    document.getElementById('awayTeam').value = '';
+                    document.getElementById('gameTime').value = '';
+                    // 경기 목록 새로고침
+                    loadGames();
+                } else {
+                    alert(data.error || '경기 추가에 실패했습니다.');
+                }
+            } catch (error) {
+                console.error('경기 추가 오류:', error);
+                alert('경기 추가 중 오류가 발생했습니다.');
+            }
+        }
+
+        // 상태 변경 모달 열기
+        function openStatusModal(gameNumber) {
+            currentGameNumber = gameNumber;
+            document.getElementById('statusModal').style.display = 'flex';
+        }
+
+        // 상태 변경 모달 닫기
+        function closeStatusModal() {
+            document.getElementById('statusModal').style.display = 'none';
+            currentGameNumber = null;
+        }
+
+        // 경기 상태 업데이트
+        async function updateGameStatus(status) {
+            if (!currentGameNumber) {
+                alert('경기 번호가 없습니다.');
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/api/daily-games/${currentGameNumber}/status`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ status })
+                });
+                
+                const data = await response.json();
+                
+                if (data.message) {
+                    alert('경기 상태가 업데이트되었습니다.');
+                    closeStatusModal();
+                    loadGames();
+                } else {
+                    alert(data.error || '상태 업데이트에 실패했습니다.');
+                }
+            } catch (error) {
+                console.error('상태 업데이트 오류:', error);
+                alert('상태 업데이트 중 오류가 발생했습니다.');
+            }
+        }
+
+        // 경기 삭제
+        async function deleteGame(gameNumber) {
+            if (!confirm(`경기 ${gameNumber}을(를) 삭제하시겠습니까?`)) {
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/api/daily-games/${gameNumber}`, {
+                    method: 'DELETE'
+                });
+                
+                if (response.ok) {
+                    alert('경기가 삭제되었습니다.');
+                    loadGames();
+                } else {
+                    const data = await response.json();
+                    alert(data.error || '경기 삭제에 실패했습니다.');
+                }
+            } catch (error) {
+                console.error('경기 삭제 오류:', error);
+                alert('경기 삭제 중 오류가 발생했습니다.');
+            }
+        }
+    </script>
+</body>
+</html> 

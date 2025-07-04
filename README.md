@@ -22,7 +22,7 @@ Node.js와 MongoDB를 사용한 회원 관리 시스템입니다.
 ## Render 배포 가이드
 
 ### 1. Render 계정 생성
-- [Render](https://render.com)에서 계정을 생성하세요.
+   - [Render](https://render.com)에서 계정을 생성하세요.
 
 ### 2. GitHub 저장소 준비
 - 현재 프로젝트를 GitHub 저장소에 업로드하세요.
@@ -110,4 +110,4 @@ npm start
 
 ## 라이선스
 
-ISC License
+ISC License 

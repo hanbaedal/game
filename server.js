@@ -173,12 +173,19 @@ const boardSchema = new mongoose.Schema({
 
 const Board = mongoose.model('Board', boardSchema, 'game-board');
 
-// 포인트 충전 스키마 정의
+// 포인트 충전 스키마 정의 (동영상 광고 시청 포함)
 const chargingSchema = new mongoose.Schema({
     userId: { type: String, required: true },
+    userName: { type: String, required: true },
     amount: { type: Number, required: true },
-    paymentMethod: { type: String, required: true },
+    paymentMethod: { type: String, default: 'video_ad' }, // 'video_ad', 'direct', 'kakao', 'phone' 등
     status: { type: String, enum: ['pending', 'completed', 'failed'], default: 'completed' },
+    // 동영상 광고 관련 필드
+    videoType: { type: String, default: null }, // 'advertisement', 'content' 등
+    videoTitle: { type: String, default: null },
+    videoDuration: { type: Number, default: null }, // 초 단위
+    watchDate: { type: Date, default: null },
+    completed: { type: Boolean, default: true },
     createdAt: { type: Date, default: Date.now }
 });
 
@@ -195,6 +202,8 @@ const inviteSchema = new mongoose.Schema({
 });
 
 const Invite = mongoose.model('Invite', inviteSchema, 'game-invite');
+
+
 
 // 댓글 스키마 정의
 const commentSchema = new mongoose.Schema({
@@ -255,6 +264,21 @@ const gameRecordSchema = new mongoose.Schema({
 });
 
 const GameRecord = mongoose.model('GameRecord', gameRecordSchema, 'game-record');
+
+// 오늘의 경기 스키마 정의
+const dailyGameSchema = new mongoose.Schema({
+    gameNumber: { type: Number, required: true }, // 1~5 경기
+    homeTeam: { type: String, required: true },
+    awayTeam: { type: String, required: true },
+    gameDate: { type: Date, required: true },
+    gameTime: { type: String, required: true },
+    status: { type: String, enum: ['before', 'during', 'after'], default: 'before' }, // 경기전, 경기중, 경기후
+    isActive: { type: Boolean, default: true }, // 선택 가능 여부
+    createdAt: { type: Date, default: Date.now },
+    updatedAt: { type: Date, default: Date.now }
+});
+
+const DailyGame = mongoose.model('DailyGame', dailyGameSchema, 'daily-games');
 
 // API 라우트
 
@@ -1432,6 +1456,77 @@ app.get('/api/inquiry/:id', async (req, res) => {
     }
 });
 
+// 동영상 시청 완료 및 포인트 지급
+app.post('/api/video-watch-complete', async (req, res) => {
+    try {
+        const { 
+            userId, 
+            userName, 
+            points, 
+            videoDuration, 
+            videoType, 
+            videoTitle, 
+            watchDate, 
+            completed 
+        } = req.body;
+        
+        if (!userId || !userName || !points || !videoDuration || !videoType || !videoTitle) {
+            return res.status(400).json({ error: '필수 정보가 누락되었습니다.' });
+        }
+        
+        // 사용자 확인
+        const user = await User.findOne({ userId });
+        if (!user) {
+            return res.status(404).json({ error: '사용자를 찾을 수 없습니다.' });
+        }
+        
+        // 동영상 시청 기록을 game-charging 컬렉션에 저장
+        const chargingRecord = new Charging({
+            userId,
+            userName,
+            amount: points,
+            paymentMethod: 'video_ad',
+            status: 'completed',
+            videoType,
+            videoTitle,
+            videoDuration,
+            watchDate: new Date(watchDate),
+            completed
+        });
+        
+        await chargingRecord.save();
+        
+        // 포인트 추가
+        user.points += points;
+        await user.save();
+        
+        console.log('동영상 시청 기록 저장 완료:', {
+            userId,
+            userName,
+            videoTitle,
+            videoDuration,
+            pointsEarned: points,
+            totalPoints: user.points
+        });
+        
+        res.json({ 
+            success: true,
+            message: `${points}포인트가 추가되었습니다.`,
+            points: user.points,
+            videoWatchRecord: {
+                id: chargingRecord._id,
+                videoTitle,
+                videoDuration,
+                pointsEarned: points,
+                watchDate: chargingRecord.watchDate
+            }
+        });
+    } catch (error) {
+        console.error('동영상 시청 완료 처리 오류:', error);
+        res.status(500).json({ error: '서버 오류가 발생했습니다.' });
+    }
+});
+
 // 포인트 업데이트 (광고 시청 후)
 app.post('/api/update-points', async (req, res) => {
     try {
@@ -1527,6 +1622,496 @@ app.put('/api/users/:userId', async (req, res) => {
     } catch (error) {
         console.error('회원정보 수정 오류:', error);
         res.status(500).json({ error: '서버 오류가 발생했습니다.' });
+    }
+});
+
+// 동영상 시청 기록 조회
+app.get('/api/video-watch', async (req, res) => {
+    try {
+        const { userId, page = 1, limit = 20 } = req.query;
+        
+        // MongoDB 연결 상태 확인
+        if (mongoose.connection.readyState !== 1) {
+            console.log('MongoDB 연결 안됨, 기본 응답 반환');
+            return res.json({ 
+                success: true,
+                records: [],
+                pagination: {
+                    currentPage: 1,
+                    totalPages: 0,
+                    totalRecords: 0
+                },
+                stats: {
+                    totalRecords: 0,
+                    totalCompleted: 0,
+                    totalPointsEarned: 0,
+                    avgWatchDuration: 0,
+                    uniqueMembers: 0
+                }
+            });
+        }
+        
+        let query = { paymentMethod: 'video_ad' }; // 동영상 광고 시청만 필터링
+        if (userId) {
+            query.userId = userId;
+        }
+        
+        // 전체 레코드 수 계산
+        const totalRecords = await Charging.countDocuments(query);
+        
+        // 페이지네이션 적용
+        const skip = (page - 1) * limit;
+        const records = await Charging.find(query)
+            .sort({ watchDate: -1, createdAt: -1 })
+            .skip(skip)
+            .limit(parseInt(limit));
+        
+        // 통계 계산
+        const stats = await Charging.aggregate([
+            { $match: query },
+            {
+                $group: {
+                    _id: null,
+                    totalRecords: { $sum: 1 },
+                    totalCompleted: { $sum: { $cond: ['$completed', 1, 0] } },
+                    totalPointsEarned: { $sum: '$amount' },
+                    avgWatchDuration: { $avg: '$videoDuration' },
+                    uniqueMembers: { $addToSet: '$userId' }
+                }
+            }
+        ]);
+        
+        const statsData = stats[0] || {
+            totalRecords: 0,
+            totalCompleted: 0,
+            totalPointsEarned: 0,
+            avgWatchDuration: 0,
+            uniqueMembers: []
+        };
+        
+        res.json({
+            success: true,
+            records: records,
+            pagination: {
+                currentPage: parseInt(page),
+                totalPages: Math.ceil(totalRecords / limit),
+                totalRecords: totalRecords,
+                hasNext: skip + records.length < totalRecords,
+                hasPrev: page > 1
+            },
+            stats: {
+                totalRecords: statsData.totalRecords,
+                totalCompleted: statsData.totalCompleted,
+                totalPointsEarned: statsData.totalPointsEarned,
+                avgWatchDuration: Math.round(statsData.avgWatchDuration || 0),
+                uniqueMembers: statsData.uniqueMembers.length
+            }
+        });
+    } catch (error) {
+        console.error('동영상 시청 기록 조회 오류:', error);
+        res.status(500).json({ 
+            success: false,
+            message: '동영상 시청 기록을 불러오는데 실패했습니다.',
+            error: error.message 
+        });
+    }
+});
+
+// 오늘의 경기 조회 API
+app.get('/api/daily-games', async (req, res) => {
+    try {
+        // MongoDB 연결 상태 확인
+        if (mongoose.connection.readyState !== 1) {
+            console.log('MongoDB 연결 안됨, 기본 응답 반환');
+            return res.json({ games: [] });
+        }
+        
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        
+        const games = await DailyGame.find({
+            gameDate: {
+                $gte: today,
+                $lt: new Date(today.getTime() + 24 * 60 * 60 * 1000)
+            }
+        }).sort({ gameNumber: 1 });
+        
+        res.json({ games });
+    } catch (error) {
+        console.error('오늘의 경기 조회 오류:', error);
+        res.status(500).json({ error: '서버 오류가 발생했습니다.' });
+    }
+});
+
+// 경기 상태 업데이트 API (관리자용)
+app.put('/api/daily-games/:gameNumber/status', async (req, res) => {
+    try {
+        const { gameNumber } = req.params;
+        const { status } = req.body;
+        
+        if (!status || !['before', 'during', 'after'].includes(status)) {
+            return res.status(400).json({ error: '유효하지 않은 상태입니다.' });
+        }
+        
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        
+        const game = await DailyGame.findOneAndUpdate(
+            {
+                gameNumber: parseInt(gameNumber),
+                gameDate: {
+                    $gte: today,
+                    $lt: new Date(today.getTime() + 24 * 60 * 60 * 1000)
+                }
+            },
+            { 
+                status,
+                updatedAt: new Date()
+            },
+            { new: true }
+        );
+        
+        if (!game) {
+            return res.status(404).json({ error: '경기를 찾을 수 없습니다.' });
+        }
+        
+        res.json({ 
+            message: '경기 상태가 업데이트되었습니다.',
+            game 
+        });
+    } catch (error) {
+        console.error('경기 상태 업데이트 오류:', error);
+        res.status(500).json({ error: '서버 오류가 발생했습니다.' });
+    }
+});
+
+// 사용자 경기 선택 스키마 정의
+const gameSelectionSchema = new mongoose.Schema({
+    userId: { type: String, required: true },
+    gameNumber: { type: Number, required: true },
+    selectedAt: { type: Date, default: Date.now },
+    gameDate: { type: Date, required: true }
+});
+
+const GameSelection = mongoose.model('GameSelection', gameSelectionSchema, 'game-selections');
+
+// 사용자 경기 선택 API
+app.post('/api/game-selection', async (req, res) => {
+    try {
+        const { userId, gameNumber } = req.body;
+        
+        if (!userId || !gameNumber) {
+            return res.status(400).json({ error: '사용자 ID와 경기 번호가 필요합니다.' });
+        }
+        
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        
+        // 같은 날짜에 이미 선택한 경기가 있는지 확인
+        const existingSelection = await GameSelection.findOne({
+            userId,
+            gameDate: {
+                $gte: today,
+                $lt: new Date(today.getTime() + 24 * 60 * 60 * 1000)
+            }
+        });
+        
+        if (existingSelection) {
+            // 기존 선택을 업데이트
+            existingSelection.gameNumber = parseInt(gameNumber);
+            existingSelection.selectedAt = new Date();
+            await existingSelection.save();
+        } else {
+            // 새로운 선택 생성
+            const gameSelection = new GameSelection({
+                userId,
+                gameNumber: parseInt(gameNumber),
+                gameDate: today
+            });
+            await gameSelection.save();
+        }
+        
+        res.json({ 
+            message: '경기가 선택되었습니다.',
+            gameNumber: parseInt(gameNumber)
+        });
+    } catch (error) {
+        console.error('경기 선택 오류:', error);
+        res.status(500).json({ error: '서버 오류가 발생했습니다.' });
+    }
+});
+
+// 사용자 경기 선택 조회 API
+app.get('/api/game-selection/:userId', async (req, res) => {
+    try {
+        const { userId } = req.params;
+        
+        if (!userId) {
+            return res.status(400).json({ error: '사용자 ID가 필요합니다.' });
+        }
+        
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        
+        const selection = await GameSelection.findOne({
+            userId,
+            gameDate: {
+                $gte: today,
+                $lt: new Date(today.getTime() + 24 * 60 * 60 * 1000)
+            }
+        });
+        
+        res.json({ selection });
+    } catch (error) {
+        console.error('경기 선택 조회 오류:', error);
+        res.status(500).json({ error: '서버 오류가 발생했습니다.' });
+    }
+});
+
+// 오늘의 경기 삭제 API (관리자용)
+app.delete('/api/daily-games/:gameNumber', async (req, res) => {
+    try {
+        const { gameNumber } = req.params;
+        
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        
+        const result = await DailyGame.deleteOne({
+            gameNumber: parseInt(gameNumber),
+            gameDate: {
+                $gte: today,
+                $lt: new Date(today.getTime() + 24 * 60 * 60 * 1000)
+            }
+        });
+        
+        if (result.deletedCount === 0) {
+            return res.status(404).json({ error: '경기를 찾을 수 없습니다.' });
+        }
+        
+        res.json({ message: '경기가 삭제되었습니다.' });
+    } catch (error) {
+        console.error('경기 삭제 오류:', error);
+        res.status(500).json({ error: '서버 오류가 발생했습니다.' });
+    }
+});
+
+// 오늘의 경기 생성 API (관리자용)
+app.post('/api/daily-games', async (req, res) => {
+    try {
+        const { gameNumber, homeTeam, awayTeam, gameDate, gameTime } = req.body;
+        
+        if (!gameNumber || !homeTeam || !awayTeam || !gameDate || !gameTime) {
+            return res.status(400).json({ error: '모든 필드를 입력해주세요.' });
+        }
+        
+        // 같은 날짜에 같은 경기 번호가 있는지 확인
+        const existingGame = await DailyGame.findOne({
+            gameNumber: parseInt(gameNumber),
+            gameDate: new Date(gameDate)
+        });
+        
+        if (existingGame) {
+            return res.status(400).json({ error: '이미 존재하는 경기입니다.' });
+        }
+        
+        const game = new DailyGame({
+            gameNumber: parseInt(gameNumber),
+            homeTeam,
+            awayTeam,
+            gameDate: new Date(gameDate),
+            gameTime,
+            status: 'before'
+        });
+        
+        await game.save();
+        
+        res.status(201).json({ 
+            message: '경기가 생성되었습니다.',
+            game 
+        });
+    } catch (error) {
+        console.error('경기 생성 오류:', error);
+        res.status(500).json({ error: '서버 오류가 발생했습니다.' });
+    }
+});
+
+// 배팅 상태 확인 API (게임 클라이언트용)
+app.get('/api/betting/status', async (req, res) => {
+    try {
+        const { date, gameNumber } = req.query;
+        
+        if (!date || !gameNumber) {
+            return res.status(400).json({ 
+                success: false, 
+                message: '날짜와 경기 번호가 필요합니다.' 
+            });
+        }
+        
+        if (!db) {
+            return res.status(503).json({ 
+                success: false, 
+                message: '데이터베이스 연결이 준비되지 않았습니다.' 
+            });
+        }
+        
+        const collection = db.collection('betting-sessions');
+        
+        // 활성 배팅 세션 조회
+        const activeSession = await collection.findOne({
+            date: date,
+            gameNumber: parseInt(gameNumber),
+            status: 'active'
+        });
+        
+        res.json({
+            success: true,
+            isActive: !!activeSession,
+            session: activeSession || null
+        });
+    } catch (error) {
+        console.error('배팅 상태 확인 오류:', error);
+        res.status(500).json({
+            success: false,
+            message: '배팅 상태 확인 중 오류가 발생했습니다.'
+        });
+    }
+});
+
+// 게임에서 배팅 제출 API
+app.post('/api/betting/submit', async (req, res) => {
+    try {
+        const { userId, gameType, prediction, points, date, gameNumber } = req.body;
+        
+        if (!userId || !gameType || !prediction || !points || !date || !gameNumber) {
+            return res.status(400).json({ 
+                success: false, 
+                message: '필수 정보가 누락되었습니다.' 
+            });
+        }
+        
+        if (!db) {
+            return res.status(503).json({ 
+                success: false, 
+                message: '데이터베이스 연결이 준비되지 않았습니다.' 
+            });
+        }
+        
+        const bettingCollection = db.collection('betting-sessions');
+        const userCollection = db.collection('game-member');
+        
+        // 활성 배팅 세션 확인
+        const activeSession = await bettingCollection.findOne({
+            date: date,
+            gameNumber: parseInt(gameNumber),
+            status: 'active'
+        });
+        
+        if (!activeSession) {
+            return res.status(400).json({
+                success: false,
+                message: '현재 배팅이 활성화되지 않았습니다.'
+            });
+        }
+        
+        // 사용자 정보 확인
+        const user = await userCollection.findOne({ userId: userId });
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: '사용자를 찾을 수 없습니다.'
+            });
+        }
+        
+        // 포인트 확인
+        if (user.points < points) {
+            return res.status(400).json({
+                success: false,
+                message: '포인트가 부족합니다.'
+            });
+        }
+        
+        // 배팅 기록 추가
+        const bettingRecord = {
+            date: date,
+            gameNumber: parseInt(gameNumber),
+            gameType: gameType,
+            inning: activeSession.inning,
+            prediction: prediction,
+            points: parseInt(points),
+            betAt: new Date()
+        };
+        
+        await userCollection.updateOne(
+            { userId: userId },
+            { 
+                $push: { bettingHistory: bettingRecord },
+                $inc: { points: -parseInt(points) }
+            }
+        );
+        
+        console.log(`게임 배팅 제출: ${userId} - ${prediction} ${points}포인트`);
+        
+        res.json({
+            success: true,
+            message: '배팅이 완료되었습니다.',
+            remainingPoints: user.points - parseInt(points)
+        });
+    } catch (error) {
+        console.error('배팅 제출 오류:', error);
+        res.status(500).json({
+            success: false,
+            message: '배팅 제출 중 오류가 발생했습니다.'
+        });
+    }
+});
+
+// 브라우저 종료 시 로그아웃 API
+app.post('/api/logout', async (req, res) => {
+    try {
+        const { userId } = req.body;
+        
+        if (!userId) {
+            return res.status(400).json({ 
+                success: false, 
+                message: '사용자 ID가 필요합니다.' 
+            });
+        }
+        
+        // MongoDB 연결 상태 확인
+        if (mongoose.connection.readyState !== 1) {
+            console.log('MongoDB 연결 안됨, 로그아웃 처리 건너뜀');
+            return res.json({
+                success: true,
+                message: '로그아웃되었습니다.'
+            });
+        }
+        
+        const user = await User.findOne({ userId });
+        if (!user) {
+            console.log(`사용자를 찾을 수 없음: ${userId}`);
+            return res.json({
+                success: true,
+                message: '로그아웃되었습니다.'
+            });
+        }
+        
+        // 회원을 로그아웃 상태로 변경
+        user.isLoggedIn = false;
+        user.lastLogoutAt = new Date();
+        user.updatedAt = new Date();
+        await user.save();
+        
+        console.log(`브라우저 종료로 인한 자동 로그아웃: ${userId} (${user.name})`);
+        res.json({
+            success: true,
+            message: '로그아웃되었습니다.'
+        });
+    } catch (error) {
+        console.error('브라우저 종료 로그아웃 오류:', error);
+        res.json({
+            success: true,
+            message: '로그아웃되었습니다.'
+        });
     }
 });
 

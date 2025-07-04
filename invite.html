@@ -39,6 +39,8 @@
         <div class="bg-gray-800 max-w-lg mx-auto p-6 rounded-lg">
             <h2 class="text-xl font-bold mb-6">친구 초대</h2>
             
+
+            
             <!-- 초대 방법 선택 -->
             <div class="space-y-4 mb-6">
                 <h3 class="text-sm font-bold">초대 방법 선택</h3>
@@ -224,16 +226,16 @@
                         inviteItem.className = 'bg-gray-700 p-3 rounded-lg mb-2';
                         inviteItem.innerHTML = `
                             <div class="flex justify-between items-start mb-2">
-                                <div class="flex-1">
+                            <div class="flex-1">
                                     <div class="text-sm font-bold text-blue-300">${invite.memberName || 'N/A'}</div>
                                     <div class="text-xs text-gray-400">ID: ${invite.memberId || 'N/A'}</div>
-                                </div>
-                                <div class="text-xs ${invite.status === 'pending' ? 'text-yellow-400' : 'text-green-400'}">
-                                    ${invite.status === 'pending' ? '대기중' : '완료'}
+                            </div>
+                            <div class="text-xs ${invite.status === 'pending' ? 'text-yellow-400' : 'text-green-400'}">
+                                ${invite.status === 'pending' ? '대기중' : '완료'}
                                 </div>
                             </div>
                             <div class="text-xs text-gray-300 space-y-1">
-                                <div>초대 당한 사람: 전화번호: ${invite.inviterPhone && invite.inviterPhone !== 'Unknown' ? formatPhoneNumber(invite.inviterPhone) : '알 수 없음'}</div>
+                                <div>초대한 친구 전화번호: ${invite.inviterPhone && invite.inviterPhone !== 'Unknown' ? formatPhoneNumber(invite.inviterPhone) : '알 수 없음'}</div>
                                 <div class="text-gray-400">초대일자: ${formatDate(invite.inviteDate)}</div>
                             </div>
                         `;
@@ -460,6 +462,8 @@
             }
         }
 
+
+
         // 숨겨진 카카오톡 공유 버튼
         document.addEventListener('DOMContentLoaded', () => {
             const hiddenButton = document.createElement('button');
@@ -471,7 +475,9 @@
             loadInvites();
             
             // 30초마다 자동 새로고침
-            setInterval(() => loadInvites(), 30000);
+            setInterval(() => {
+                loadInvites();
+            }, 30000);
         });
     </script>
 </body>
