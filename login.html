@@ -239,6 +239,11 @@
             
             const userId = document.getElementById('userId').value;
             const password = document.getElementById('password').value;
+            const loginButton = document.getElementById('loginButton');
+
+            // 로그인 버튼 비활성화
+            loginButton.disabled = true;
+            loginButton.textContent = '로그인 중...';
 
             try {
                 const response = await fetch('/api/login', {
@@ -251,17 +256,29 @@
 
                 const data = await response.json();
                 
-                if (response.ok) {
-                    localStorage.setItem('currentUser', JSON.stringify(data.user));
-                    window.location.href = 'index.html';
+                if (response.ok && data.success) {
+                    // 로그인 성공 시 사용자 정보를 로컬 스토리지에 저장
+                    if (data.user) {
+                        localStorage.setItem('currentUser', JSON.stringify(data.user));
+                        console.log('사용자 정보를 로컬 스토리지에 저장:', data.user);
+                    }
+                    
+                    // 로그인 성공 시 메인 페이지로 이동
+                    setTimeout(() => {
+                        window.location.href = 'index.html';
+                    }, 1500);
                 } else {
-                    showModal(data.error || '아이디 또는 비밀번호가 일치하지 않습니다');
+                    showModal(data.message || '아이디 또는 비밀번호가 일치하지 않습니다');
                     document.getElementById('password').value = '';
                     document.getElementById('password').focus();
                 }
             } catch (error) {
                 console.error('로그인 오류:', error);
                 showModal('로그인 처리 중 오류가 발생했습니다');
+            } finally {
+                // 로그인 버튼 재활성화
+                loginButton.disabled = false;
+                loginButton.textContent = '로그인';
             }
             
             return false;

@@ -137,7 +137,12 @@ const userSchema = new mongoose.Schema({
     favoriteTeam: { type: String, required: true },
     points: { type: Number, default: 3000 },
     attendance: [{ type: String }],
-    createdAt: { type: Date, default: Date.now }
+    isLoggedIn: { type: Boolean, default: false },
+    loginCount: { type: Number, default: 0 },
+    lastLoginAt: { type: Date },
+    lastLogoutAt: { type: Date },
+    createdAt: { type: Date, default: Date.now },
+    updatedAt: { type: Date, default: Date.now }
 });
 
 const User = mongoose.model('User', userSchema, 'game-member');
@@ -269,7 +274,18 @@ app.get('/api/invites', async (req, res) => {
         }
         
         // 특정 사용자가 초대한 데이터만 조회
-        const invites = await Invite.find({ memberId: userId }).sort({ inviteDate: -1 });
+        let invites = await Invite.find({ memberId: userId }).sort({ inviteDate: -1 });
+        
+        // "Unknown" 전화번호를 실제 전화번호로 수정
+        for (let invite of invites) {
+            if (invite.inviterPhone === 'Unknown' && invite.memberId) {
+                const currentUser = await User.findOne({ userId: invite.memberId });
+                if (currentUser && currentUser.phone) {
+                    invite.inviterPhone = currentUser.phone;
+                    await invite.save();
+                }
+            }
+        }
         
         console.log(`사용자 ${userId}의 초대 데이터:`, invites);
         res.json({ invites });
@@ -306,20 +322,36 @@ app.post('/api/invite/verify-code', async (req, res) => {
     try {
         const { phoneNumber, verificationCode, inputCode, memberName, memberId, memberPhone, inviterPhone } = req.body;
         
-        if (!phoneNumber || !verificationCode || !inputCode || !memberName || !memberId || !memberPhone || !inviterPhone) {
+        if (!phoneNumber || !verificationCode || !inputCode || !memberName || !memberId || !memberPhone) {
             return res.status(400).json({ error: '모든 필드를 입력해주세요.' });
         }
         
         if (verificationCode === inputCode) {
+            // 현재 로그인한 사용자의 전화번호를 데이터베이스에서 가져오기
+            let actualInviterPhone = inviterPhone;
+            
+            if (memberId) {
+                const currentUser = await User.findOne({ userId: memberId });
+                if (currentUser && currentUser.phone) {
+                    actualInviterPhone = currentUser.phone;
+                }
+            }
+            
             const invite = new Invite({
                 memberName,
                 memberId,
                 memberPhone,
-                inviterPhone,
+                inviterPhone: actualInviterPhone,
                 status: 'completed'
             });
             
             await invite.save();
+            console.log('초대 데이터 저장됨:', {
+                memberName,
+                memberId,
+                memberPhone,
+                inviterPhone: actualInviterPhone
+            });
             res.json({ message: '인증이 완료되었습니다.' });
         } else {
             res.status(400).json({ error: '인증번호가 올바르지 않습니다.' });
@@ -385,15 +417,84 @@ app.post('/api/register', async (req, res) => {
     }
 });
 
+// 아이디 중복 확인
+app.post('/api/check-id', async (req, res) => {
+    try {
+        const { userId } = req.body;
+        
+        if (!userId) {
+            return res.status(400).json({ 
+                success: false, 
+                available: false, 
+                message: '아이디를 입력해주세요.' 
+            });
+        }
+        
+        // 아이디 길이 검증
+        if (userId.length < 4 || userId.length > 20) {
+            return res.status(400).json({ 
+                success: false, 
+                available: false, 
+                message: '아이디는 4자 이상 20자 이하로 입력해주세요.' 
+            });
+        }
+        
+        const existingUser = await User.findOne({ userId });
+        
+        if (existingUser) {
+            return res.json({ 
+                success: true, 
+                available: false, 
+                message: '이미 사용 중인 아이디입니다.' 
+            });
+        } else {
+            return res.json({ 
+                success: true, 
+                available: true, 
+                message: '사용 가능한 아이디입니다.' 
+            });
+        }
+    } catch (error) {
+        console.error('아이디 중복 확인 오류:', error);
+        res.status(500).json({ 
+            success: false, 
+            available: false, 
+            message: '서버 오류가 발생했습니다.' 
+        });
+    }
+});
+
 // 회원가입 (클라이언트 호환용)
 app.post('/api/users', async (req, res) => {
     try {
-        const { userId, password, name, email, phone, favoriteTeam, regDate } = req.body;
+        const { userId, password, name, email, phone, favoriteTeam } = req.body;
         
-        console.log('회원가입 요청 데이터:', { userId, name, email, phone, favoriteTeam, regDate });
+        console.log('회원가입 요청 데이터:', { userId, name, email, phone, favoriteTeam });
         
         if (!userId || !password || !name || !email || !phone || !favoriteTeam) {
             return res.status(400).json({ error: '모든 필드를 입력해주세요.' });
+        }
+        
+        // 아이디 길이 검증
+        if (userId.length < 4 || userId.length > 20) {
+            return res.status(400).json({ error: '아이디는 4자 이상 20자 이하로 입력해주세요.' });
+        }
+        
+        // 비밀번호 길이 검증
+        if (password.length < 6) {
+            return res.status(400).json({ error: '비밀번호는 6자 이상 입력해주세요.' });
+        }
+        
+        // 이메일 형식 검증
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(email)) {
+            return res.status(400).json({ error: '올바른 이메일 형식을 입력해주세요.' });
+        }
+        
+        // 전화번호 형식 검증 (010-0000-0000 형식)
+        const phoneRegex = /^010-\d{4}-\d{4}$/;
+        if (!phoneRegex.test(phone)) {
+            return res.status(400).json({ error: '올바른 전화번호 형식이 아닙니다. (예: 010-0000-0000)' });
         }
         
         const existingUser = await User.findOne({ userId });
@@ -409,7 +510,11 @@ app.post('/api/users', async (req, res) => {
             phone,
             favoriteTeam,
             points: 3000,
-            createdAt: regDate ? new Date(regDate) : new Date()
+            attendance: [],
+            isLoggedIn: false,
+            loginCount: 0,
+            createdAt: new Date(),
+            updatedAt: new Date()
         });
         
         await user.save();
@@ -427,27 +532,64 @@ app.post('/api/login', async (req, res) => {
         const { userId, password } = req.body;
         
         if (!userId || !password) {
-            return res.status(400).json({ error: 'ID와 비밀번호를 입력해주세요.' });
+            return res.status(400).json({ 
+                success: false,
+                message: 'ID와 비밀번호를 입력해주세요.' 
+            });
         }
         
-        const user = await User.findOne({ userId, password });
+        const user = await User.findOne({ userId });
         
         if (!user) {
-            return res.status(401).json({ error: 'ID 또는 비밀번호가 올바르지 않습니다.' });
+            return res.status(401).json({ 
+                success: false,
+                message: 'ID 또는 비밀번호가 올바르지 않습니다.' 
+            });
         }
         
-        res.json({
-            message: '로그인 성공',
-            user: {
-                userId: user.userId,
-                name: user.name,
-                points: user.points,
-                favoriteTeam: user.favoriteTeam
+        if (user.password !== password) {
+            return res.status(401).json({ 
+                success: false,
+                message: 'ID 또는 비밀번호가 올바르지 않습니다.' 
+            });
+        }
+        
+        // 로그인 정보 업데이트
+        const loginCount = (user.loginCount || 0) + 1;
+        const lastLoginAt = new Date();
+        
+        await User.updateOne(
+            { userId },
+            {
+                $set: {
+                    loginCount: loginCount,
+                    lastLoginAt: lastLoginAt,
+                    isLoggedIn: true,
+                    updatedAt: new Date()
+                }
             }
+        );
+        
+        // 비밀번호 제외하고 회원 정보 반환
+        const { password: _, ...userInfo } = user.toObject();
+        const updatedUserInfo = {
+            ...userInfo,
+            loginCount: loginCount,
+            lastLoginAt: lastLoginAt,
+            isLoggedIn: true
+        };
+        
+        res.json({
+            success: true,
+            message: '로그인이 성공했습니다.',
+            user: updatedUserInfo
         });
     } catch (error) {
         console.error('로그인 오류:', error);
-        res.status(500).json({ error: '서버 오류가 발생했습니다.' });
+        res.status(500).json({ 
+            success: false,
+            message: '서버 오류가 발생했습니다.' 
+        });
     }
 });
 
@@ -463,6 +605,16 @@ app.post('/api/find-id', async (req, res) => {
             });
         }
         
+        // 전화번호 형식 검증 및 정규화
+        const phoneRegex = /^010-\d{4}-\d{4}$/;
+        if (!phoneRegex.test(phone)) {
+            return res.status(400).json({ 
+                success: false, 
+                message: '올바른 전화번호 형식이 아닙니다. (예: 010-0000-0000)' 
+            });
+        }
+        
+        // 이름과 전화번호로 사용자 검색
         const user = await User.findOne({ name, phone });
         if (!user) {
             return res.status(404).json({ 
@@ -497,6 +649,16 @@ app.post('/api/find-password', async (req, res) => {
             });
         }
         
+        // 전화번호 형식 검증
+        const phoneRegex = /^010-\d{4}-\d{4}$/;
+        if (!phoneRegex.test(phone)) {
+            return res.status(400).json({ 
+                success: false, 
+                message: '올바른 전화번호 형식이 아닙니다. (예: 010-0000-0000)' 
+            });
+        }
+        
+        // 아이디, 이름, 전화번호로 사용자 검색
         const user = await User.findOne({ userId, name, phone });
         if (!user) {
             return res.status(404).json({ 
@@ -599,6 +761,156 @@ app.post('/api/attendance', async (req, res) => {
     } catch (error) {
         console.error('출석체크 오류:', error);
         res.status(500).json({ success: false, message: '서버 오류가 발생했습니다.' });
+    }
+});
+
+// 로그아웃
+app.post('/api/logout', async (req, res) => {
+    try {
+        const { userId } = req.body;
+        
+        if (!userId) {
+            return res.status(400).json({
+                success: false,
+                message: '회원 ID가 필요합니다.'
+            });
+        }
+        
+        // 로그아웃 정보 업데이트
+        await User.updateOne(
+            { userId },
+            {
+                $set: {
+                    isLoggedIn: false,
+                    lastLogoutAt: new Date(),
+                    updatedAt: new Date()
+                }
+            }
+        );
+        
+        res.json({
+            success: true,
+            message: '로그아웃되었습니다.'
+        });
+    } catch (error) {
+        console.error('로그아웃 오류:', error);
+        res.status(500).json({
+            success: false,
+            message: '서버 오류가 발생했습니다.'
+        });
+    }
+});
+
+// 회원 로그인 통계 API
+app.get('/api/login-stats', async (req, res) => {
+    try {
+        // 전체 회원 수
+        const totalMembers = await User.countDocuments();
+        
+        // 현재 로그인한 회원 수
+        const onlineMembers = await User.countDocuments({ isLoggedIn: true });
+        
+        // 최근 로그인한 회원들 (24시간 이내)
+        const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+        const recentLoginMembers = await User.find(
+            { lastLoginAt: { $gte: oneDayAgo } },
+            { 
+                userId: 1, 
+                name: 1, 
+                lastLoginAt: 1, 
+                lastLogoutAt: 1,
+                loginCount: 1,
+                isLoggedIn: 1,
+                createdAt: 1
+            }
+        ).sort({ lastLoginAt: -1 });
+        
+        // 로그인한 회원들 (현재 온라인)
+        const onlineMembersList = await User.find(
+            { isLoggedIn: true },
+            { 
+                userId: 1, 
+                name: 1, 
+                lastLoginAt: 1, 
+                lastLogoutAt: 1,
+                loginCount: 1,
+                isLoggedIn: 1,
+                createdAt: 1
+            }
+        ).sort({ lastLoginAt: -1 });
+        
+        res.json({
+            success: true,
+            stats: {
+                totalMembers: totalMembers,
+                onlineMembers: onlineMembers,
+                recentLoginMembers: recentLoginMembers,
+                onlineMembersList: onlineMembersList
+            }
+        });
+    } catch (error) {
+        console.error('로그인 통계 조회 오류:', error);
+        res.status(500).json({
+            success: false,
+            message: '서버 오류가 발생했습니다.'
+        });
+    }
+});
+
+// 강제 로그아웃 API
+app.post('/api/force-logout/:userId', async (req, res) => {
+    try {
+        const { userId } = req.params;
+        
+        if (!userId) {
+            return res.status(400).json({
+                success: false,
+                message: '회원 ID가 필요합니다.'
+            });
+        }
+        
+        // 회원을 강제 로그아웃 상태로 변경
+        const result = await User.updateOne(
+            { userId },
+            { 
+                $set: { 
+                    isLoggedIn: false,
+                    lastLogoutAt: new Date(),
+                    updatedAt: new Date()
+                } 
+            }
+        );
+        
+        if (result.matchedCount === 0) {
+            return res.status(404).json({
+                success: false,
+                message: '해당 회원을 찾을 수 없습니다.'
+            });
+        }
+        
+        // 로그아웃된 회원 정보 조회
+        const loggedOutUser = await User.findOne(
+            { userId },
+            { 
+                userId: 1, 
+                name: 1, 
+                lastLoginAt: 1, 
+                lastLogoutAt: 1,
+                isLoggedIn: 1
+            }
+        );
+        
+        res.json({
+            success: true,
+            message: '강제 로그아웃이 완료되었습니다.',
+            loggedOutUser: loggedOutUser
+        });
+    } catch (error) {
+        console.error('강제 로그아웃 오류:', error);
+        res.status(500).json({
+            success: false,
+            message: '서버 오류가 발생했습니다.'
+        });
     }
 });
 
@@ -993,6 +1305,8 @@ app.get('/api/user/:userId', async (req, res) => {
         res.json({
             userId: user.userId,
             name: user.name,
+            email: user.email,
+            phone: user.phone,
             points: user.points,
             favoriteTeam: user.favoriteTeam,
             attendance: user.attendance
