@@ -67,14 +67,34 @@
                     <img src="/img/menu3.png" width="50" height="50" alt="배팅 이미지" class="rounded">
                     <div class="flex-1">
                         <p class="text-sm">배팅선택</p>
-                        <select id="bettingSelect" class="w-full p-2 rounded bg-gray-600 text-white"
-                                title="배팅 유형을 선택하세요">
-                            <option value="first">1루</option>
-                            <option value="second">2루</option>
-                            <option value="third">3루</option>
-                            <option value="homerun">홈런</option>
-                            <option value="out">아웃</option>
-                        </select>
+                        <div id="bettingSection" class="space-y-2">
+                            <div class="grid grid-cols-2 gap-2">
+                                <label class="flex items-center space-x-2 cursor-pointer">
+                                    <input type="radio" name="betChoice" value="1base" class="text-blue-500">
+                                    <span class="text-sm">1루</span>
+                                </label>
+                                <label class="flex items-center space-x-2 cursor-pointer">
+                                    <input type="radio" name="betChoice" value="2base" class="text-blue-500">
+                                    <span class="text-sm">2루</span>
+                                </label>
+                                <label class="flex items-center space-x-2 cursor-pointer">
+                                    <input type="radio" name="betChoice" value="3base" class="text-blue-500">
+                                    <span class="text-sm">3루</span>
+                                </label>
+                                <label class="flex items-center space-x-2 cursor-pointer">
+                                    <input type="radio" name="betChoice" value="homerun" class="text-blue-500">
+                                    <span class="text-sm">홈런</span>
+                                </label>
+                                <label class="flex items-center space-x-2 cursor-pointer">
+                                    <input type="radio" name="betChoice" value="strikeout" class="text-blue-500">
+                                    <span class="text-sm">삼진</span>
+                                </label>
+                                <label class="flex items-center space-x-2 cursor-pointer">
+                                    <input type="radio" name="betChoice" value="out" class="text-blue-500">
+                                    <span class="text-sm">아웃</span>
+                                </label>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -82,14 +102,8 @@
                     <img src="/img/menu4.png" width="50" height="50" alt="배팅금액 이미지" class="rounded">
                     <div class="flex-1">
                         <p class="text-sm">배팅포인트</p>
-                        <select id="pointSelect" class="w-full p-2 rounded bg-gray-600 text-white"
-                                title="배팅 포인트를 선택하세요">
-                            <option value="100">100 포인트</option>
-                            <option value="200">200 포인트</option>
-                            <option value="300">300 포인트</option>
-                            <option value="400">400 포인트</option>
-                            <option value="500">500 포인트</option>
-                        </select>
+                        <input type="number" id="betAmount" placeholder="배팅 포인트" 
+                               class="w-full p-2 rounded bg-gray-600 text-white" min="100" max="10000">
                     </div>
                 </div>
 
@@ -100,14 +114,14 @@
                 </p>
                 <p class="text-sm">예상 배당 포인트 : <span id="expectedPoints" class="font-bold">0포인트</span></p>
 
-                <button id="bettingButton" class="flex items-center justify-center space-x-2 w-full py-3 mt-4 bg-yellow-300 text-black font-bold rounded">
+                <button id="betBtn" class="flex items-center justify-center space-x-2 w-full py-3 mt-4 bg-yellow-300 text-black font-bold rounded">
                     <i class="fas fa-user-tie"></i>
                     <span>배팅하기</span>
                 </button>
 
-                <button id="bettingResultButton" class="flex items-center justify-center space-x-2 w-full py-3 mt-2 bg-blue-500 text-white font-bold rounded hidden">
+                <button id="resultBtn" class="flex items-center justify-center space-x-2 w-full py-3 mt-2 bg-blue-500 text-white font-bold rounded hidden">
                     <i class="fas fa-chart-line"></i>
-                    <span>배팅결과</span>
+                    <span>결과 확인</span>
                 </button>
             </div>
 
@@ -220,21 +234,7 @@
         let isBetting = false;
         let currentWinPoints = 0; // 현재 승리 포인트 저장용
 
-        // KBO 예측 승률 데이터
-        const kboOdds = {
-            'first': { success: 280, winRate: 0.28 },    // 28% 성공률 -> 배당률 3.57
-            'second': { success: 180, winRate: 0.18 },   // 18% 성공률 -> 배당률 5.56
-            'third': { success: 120, winRate: 0.12 },    // 12% 성공률 -> 배당률 8.33
-            'homerun': { success: 50, winRate: 0.05 },   // 5% 성공률 -> 배당률 20.0
-            'out': { success: 370, winRate: 0.37 }       // 37% 성공률 -> 배당률 2.70
-        };
 
-        // 배당률 계산 함수
-        function calculateOdds(winRate) {
-            // 배당률 = 1 / 승률
-            // 예: 승률 28%인 경우 -> 1 / 0.28 = 3.57
-            return (1 / winRate).toFixed(2);
-        }
 
         // 페이지 로드 시 사용자 정보 가져오기
         document.addEventListener('DOMContentLoaded', async () => {
@@ -256,10 +256,10 @@
                 document.getElementById('logoutButton').style.display = 'block';
 
                     // 배팅 버튼 이벤트 리스너 추가
-                    document.getElementById('bettingButton').addEventListener('click', handleBetting);
+                    document.getElementById('betBtn').addEventListener('click', handleBetting);
                     
-                    // 배팅 결과 버튼 이벤트 리스너 추가
-                    document.getElementById('bettingResultButton').addEventListener('click', showBettingResult);
+                    // 결과 확인 버튼 이벤트 리스너 추가
+                    document.getElementById('resultBtn').addEventListener('click', showBettingResult);
 
                     // 오늘의 경기 로드
                     await loadDailyGames();
@@ -287,28 +287,85 @@
         function handleBetting() {
             if (isBetting) return; // 이미 배팅 중이면 리턴
 
-            const bettingPoints = parseInt(document.getElementById('pointSelect').value);
-            const bettingType = document.getElementById('bettingSelect').value;
+            // 선택된 배팅 유형 확인
+            const selectedBet = document.querySelector('input[name="betChoice"]:checked');
+            if (!selectedBet) {
+                alert('배팅 유형을 선택해주세요.');
+                return;
+            }
+
+            const betAmount = parseInt(document.getElementById('betAmount').value);
+            if (!betAmount || betAmount < 100) {
+                alert('배팅 포인트를 입력해주세요. (최소 100포인트)');
+                return;
+            }
             
             // 보유 포인트 확인
-            if (currentUser.points < bettingPoints) {
+            if (currentUser.points < betAmount) {
                 alert('보유 포인트가 부족합니다.');
                 return;
             }
 
-            // 배팅 포인트 차감
-            currentUser.points -= bettingPoints;
-            document.getElementById('userPoints').textContent = `${currentUser.points}`;
+            // 현재 날짜와 선택된 경기 정보 가져오기
+            const today = new Date().toISOString().split('T')[0].replace(/-/g, '');
+            const selectedGame = getSelectedGame();
             
-            // localStorage 업데이트
-            localStorage.setItem('currentUser', JSON.stringify(currentUser));
+            if (!selectedGame) {
+                alert('경기를 선택해주세요.');
+                return;
+            }
 
-            // 배팅 버튼 숨기고 결과 버튼 표시
-            document.getElementById('bettingButton').style.display = 'none';
-            document.getElementById('bettingResultButton').style.display = 'block';
-            
-            // 배팅 중 상태로 변경
-            isBetting = true;
+            // 서버로 배팅 데이터 전송
+            fetch('/api/betting/bet', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    date: today,
+                    gameNumber: selectedGame.gameNumber,
+                    memberId: currentUser.userId,
+                    memberName: currentUser.name,
+                    betChoice: selectedBet.value,
+                    betAmount: betAmount
+                })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    // 배팅 포인트 차감
+                    currentUser.points -= betAmount;
+                    document.getElementById('userPoints').textContent = `${currentUser.points}`;
+                    
+                    // localStorage 업데이트
+                    localStorage.setItem('currentUser', JSON.stringify(currentUser));
+
+                    // 배팅 버튼 숨기고 결과 버튼 표시
+                    document.getElementById('betBtn').style.display = 'none';
+                    document.getElementById('resultBtn').style.display = 'block';
+                    
+                    // 배팅 중 상태로 변경
+                    isBetting = true;
+                    
+                    alert('배팅이 완료되었습니다!');
+                } else {
+                    alert('배팅 실패: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('배팅 오류:', error);
+                alert('배팅 중 오류가 발생했습니다.');
+            });
+        }
+
+        // 선택된 경기 정보 가져오기
+        function getSelectedGame() {
+            const selectedGameElement = document.querySelector('.game-item.selected');
+            if (selectedGameElement) {
+                const gameNumber = selectedGameElement.dataset.gameNumber;
+                const homeTeam = selectedGameElement.dataset.homeTeam;
+                const awayTeam = selectedGameElement.dataset.awayTeam;
+                return { gameNumber, homeTeam, awayTeam };
+            }
+            return null;
         }
 
         // 배팅 결과 표시 함수
@@ -316,59 +373,44 @@
             if (!isBetting) return;
             
             try {
-                const bettingPoints = parseInt(document.getElementById('pointSelect').value);
-                const bettingType = document.getElementById('bettingSelect').value;
-                
-                const response = await fetch('/api/bet', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        userId: currentUser.userId,
-                        bettingPoints: bettingPoints,
-                        matchId: 'default_match',
-                        gameType: 'default_game',
-                        bettingType: bettingType
-                    })
-                });
-
-                const data = await response.json();
-                
-                if (data.success) {
-                    // 승리: 실패자들의 배팅 금액을 성공자들이 나눠가짐
-                    const totalParticipants = 1000;
-                    const successCount = kboOdds[bettingType].success;
-                    const failCount = totalParticipants - successCount;
-                    const failedBettingAmount = failCount * bettingPoints;
-                    const winPoints = Math.floor(failedBettingAmount / successCount);
-                    
-                    currentWinPoints = winPoints; // 승리 포인트 저장
-                    currentUser.points += winPoints;
-                    
-                    if (currentUser.isGuest) {
-                        showGuestWinModal();
-                    } else {
-                        showDonationModal();
-                        document.getElementById('donationOptions').style.display = 'block';
-                    }
-                } else {
-                    showLoseModal();
-                    // 패배 시 서버에 포인트 업데이트
-                    if (!currentUser.isGuest) {
-                        updateServerPoints(currentUser.points);
-                    }
+                const selectedGame = getSelectedGame();
+                if (!selectedGame) {
+                    alert('선택된 경기가 없습니다.');
+                    return;
                 }
 
-                // 포인트 표시 업데이트
-                document.getElementById('userPoints').textContent = `${currentUser.points}`;
+                const today = new Date().toISOString().split('T')[0].replace(/-/g, '');
                 
-                // localStorage 업데이트
-                localStorage.setItem('currentUser', JSON.stringify(currentUser));
+                // 서버에서 배팅 결과 조회
+                const response = await fetch(`/api/betting/results?date=${today}&gameNumber=${selectedGame.gameNumber}`);
+                const data = await response.json();
+                
+                // 사용자의 배팅 결과 찾기
+                const myResult = data.bets.find(b => b.memberId === currentUser.userId);
+                
+                if (myResult) {
+                    if (myResult.isWinner) {
+                        // 승리 시 포인트 추가
+                        currentUser.points += myResult.winAmount;
+                        document.getElementById('userPoints').textContent = `${currentUser.points}`;
+                        localStorage.setItem('currentUser', JSON.stringify(currentUser));
+                        
+                        if (currentUser.isGuest) {
+                            showGuestWinModal();
+                        } else {
+                            showDonationModal();
+                            document.getElementById('donationOptions').style.display = 'block';
+                        }
+                    } else {
+                        showLoseModal();
+                    }
+                } else {
+                    alert('배팅 내역이 없습니다.');
+                }
 
                 // 배팅 버튼 복원
-                document.getElementById('bettingButton').style.display = 'block';
-                document.getElementById('bettingResultButton').style.display = 'none';
+                document.getElementById('betBtn').style.display = 'block';
+                document.getElementById('resultBtn').style.display = 'none';
                 
                 // 배팅 상태 초기화
                 isBetting = false;
@@ -383,19 +425,18 @@
 
         // 예상 배당금 계산 및 표시 함수
         function updateExpectedPoints() {
-            const selectedPoints = parseInt(document.getElementById('pointSelect').value);
-            const bettingType = document.getElementById('bettingSelect').value;
+            const selectedBet = document.querySelector('input[name="betChoice"]:checked');
+            const bettingPoints = parseInt(document.getElementById('betAmount').value) || 0;
             
-            // 1000명 기준 계산
-            const totalParticipants = 1000;
-            const successCount = kboOdds[bettingType].success;
-            const failCount = totalParticipants - successCount;
+            if (!selectedBet || bettingPoints === 0) {
+                document.getElementById('expectedPoints').textContent = '0';
+                const afterBettingSpan = document.getElementById('afterBettingPoints');
+                afterBettingSpan.style.display = 'none';
+                return;
+            }
             
-            // 실패한 사람들의 총 배팅 금액
-            const failedBettingAmount = failCount * selectedPoints;
-            
-            // 실패한 사람들의 배팅 금액을 성공한 사람들이 나눠가짐
-            const expectedWinPoints = Math.floor(failedBettingAmount / successCount);
+            // 간단한 예상 배당금 계산 (배팅 포인트의 2배)
+            const expectedWinPoints = bettingPoints * 2;
             
             // 예상 배당금 표시
             document.getElementById('expectedPoints').textContent = `${expectedWinPoints}`;
@@ -403,12 +444,14 @@
             // 배팅 후 예상 포인트 표시
             const afterBettingSpan = document.getElementById('afterBettingPoints');
             afterBettingSpan.style.display = 'inline';
-            afterBettingSpan.querySelector('span').textContent = `${currentUser.points - selectedPoints}`;
+            afterBettingSpan.querySelector('span').textContent = `${currentUser.points - bettingPoints}`;
         }
 
-        // 포인트 선택 또는 배팅 유형 변경 시 예상 배당금 업데이트
-        document.getElementById('pointSelect').addEventListener('change', updateExpectedPoints);
-        document.getElementById('bettingSelect').addEventListener('change', updateExpectedPoints);
+        // 배팅 유형 선택 또는 배팅 포인트 변경 시 예상 배당금 업데이트
+        document.querySelectorAll('input[name="betChoice"]').forEach(radio => {
+            radio.addEventListener('change', updateExpectedPoints);
+        });
+        document.getElementById('betAmount').addEventListener('input', updateExpectedPoints);
 
         // 모달 관련 함수들은 그대로 유지
         function showGuestWinModal() {
@@ -647,6 +690,14 @@
                                 </div>
                             </div>
                         `;
+                        
+                        // 선택된 경기인 경우 selected 클래스와 데이터 속성 추가
+                        if (isSelected) {
+                            gameItem.classList.add('selected');
+                            gameItem.dataset.gameNumber = game.gameNumber;
+                            gameItem.dataset.homeTeam = game.homeTeam;
+                            gameItem.dataset.awayTeam = game.awayTeam;
+                        }
                         gameSelectionContainer.appendChild(gameItem);
                     });
                 } else {
