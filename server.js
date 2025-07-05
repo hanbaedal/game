@@ -1,4 +1,7 @@
-require('dotenv').config();
+// 환경 변수 설정 (Render 배포용)
+if (process.env.NODE_ENV !== 'production') {
+    require('dotenv').config();
+}
 const express = require('express');
 const cors = require('cors');
 const mongoose = require('mongoose');
@@ -1720,25 +1723,36 @@ app.get('/api/video-watch', async (req, res) => {
 // 오늘의 경기 조회 API
 app.get('/api/daily-games', async (req, res) => {
     try {
+        console.log('📅 오늘의 경기 조회 요청');
+        
         // MongoDB 연결 상태 확인
         if (mongoose.connection.readyState !== 1) {
-            console.log('MongoDB 연결 안됨, 기본 응답 반환');
+            console.log('❌ MongoDB 연결 안됨, 기본 응답 반환');
             return res.json({ games: [] });
         }
         
         const today = new Date();
         today.setHours(0, 0, 0, 0);
+        const tomorrow = new Date(today.getTime() + 24 * 60 * 60 * 1000);
+        
+        console.log('🔍 조회 조건:', {
+            today: today.toISOString(),
+            tomorrow: tomorrow.toISOString()
+        });
         
         const games = await DailyGame.find({
             gameDate: {
                 $gte: today,
-                $lt: new Date(today.getTime() + 24 * 60 * 60 * 1000)
+                $lt: tomorrow
             }
         }).sort({ gameNumber: 1 });
         
+        console.log(`✅ 오늘의 경기 조회 완료: ${games.length}개 경기`);
+        console.log('📋 경기 목록:', games.map(g => `${g.gameNumber}. ${g.homeTeam} vs ${g.awayTeam}`));
+        
         res.json({ games });
     } catch (error) {
-        console.error('오늘의 경기 조회 오류:', error);
+        console.error('❌ 오늘의 경기 조회 오류:', error);
         res.status(500).json({ error: '서버 오류가 발생했습니다.' });
     }
 });
@@ -1896,6 +1910,8 @@ app.delete('/api/daily-games/:gameNumber', async (req, res) => {
         res.status(500).json({ error: '서버 오류가 발생했습니다.' });
     }
 });
+
+
 
 // 오늘의 경기 생성 API (관리자용)
 app.post('/api/daily-games', async (req, res) => {

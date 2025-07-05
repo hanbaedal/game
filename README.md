@@ -59,25 +59,22 @@ PORT=10000
 - Render 로그에서 오류 메시지 확인
 - 자세한 배포 가이드는 `RENDER_DEPLOYMENT.md` 참조
 
-## 로컬 개발
+## 배포 전 확인사항
 
-### 환경 설정
-1. `.env` 파일 생성:
-```
-NODE_ENV=development
-MONGODB_URI=mongodb://localhost:27017/member-management
-PORT=3000
-```
+### 환경 변수 설정
+Render에서 다음 환경 변수를 설정하세요:
 
-2. 의존성 설치:
-```bash
-npm install
+```
+MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/database?retryWrites=true&w=majority
+NODE_ENV=production
+PORT=10000
 ```
 
-3. 서버 실행:
-```bash
-npm start
-```
+### MongoDB Atlas 설정
+1. MongoDB Atlas에서 클러스터 생성
+2. Database Access에서 사용자 생성
+3. Network Access에서 IP 주소 추가 (0.0.0.0/0)
+4. 연결 문자열 복사하여 MONGODB_URI에 설정
 
 ## API 엔드포인트
 

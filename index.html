@@ -54,12 +54,17 @@
                     <img src="/img/menu2.png" width="50" height="50" alt="게임 이미지" class="rounded">
                     <div class="flex-1">
                         <p class="text-sm">게임선택</p>
-                        <select id="gameTypeSelect" class="w-full p-2 rounded bg-gray-600 text-white"
-                                title="게임 유형을 선택하세요">
-                            <option value="batter">타자</option>
-                            <option value="defense">수비</option>
-                            <option value="pitcher">투수</option>
-                        </select>
+                        <div class="grid grid-cols-3 gap-2 mt-2">
+                            <button id="batterBtn" class="game-type-btn bg-blue-500 hover:bg-blue-600 text-white text-xs py-2 px-3 rounded active" data-type="batter">
+                                타자
+                            </button>
+                            <button id="defenseBtn" class="game-type-btn bg-gray-600 hover:bg-gray-500 text-white text-xs py-2 px-3 rounded" data-type="defense">
+                                수비
+                            </button>
+                            <button id="pitcherBtn" class="game-type-btn bg-gray-600 hover:bg-gray-500 text-white text-xs py-2 px-3 rounded" data-type="pitcher">
+                                투수
+                            </button>
+                        </div>
                     </div>
                 </div>
 
@@ -67,32 +72,26 @@
                     <img src="/img/menu3.png" width="50" height="50" alt="배팅 이미지" class="rounded">
                     <div class="flex-1">
                         <p class="text-sm">배팅선택</p>
-                        <div id="bettingSection" class="space-y-2">
-                            <div class="grid grid-cols-2 gap-2">
-                                <label class="flex items-center space-x-2 cursor-pointer">
-                                    <input type="radio" name="betChoice" value="1base" class="text-blue-500">
-                                    <span class="text-sm">1루</span>
-                                </label>
-                                <label class="flex items-center space-x-2 cursor-pointer">
-                                    <input type="radio" name="betChoice" value="2base" class="text-blue-500">
-                                    <span class="text-sm">2루</span>
-                                </label>
-                                <label class="flex items-center space-x-2 cursor-pointer">
-                                    <input type="radio" name="betChoice" value="3base" class="text-blue-500">
-                                    <span class="text-sm">3루</span>
-                                </label>
-                                <label class="flex items-center space-x-2 cursor-pointer">
-                                    <input type="radio" name="betChoice" value="homerun" class="text-blue-500">
-                                    <span class="text-sm">홈런</span>
-                                </label>
-                                <label class="flex items-center space-x-2 cursor-pointer">
-                                    <input type="radio" name="betChoice" value="strikeout" class="text-blue-500">
-                                    <span class="text-sm">삼진</span>
-                                </label>
-                                <label class="flex items-center space-x-2 cursor-pointer">
-                                    <input type="radio" name="betChoice" value="out" class="text-blue-500">
-                                    <span class="text-sm">아웃</span>
-                                </label>
+                        <div id="bettingSection" class="space-y-2 mt-2">
+                            <div class="grid grid-cols-3 gap-1">
+                                <button class="bet-choice-btn bg-gray-600 hover:bg-gray-500 text-white text-xs py-2 px-2 rounded" data-choice="1base">
+                                    1루
+                                </button>
+                                <button class="bet-choice-btn bg-gray-600 hover:bg-gray-500 text-white text-xs py-2 px-2 rounded" data-choice="2base">
+                                    2루
+                                </button>
+                                <button class="bet-choice-btn bg-gray-600 hover:bg-gray-500 text-white text-xs py-2 px-2 rounded" data-choice="3base">
+                                    3루
+                                </button>
+                                <button class="bet-choice-btn bg-gray-600 hover:bg-gray-500 text-white text-xs py-2 px-2 rounded" data-choice="homerun">
+                                    홈런
+                                </button>
+                                <button class="bet-choice-btn bg-gray-600 hover:bg-gray-500 text-white text-xs py-2 px-2 rounded" data-choice="strikeout">
+                                    삼진
+                                </button>
+                                <button class="bet-choice-btn bg-gray-600 hover:bg-gray-500 text-white text-xs py-2 px-2 rounded" data-choice="out">
+                                    아웃
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -102,8 +101,23 @@
                     <img src="/img/menu4.png" width="50" height="50" alt="배팅금액 이미지" class="rounded">
                     <div class="flex-1">
                         <p class="text-sm">배팅포인트</p>
-                        <input type="number" id="betAmount" placeholder="배팅 포인트" 
-                               class="w-full p-2 rounded bg-gray-600 text-white" min="100" max="10000">
+                        <div class="grid grid-cols-5 gap-1 mt-2">
+                            <button class="bet-amount-btn bg-gray-600 hover:bg-gray-500 text-white text-xs py-2 px-1 rounded" data-amount="100">
+                                100
+                            </button>
+                            <button class="bet-amount-btn bg-gray-600 hover:bg-gray-500 text-white text-xs py-2 px-1 rounded" data-amount="200">
+                                200
+                            </button>
+                            <button class="bet-amount-btn bg-gray-600 hover:bg-gray-500 text-white text-xs py-2 px-1 rounded" data-amount="300">
+                                300
+                            </button>
+                            <button class="bet-amount-btn bg-gray-600 hover:bg-gray-500 text-white text-xs py-2 px-1 rounded" data-amount="400">
+                                400
+                            </button>
+                            <button class="bet-amount-btn bg-gray-600 hover:bg-gray-500 text-white text-xs py-2 px-1 rounded" data-amount="500">
+                                500
+                            </button>
+                        </div>
                     </div>
                 </div>
 
@@ -794,9 +808,69 @@
             }
         }
 
-        // 배팅 버튼 이벤트 리스너 추가
+        // 전역 변수로 선택된 값들 저장
+        let selectedGameType = 'batter'; // 기본값은 타자
+        let selectedBetChoice = '';
+        let selectedBetAmount = 0;
+
+        // 페이지 로드 시 이벤트 리스너 설정
         document.addEventListener('DOMContentLoaded', function() {
-            const bettingButton = document.getElementById('bettingButton');
+            // 게임 타입 버튼 이벤트
+            document.querySelectorAll('.game-type-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    // 모든 게임 타입 버튼 비활성화
+                    document.querySelectorAll('.game-type-btn').forEach(b => {
+                        b.classList.remove('bg-blue-500', 'active');
+                        b.classList.add('bg-gray-600');
+                    });
+                    
+                    // 선택된 버튼 활성화
+                    this.classList.remove('bg-gray-600');
+                    this.classList.add('bg-blue-500', 'active');
+                    
+                    selectedGameType = this.dataset.type;
+                    console.log('선택된 게임 타입:', selectedGameType);
+                });
+            });
+
+            // 배팅 선택 버튼 이벤트
+            document.querySelectorAll('.bet-choice-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    // 모든 배팅 선택 버튼 비활성화
+                    document.querySelectorAll('.bet-choice-btn').forEach(b => {
+                        b.classList.remove('bg-blue-500');
+                        b.classList.add('bg-gray-600');
+                    });
+                    
+                    // 선택된 버튼 활성화
+                    this.classList.remove('bg-gray-600');
+                    this.classList.add('bg-blue-500');
+                    
+                    selectedBetChoice = this.dataset.choice;
+                    console.log('선택된 배팅:', selectedBetChoice);
+                });
+            });
+
+            // 배팅 포인트 버튼 이벤트
+            document.querySelectorAll('.bet-amount-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    // 모든 포인트 버튼 비활성화
+                    document.querySelectorAll('.bet-amount-btn').forEach(b => {
+                        b.classList.remove('bg-blue-500');
+                        b.classList.add('bg-gray-600');
+                    });
+                    
+                    // 선택된 버튼 활성화
+                    this.classList.remove('bg-gray-600');
+                    this.classList.add('bg-blue-500');
+                    
+                    selectedBetAmount = parseInt(this.dataset.amount);
+                    console.log('선택된 포인트:', selectedBetAmount);
+                });
+            });
+
+            // 배팅 버튼 이벤트
+            const bettingButton = document.getElementById('betBtn');
             if (bettingButton) {
                 bettingButton.addEventListener('click', submitBetting);
             }
@@ -843,21 +917,18 @@
         
         // 배팅 활성화
         function enableBetting(session) {
-            const bettingButton = document.getElementById('bettingButton');
-            const gameTypeSelect = document.getElementById('gameTypeSelect');
-            const bettingSelect = document.getElementById('bettingSelect');
-            const pointSelect = document.getElementById('pointSelect');
+            const betBtn = document.getElementById('betBtn');
             
             // 배팅 UI 활성화
-            bettingButton.disabled = false;
-            bettingButton.classList.remove('bg-gray-500');
-            bettingButton.classList.add('bg-yellow-300');
-            bettingButton.innerHTML = '<i class="fas fa-user-tie"></i><span>배팅하기</span>';
+            betBtn.disabled = false;
+            betBtn.classList.remove('bg-gray-500');
+            betBtn.classList.add('bg-yellow-300');
+            betBtn.innerHTML = '<i class="fas fa-user-tie"></i><span>배팅하기</span>';
             
-            // 선택 옵션 활성화
-            gameTypeSelect.disabled = false;
-            bettingSelect.disabled = false;
-            pointSelect.disabled = false;
+            // 버튼들 활성화
+            document.querySelectorAll('.game-type-btn, .bet-choice-btn, .bet-amount-btn').forEach(btn => {
+                btn.disabled = false;
+            });
             
             // 배팅 정보 표시
             console.log('배팅 활성화:', session);
@@ -865,21 +936,18 @@
         
         // 배팅 비활성화
         function disableBetting() {
-            const bettingButton = document.getElementById('bettingButton');
-            const gameTypeSelect = document.getElementById('gameTypeSelect');
-            const bettingSelect = document.getElementById('bettingSelect');
-            const pointSelect = document.getElementById('pointSelect');
+            const betBtn = document.getElementById('betBtn');
             
             // 배팅 UI 비활성화
-            bettingButton.disabled = true;
-            bettingButton.classList.remove('bg-yellow-300');
-            bettingButton.classList.add('bg-gray-500');
-            bettingButton.innerHTML = '<i class="fas fa-clock"></i><span>배팅 대기중...</span>';
+            betBtn.disabled = true;
+            betBtn.classList.remove('bg-yellow-300');
+            betBtn.classList.add('bg-gray-500');
+            betBtn.innerHTML = '<i class="fas fa-clock"></i><span>배팅 대기중...</span>';
             
-            // 선택 옵션 비활성화
-            gameTypeSelect.disabled = true;
-            bettingSelect.disabled = true;
-            pointSelect.disabled = true;
+            // 버튼들 비활성화
+            document.querySelectorAll('.game-type-btn, .bet-choice-btn, .bet-amount-btn').forEach(btn => {
+                btn.disabled = true;
+            });
         }
         
         // 배팅 상태 주기적 확인 시작
@@ -898,16 +966,13 @@
                 return;
             }
             
-            const gameType = document.getElementById('gameTypeSelect').value;
-            const prediction = document.getElementById('bettingSelect').value;
-            const points = parseInt(document.getElementById('pointSelect').value);
-            
-            if (!gameType || !prediction || !points) {
-                alert('모든 항목을 선택해주세요.');
+            // 선택된 값들 확인
+            if (!selectedGameType || !selectedBetChoice || !selectedBetAmount) {
+                alert('게임 타입, 배팅 선택, 포인트를 모두 선택해주세요.');
                 return;
             }
             
-            if (currentUser.points < points) {
+            if (currentUser.points < selectedBetAmount) {
                 alert('포인트가 부족합니다.');
                 return;
             }
@@ -921,9 +986,9 @@
                     },
                     body: JSON.stringify({
                         userId: currentUser.userId,
-                        gameType: gameType,
-                        prediction: prediction,
-                        points: points,
+                        gameType: selectedGameType,
+                        prediction: selectedBetChoice,
+                        points: selectedBetAmount,
                         date: today,
                         gameNumber: 1
                     })
@@ -939,10 +1004,11 @@
                     alert('배팅이 완료되었습니다!');
                     
                     // 배팅 버튼 비활성화
-                    document.getElementById('bettingButton').disabled = true;
-                    document.getElementById('bettingButton').classList.remove('bg-yellow-300');
-                    document.getElementById('bettingButton').classList.add('bg-gray-500');
-                    document.getElementById('bettingButton').innerHTML = '<i class="fas fa-check"></i><span>배팅 완료</span>';
+                    const betBtn = document.getElementById('betBtn');
+                    betBtn.disabled = true;
+                    betBtn.classList.remove('bg-yellow-300');
+                    betBtn.classList.add('bg-gray-500');
+                    betBtn.innerHTML = '<i class="fas fa-check"></i><span>배팅 완료</span>';
                 } else {
                     alert('배팅 실패: ' + result.message);
                 }
