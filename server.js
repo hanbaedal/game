@@ -1949,17 +1949,19 @@ app.get('/api/betting/status', async (req, res) => {
             });
         }
         
-        if (!db) {
+        // MongoDB 연결 상태 확인
+        if (mongoose.connection.readyState !== 1) {
             return res.status(503).json({ 
                 success: false, 
                 message: '데이터베이스 연결이 준비되지 않았습니다.' 
             });
         }
         
-        const collection = db.collection('betting-sessions');
+        // 배팅 세션 컬렉션 사용
+        const bettingCollection = mongoose.connection.db.collection('betting-sessions');
         
         // 활성 배팅 세션 조회
-        const activeSession = await collection.findOne({
+        const activeSession = await bettingCollection.findOne({
             date: date,
             gameNumber: parseInt(gameNumber),
             status: 'active'
@@ -1991,15 +1993,16 @@ app.post('/api/betting/submit', async (req, res) => {
             });
         }
         
-        if (!db) {
+        // MongoDB 연결 상태 확인
+        if (mongoose.connection.readyState !== 1) {
             return res.status(503).json({ 
                 success: false, 
                 message: '데이터베이스 연결이 준비되지 않았습니다.' 
             });
         }
         
-        const bettingCollection = db.collection('betting-sessions');
-        const userCollection = db.collection('game-member');
+        const bettingCollection = mongoose.connection.db.collection('betting-sessions');
+        const userCollection = mongoose.connection.db.collection('game-member');
         
         // 활성 배팅 세션 확인
         const activeSession = await bettingCollection.findOne({
