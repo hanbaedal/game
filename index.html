@@ -252,10 +252,10 @@
 
         // 페이지 로드 시 사용자 정보 가져오기
         document.addEventListener('DOMContentLoaded', async () => {
-            try {
-                // localStorage에서 사용자 정보 확인
-                const storedUser = localStorage.getItem('currentUser');
-                if (storedUser) {
+            // localStorage에서 사용자 정보 확인
+            const storedUser = localStorage.getItem('currentUser');
+            if (storedUser) {
+                try {
                     currentUser = JSON.parse(storedUser);
                     
                     // 사용자 이름 표시 (게스트 여부에 따라 다르게 표시)
@@ -266,29 +266,23 @@
                     document.getElementById('userPoints').textContent = `${currentUser.points}`;
                     
                     // 로그인/로그아웃 버튼 표시 설정
-                document.getElementById('loginButton').style.display = 'none';
-                document.getElementById('logoutButton').style.display = 'block';
-
-                    // 배팅 버튼 이벤트 리스너 추가
-                    document.getElementById('betBtn').addEventListener('click', handleBetting);
-                    
-                    // 결과 확인 버튼 이벤트 리스너 추가
-                    document.getElementById('resultBtn').addEventListener('click', showBettingResult);
-
-                    // 오늘의 경기 로드
-                    await loadDailyGames();
-
-                    // 초기 예상 배당금 계산
-                    updateExpectedPoints();
-                    return;
+                    document.getElementById('loginButton').style.display = 'none';
+                    document.getElementById('logoutButton').style.display = 'block';
+                } catch (error) {
+                    console.error('사용자 정보 파싱 오류:', error);
+                    localStorage.removeItem('currentUser');
+                    currentUser = null;
                 }
-
-                // localStorage에 사용자 정보가 없는 경우 로그인 페이지로 이동
-                window.location.href = '/login.html';
-            } catch (error) {
-                console.error('사용자 정보 로드 실패:', error);
-                window.location.href = '/login.html';
             }
+            
+            // 로그인 상태에 관계없이 기본 UI 설정
+            if (!currentUser) {
+                document.getElementById('loginButton').style.display = 'block';
+                document.getElementById('logoutButton').style.display = 'none';
+            }
+
+            // 오늘의 경기 로드 (로그인 상태에 관계없이)
+            await loadDailyGames();
         });
 
         // 로그아웃 함수
@@ -299,6 +293,13 @@
 
         // 배팅 처리 함수
         function handleBetting() {
+            // 로그인 상태 확인
+            if (!currentUser || !currentUser.userId) {
+                alert('로그인이 필요한 서비스입니다.');
+                window.location.href = '/login.html';
+                return;
+            }
+
             if (isBetting) return; // 이미 배팅 중이면 리턴
 
             // 선택된 배팅 유형 확인
@@ -879,7 +880,7 @@
         // 출석체크 함수
         async function checkAttendance() {
             // 로그인 체크
-            if (!currentUser) {
+            if (!currentUser || !currentUser.userId) {
                 alert('로그인이 필요한 서비스입니다.');
                 window.location.href = '/login.html';
                 return;
@@ -961,8 +962,9 @@
         
         // 배팅 제출 함수
         async function submitBetting() {
-            if (!currentUser || currentUser.isGuest) {
+            if (!currentUser || !currentUser.userId) {
                 alert('로그인이 필요한 서비스입니다.');
+                window.location.href = '/login.html';
                 return;
             }
             

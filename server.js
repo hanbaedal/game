@@ -1,7 +1,4 @@
-// 환경 변수 설정 (Render 배포용)
-if (process.env.NODE_ENV !== 'production') {
-    require('dotenv').config();
-}
+
 const express = require('express');
 const cors = require('cors');
 const mongoose = require('mongoose');
