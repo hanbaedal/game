@@ -1,4 +1,3 @@
-
 const express = require('express');
 const cors = require('cors');
 const mongoose = require('mongoose');
@@ -68,10 +67,12 @@ const createTodayGames = async () => {
     try {
         console.log('🎯 오늘의 경기 데이터 생성 중...');
         
+        // 한국 시간대로 오늘 날짜 계산
         const today = new Date();
-        const todayString = today.getFullYear().toString() + 
-                           String(today.getMonth() + 1).padStart(2, '0') + 
-                           String(today.getDate()).padStart(2, '0');
+        const koreaTime = new Date(today.getTime() + (9 * 60 * 60 * 1000)); // UTC+9
+        const todayString = koreaTime.getFullYear().toString() + 
+                           String(koreaTime.getMonth() + 1).padStart(2, '0') + 
+                           String(koreaTime.getDate()).padStart(2, '0');
         
         // 오늘 경기 데이터가 이미 있는지 확인
         const existingGames = await DailyGame.find({
@@ -1821,10 +1822,12 @@ app.get('/api/daily-games', async (req, res) => {
             return res.json({ games: [] });
         }
         
+        // 한국 시간대로 오늘 날짜 계산
         const today = new Date();
-        const todayString = today.getFullYear().toString() + 
-                           String(today.getMonth() + 1).padStart(2, '0') + 
-                           String(today.getDate()).padStart(2, '0');
+        const koreaTime = new Date(today.getTime() + (9 * 60 * 60 * 1000)); // UTC+9
+        const todayString = koreaTime.getFullYear().toString() + 
+                           String(koreaTime.getMonth() + 1).padStart(2, '0') + 
+                           String(koreaTime.getDate()).padStart(2, '0');
         
         console.log('🔍 조회 조건:', {
             date: todayString
@@ -1855,10 +1858,12 @@ app.put('/api/daily-games/:gameNumber/status', async (req, res) => {
             return res.status(400).json({ error: '게임상황을 입력해주세요.' });
         }
         
+        // 한국 시간대로 오늘 날짜 계산
         const today = new Date();
-        const todayString = today.getFullYear().toString() + 
-                           String(today.getMonth() + 1).padStart(2, '0') + 
-                           String(today.getDate()).padStart(2, '0');
+        const koreaTime = new Date(today.getTime() + (9 * 60 * 60 * 1000)); // UTC+9
+        const todayString = koreaTime.getFullYear().toString() + 
+                           String(koreaTime.getMonth() + 1).padStart(2, '0') + 
+                           String(koreaTime.getDate()).padStart(2, '0');
         
         const game = await DailyGame.findOneAndUpdate(
             {
@@ -1905,10 +1910,12 @@ app.post('/api/game-selection', async (req, res) => {
             return res.status(400).json({ error: '사용자 ID와 경기 번호가 필요합니다.' });
         }
         
+        // 한국 시간대로 오늘 날짜 계산
         const today = new Date();
-        const todayString = today.getFullYear().toString() + 
-                           String(today.getMonth() + 1).padStart(2, '0') + 
-                           String(today.getDate()).padStart(2, '0');
+        const koreaTime = new Date(today.getTime() + (9 * 60 * 60 * 1000)); // UTC+9
+        const todayString = koreaTime.getFullYear().toString() + 
+                           String(koreaTime.getMonth() + 1).padStart(2, '0') + 
+                           String(koreaTime.getDate()).padStart(2, '0');
         
         // 같은 날짜에 이미 선택한 경기가 있는지 확인
         const existingSelection = await GameSelection.findOne({
@@ -1950,10 +1957,12 @@ app.get('/api/game-selection/:userId', async (req, res) => {
             return res.status(400).json({ error: '사용자 ID가 필요합니다.' });
         }
         
+        // 한국 시간대로 오늘 날짜 계산
         const today = new Date();
-        const todayString = today.getFullYear().toString() + 
-                           String(today.getMonth() + 1).padStart(2, '0') + 
-                           String(today.getDate()).padStart(2, '0');
+        const koreaTime = new Date(today.getTime() + (9 * 60 * 60 * 1000)); // UTC+9
+        const todayString = koreaTime.getFullYear().toString() + 
+                           String(koreaTime.getMonth() + 1).padStart(2, '0') + 
+                           String(koreaTime.getDate()).padStart(2, '0');
         
         const selection = await GameSelection.findOne({
             userId,
@@ -1974,10 +1983,12 @@ app.delete('/api/daily-games/:gameNumber', async (req, res) => {
     try {
         const { gameNumber } = req.params;
         
+        // 한국 시간대로 오늘 날짜 계산
         const today = new Date();
-        const todayString = today.getFullYear().toString() + 
-                           String(today.getMonth() + 1).padStart(2, '0') + 
-                           String(today.getDate()).padStart(2, '0');
+        const koreaTime = new Date(today.getTime() + (9 * 60 * 60 * 1000)); // UTC+9
+        const todayString = koreaTime.getFullYear().toString() + 
+                           String(koreaTime.getMonth() + 1).padStart(2, '0') + 
+                           String(koreaTime.getDate()).padStart(2, '0');
         
         const result = await DailyGame.deleteOne({
             number: parseInt(gameNumber),
