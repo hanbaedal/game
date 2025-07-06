@@ -739,7 +739,7 @@
                                     
                                     return `
                                         <div class="game-option p-3 border border-gray-600 rounded-lg hover:bg-gray-700 cursor-pointer ${gameIsSelected ? 'bg-blue-900 border-blue-500' : ''}" 
-                                             onclick="selectGameFromModal(${game.number}, '${game.homeTeam}', '${game.awayTeam}')">
+                                             onclick="${gameIsSelectable ? `selectGameFromModal(${game.number}, '${game.homeTeam}', '${game.awayTeam}')` : 'alert(\'경기중인 경기만 선택할 수 있습니다.\')'}">
                                             <div class="flex justify-between items-center">
                                                 <div class="flex-1">
                                                     <div class="text-sm font-bold">${game.homeTeam} vs ${game.awayTeam}</div>
