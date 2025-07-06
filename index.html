@@ -674,6 +674,9 @@
                 gameSelectionContainer.innerHTML = '';
                 
                 if (data.games && data.games.length > 0) {
+                    // 전체 경기 상태 확인
+                    const allGamesBeforeStart = checkAllGamesStatus(data.games);
+                    
                     // 선택된 경기 찾기
                     const selectedGame = data.games.find(game => userSelection && userSelection.gameNumber === game.number);
                     
@@ -689,33 +692,55 @@
                     const isSelectable = displayGame.isActive && gameStatus.includes('경기중');
                     const isSelected = userSelection && userSelection.gameNumber === displayGame.number;
                     
-                                        dropdownContainer.innerHTML = `
-                        <div class="game-dropdown border border-gray-600 rounded hover:bg-gray-700 cursor-pointer ${isSelected ? 'bg-red-500 text-white' : getGameStatusClass(displayGame)}" onclick="openGameModal()" style="height: 32px; display: flex; align-items: center; padding: 0 12px;">
-                            <div class="flex justify-between items-center w-full">
-                                <div class="flex-1">
-                                    <div class="text-xs font-bold">${displayGame.homeTeam} vs ${displayGame.awayTeam}</div>
-                                    ${isSelected ? '' : `<div class="text-xs text-gray-400">경기 ${displayGame.number} • ${getStatusText(displayGame)}</div>`}
-                                </div>
-                                <div class="flex items-center space-x-2">
-                                    ${!isSelected ? `
-                                        <span class="text-xs px-2 py-1 rounded ${getStatusBadgeClass(displayGame)}">
-                                            ${getGameSituationText(displayGame)}
+                    // 전체 경기가 경기전이면 파란색으로 표시
+                    if (allGamesBeforeStart) {
+                        dropdownContainer.innerHTML = `
+                            <div class="game-dropdown border border-blue-500 bg-blue-900 bg-opacity-20 rounded hover:bg-blue-800 cursor-pointer" onclick="openGameModal()" style="height: 32px; display: flex; align-items: center; padding: 0 12px;">
+                                <div class="flex justify-between items-center w-full">
+                                    <div class="flex-1">
+                                        <div class="text-xs font-bold text-blue-200">아직 경기전입니다.</div>
+                                        <div class="text-xs text-blue-300">경기를 선택해주세요</div>
+                                    </div>
+                                    <div class="flex items-center space-x-2">
+                                        <span class="text-xs px-2 py-1 rounded bg-blue-500 text-white">
+                                            경기전
                                         </span>
-                                        ${isSelectable ? 
-                                            (isSelected ? 
-                                                `<span class="text-xs bg-red-500 text-white px-2 py-1 rounded">선택중</span>` :
-                                                `<span class="text-xs text-blue-500 px-2 py-1">선택가능</span>`
-                                            ) : 
-                                            `<span class="text-xs text-gray-500 px-2 py-1">선택불가</span>`
-                                        }
-                                    ` : ''}
-                                    <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-                                    </svg>
+                                        <svg class="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                                        </svg>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                    `;
+                        `;
+                    } else {
+                        dropdownContainer.innerHTML = `
+                            <div class="game-dropdown border border-gray-600 rounded hover:bg-gray-700 cursor-pointer ${isSelected ? 'bg-red-500 text-white' : getGameStatusClass(displayGame)}" onclick="openGameModal()" style="height: 32px; display: flex; align-items: center; padding: 0 12px;">
+                                <div class="flex justify-between items-center w-full">
+                                    <div class="flex-1">
+                                        <div class="text-xs font-bold">${displayGame.homeTeam} vs ${displayGame.awayTeam}</div>
+                                        ${isSelected ? '' : `<div class="text-xs text-gray-400">경기 ${displayGame.number} • ${getStatusText(displayGame)}</div>`}
+                                    </div>
+                                    <div class="flex items-center space-x-2">
+                                        ${!isSelected ? `
+                                            <span class="text-xs px-2 py-1 rounded ${getStatusBadgeClass(displayGame)}">
+                                                ${getGameSituationText(displayGame)}
+                                            </span>
+                                            ${isSelectable ? 
+                                                (isSelected ? 
+                                                    `<span class="text-xs bg-red-500 text-white px-2 py-1 rounded">선택중</span>` :
+                                                    `<span class="text-xs text-blue-500 px-2 py-1">선택가능</span>`
+                                                ) : 
+                                                `<span class="text-xs text-gray-500 px-2 py-1">선택불가</span>`
+                                            }
+                                        ` : ''}
+                                        <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                                        </svg>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    }
                     
                     // 모달 생성
                     const modal = document.createElement('div');
@@ -732,6 +757,14 @@
                                 </button>
                             </div>
                             <div class="space-y-2">
+                                ${allGamesBeforeStart ? `
+                                    <div class="p-3 border border-blue-500 bg-blue-900 bg-opacity-20 rounded-lg">
+                                        <div class="text-center">
+                                            <div class="text-blue-200 text-sm font-bold mb-1">아직 경기전입니다.</div>
+                                            <div class="text-blue-300 text-xs">모든 경기가 시작되지 않았습니다.</div>
+                                        </div>
+                                    </div>
+                                ` : ''}
                                 ${data.games.map(game => {
                                     const gameStatus = getStatusText(game);
                                     const gameIsSelectable = game.isActive && gameStatus.includes('경기중');
@@ -858,6 +891,25 @@
             else {
                 return `경기중 (${game.startTime})`;
             }
+        }
+
+        // 전체 경기 상태 확인 함수 (1경기부터 5경기 중 하나라도 경기중이 없으면 true)
+        function checkAllGamesStatus(games) {
+            if (!games || games.length === 0) {
+                return true; // 경기가 없으면 경기전으로 간주
+            }
+            
+            // 1경기부터 5경기까지 확인
+            for (let i = 1; i <= 5; i++) {
+                const game = games.find(g => g.number === i);
+                if (game) {
+                    const status = getStatusText(game);
+                    if (status.includes('경기중')) {
+                        return false; // 하나라도 경기중이 있으면 false
+                    }
+                }
+            }
+            return true; // 모든 경기가 경기중이 아니면 true
         }
 
         // 게임 상황 텍스트 반환 (noGame 필드값 그대로)

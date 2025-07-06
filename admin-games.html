@@ -135,6 +135,29 @@
                 gamesList.innerHTML = '';
                 
                 if (data.games && data.games.length > 0) {
+                    // 전체 경기 상태 확인
+                    const allGamesBeforeStart = checkAllGamesStatus(data.games);
+                    
+                    // 전체 경기 상태 알림 표시
+                    if (allGamesBeforeStart) {
+                        const statusAlert = document.createElement('div');
+                        statusAlert.className = 'mb-4 p-4 border border-blue-500 bg-blue-900 bg-opacity-20 rounded-lg';
+                        statusAlert.innerHTML = `
+                            <div class="flex items-center space-x-3">
+                                <div class="text-blue-400">
+                                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                    </svg>
+                                </div>
+                                <div>
+                                    <div class="text-blue-200 font-bold">아직 경기전입니다.</div>
+                                    <div class="text-blue-300 text-sm">1경기부터 5경기 중 하나라도 경기중이 없습니다.</div>
+                                </div>
+                            </div>
+                        `;
+                        gamesList.appendChild(statusAlert);
+                    }
+                    
                     data.games.forEach(game => {
                         const gameItem = document.createElement('div');
                         gameItem.className = `border rounded-lg p-4 ${getGameStatusClass(game.noGame)}`;
@@ -209,6 +232,25 @@
                 default:
                     return noGame || '알 수 없음';
             }
+        }
+
+        // 전체 경기 상태 확인 함수 (1경기부터 5경기 중 하나라도 경기중이 없으면 true)
+        function checkAllGamesStatus(games) {
+            if (!games || games.length === 0) {
+                return true; // 경기가 없으면 경기전으로 간주
+            }
+            
+            // 1경기부터 5경기까지 확인
+            for (let i = 1; i <= 5; i++) {
+                const game = games.find(g => g.number === i);
+                if (game) {
+                    const status = getStatusText(game.noGame);
+                    if (status.includes('경기중')) {
+                        return false; // 하나라도 경기중이 있으면 false
+                    }
+                }
+            }
+            return true; // 모든 경기가 경기중이 아니면 true
         }
 
         // 경기 추가
