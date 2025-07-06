@@ -90,11 +90,14 @@
         <div class="bg-gray-800 p-6 rounded-lg max-w-sm w-full mx-4">
             <h3 class="text-lg font-bold mb-4">경기 상황 변경</h3>
             <div class="space-y-3">
-                <button onclick="updateGameStatus('정상게임')" class="w-full bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded">
-                    정상게임
+                <button onclick="updateGameStatus('정상게임')" class="w-full bg-yellow-500 hover:bg-yellow-600 text-black px-4 py-2 rounded">
+                    경기전
                 </button>
                 <button onclick="updateGameStatus('경기중')" class="w-full bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded">
                     경기중
+                </button>
+                <button onclick="updateGameStatus('경기끝')" class="w-full bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded">
+                    경기 끝
                 </button>
                 <button onclick="updateGameStatus('우천취소')" class="w-full bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded">
                     우천취소
@@ -181,9 +184,11 @@
         function getGameStatusClass(noGame) {
             switch (noGame) {
                 case '정상게임':
-                    return 'border-green-500 bg-green-900 bg-opacity-20';
+                    return 'border-yellow-500 bg-yellow-900 bg-opacity-20';
                 case '경기중':
                     return 'border-blue-500 bg-blue-900 bg-opacity-20';
+                case '경기끝':
+                    return 'border-gray-500 bg-gray-600';
                 case '우천취소':
                     return 'border-red-500 bg-red-900 bg-opacity-20';
                 case '경기연기':
@@ -197,9 +202,11 @@
         function getStatusText(noGame) {
             switch (noGame) {
                 case '정상게임':
-                    return '정상게임';
+                    return '경기전';
                 case '경기중':
                     return '경기중';
+                case '경기끝':
+                    return '경기 끝';
                 case '우천취소':
                     return '우천취소';
                 case '경기연기':

@@ -735,9 +735,11 @@
         function getGameStatusClass(noGame) {
             switch (noGame) {
                 case '정상게임':
-                    return 'border-green-500 bg-green-900 bg-opacity-20';
+                    return 'border-yellow-500 bg-yellow-900 bg-opacity-20';
                 case '경기중':
                     return 'border-blue-500 bg-blue-900 bg-opacity-20';
+                case '경기끝':
+                    return 'border-gray-500 bg-gray-600';
                 case '우천취소':
                     return 'border-red-500 bg-red-900 bg-opacity-20';
                 case '경기연기':
@@ -751,9 +753,11 @@
         function getStatusBadgeClass(noGame) {
             switch (noGame) {
                 case '정상게임':
-                    return 'bg-green-500 text-white';
+                    return 'bg-yellow-500 text-black';
                 case '경기중':
                     return 'bg-blue-500 text-white';
+                case '경기끝':
+                    return 'bg-gray-500 text-white';
                 case '우천취소':
                     return 'bg-red-500 text-white';
                 case '경기연기':
@@ -767,9 +771,11 @@
         function getStatusText(noGame) {
             switch (noGame) {
                 case '정상게임':
-                    return '정상게임';
+                    return '경기전';
                 case '경기중':
                     return '경기중';
+                case '경기끝':
+                    return '경기 끝';
                 case '우천취소':
                     return '우천취소';
                 case '경기연기':
