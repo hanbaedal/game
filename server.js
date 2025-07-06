@@ -69,14 +69,13 @@ const createTodayGames = async () => {
         console.log('🎯 오늘의 경기 데이터 생성 중...');
         
         const today = new Date();
-        today.setHours(0, 0, 0, 0);
+        const todayString = today.getFullYear().toString() + 
+                           String(today.getMonth() + 1).padStart(2, '0') + 
+                           String(today.getDate()).padStart(2, '0');
         
         // 오늘 경기 데이터가 이미 있는지 확인
         const existingGames = await DailyGame.find({
-            gameDate: {
-                $gte: today,
-                $lt: new Date(today.getTime() + 24 * 60 * 60 * 1000)
-            }
+            date: todayString
         });
         
         if (existingGames.length > 0) {
@@ -84,47 +83,57 @@ const createTodayGames = async () => {
             return;
         }
         
-        // 오늘의 경기 데이터 생성
+        // 오늘의 경기 데이터 생성 (사용자 제공 데이터 기반)
         const todayGames = [
             {
-                gameNumber: 1,
-                homeTeam: '두산',
-                awayTeam: 'LG',
-                gameDate: today,
-                gameTime: '18:30',
-                status: 'before'
-            },
-            {
-                gameNumber: 2,
-                homeTeam: '삼성',
-                awayTeam: 'KT',
-                gameDate: today,
-                gameTime: '18:30',
-                status: 'during'
-            },
-            {
-                gameNumber: 3,
+                number: 1,
                 homeTeam: '키움',
-                awayTeam: 'SSG',
-                gameDate: today,
-                gameTime: '18:30',
-                status: 'after'
+                awayTeam: '한화',
+                date: todayString,
+                startTime: '14:00',
+                endTime: '18:00',
+                noGame: '정상게임',
+                isActive: true
             },
             {
-                gameNumber: 4,
-                homeTeam: '한화',
+                number: 2,
+                homeTeam: '두산',
+                awayTeam: 'KT',
+                date: todayString,
+                startTime: '18:00',
+                endTime: '01:00',
+                noGame: '정상게임',
+                isActive: true
+            },
+            {
+                number: 3,
+                homeTeam: '삼성',
+                awayTeam: 'LG',
+                date: todayString,
+                startTime: '18:00',
+                endTime: '20:00',
+                noGame: '정상게임',
+                isActive: true
+            },
+            {
+                number: 4,
+                homeTeam: 'KIA',
                 awayTeam: '롯데',
-                gameDate: today,
-                gameTime: '18:30',
-                status: 'before'
+                date: todayString,
+                startTime: '18:00',
+                endTime: '01:00',
+                noGame: '정상게임',
+                isActive: true
             },
             {
-                gameNumber: 5,
+                number: 5,
                 homeTeam: 'NC',
-                awayTeam: 'KIA',
-                gameDate: today,
-                gameTime: '18:30',
-                status: 'before'
+                awayTeam: 'SSG',
+                date: todayString,
+                startTime: '18:00',
+                endTime: '22:00',
+                noGame: '정상게임',
+                isActive: true
             }
         ];
         
@@ -133,7 +142,7 @@ const createTodayGames = async () => {
         
         // 생성된 경기 목록 출력
         createdGames.forEach(game => {
-            console.log(`   ${game.gameNumber}. ${game.homeTeam} vs ${game.awayTeam} (${game.status})`);
+            console.log(`   ${game.number}. ${game.homeTeam} vs ${game.awayTeam} (${game.noGame})`);
         });
         
     } catch (error) {
@@ -350,13 +359,14 @@ const GameRecord = mongoose.model('GameRecord', gameRecordSchema, 'game-record')
 
 // 오늘의 경기 스키마 정의
 const dailyGameSchema = new mongoose.Schema({
-    gameNumber: { type: Number, required: true }, // 1~5 경기
-    homeTeam: { type: String, required: true },
-    awayTeam: { type: String, required: true },
-    gameDate: { type: Date, required: true },
-    gameTime: { type: String, required: true },
-    status: { type: String, enum: ['before', 'during', 'after'], default: 'before' }, // 경기전, 경기중, 경기후
-    isActive: { type: Boolean, default: true }, // 선택 가능 여부
+    number: { type: Number, required: true }, // 경기 번호
+    homeTeam: { type: String, required: true }, // 홈팀
+    awayTeam: { type: String, required: true }, // 원정팀
+    date: { type: String, required: true }, // 날짜 (YYYYMMDD 형식)
+    startTime: { type: String, required: true }, // 시작 시간
+    endTime: { type: String, required: true }, // 종료 시간
+    noGame: { type: String, required: true }, // 게임상황 (정상게임, 우천취소 등)
+    isActive: { type: Boolean, default: true }, // 활성화 여부
     createdAt: { type: Date, default: Date.now },
     updatedAt: { type: Date, default: Date.now }
 });
@@ -1812,23 +1822,21 @@ app.get('/api/daily-games', async (req, res) => {
         }
         
         const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        const tomorrow = new Date(today.getTime() + 24 * 60 * 60 * 1000);
+        const todayString = today.getFullYear().toString() + 
+                           String(today.getMonth() + 1).padStart(2, '0') + 
+                           String(today.getDate()).padStart(2, '0');
         
         console.log('🔍 조회 조건:', {
-            today: today.toISOString(),
-            tomorrow: tomorrow.toISOString()
+            date: todayString
         });
         
         const games = await DailyGame.find({
-            gameDate: {
-                $gte: today,
-                $lt: tomorrow
-            }
-        }).sort({ gameNumber: 1 });
+            date: todayString,
+            isActive: true
+        }).sort({ number: 1 });
         
         console.log(`✅ 오늘의 경기 조회 완료: ${games.length}개 경기`);
-        console.log('📋 경기 목록:', games.map(g => `${g.gameNumber}. ${g.homeTeam} vs ${g.awayTeam}`));
+        console.log('📋 경기 목록:', games.map(g => `${g.number}. ${g.homeTeam} vs ${g.awayTeam} (${g.noGame})`));
         
         res.json({ games });
     } catch (error) {
@@ -1841,25 +1849,24 @@ app.get('/api/daily-games', async (req, res) => {
 app.put('/api/daily-games/:gameNumber/status', async (req, res) => {
     try {
         const { gameNumber } = req.params;
-        const { status } = req.body;
+        const { noGame } = req.body;
         
-        if (!status || !['before', 'during', 'after'].includes(status)) {
-            return res.status(400).json({ error: '유효하지 않은 상태입니다.' });
+        if (!noGame) {
+            return res.status(400).json({ error: '게임상황을 입력해주세요.' });
         }
         
         const today = new Date();
-        today.setHours(0, 0, 0, 0);
+        const todayString = today.getFullYear().toString() + 
+                           String(today.getMonth() + 1).padStart(2, '0') + 
+                           String(today.getDate()).padStart(2, '0');
         
         const game = await DailyGame.findOneAndUpdate(
             {
-                gameNumber: parseInt(gameNumber),
-                gameDate: {
-                    $gte: today,
-                    $lt: new Date(today.getTime() + 24 * 60 * 60 * 1000)
-                }
+                number: parseInt(gameNumber),
+                date: todayString
             },
             { 
-                status,
+                noGame,
                 updatedAt: new Date()
             },
             { new: true }
@@ -1870,11 +1877,11 @@ app.put('/api/daily-games/:gameNumber/status', async (req, res) => {
         }
         
         res.json({ 
-            message: '경기 상태가 업데이트되었습니다.',
+            message: '경기 상황이 업데이트되었습니다.',
             game 
         });
     } catch (error) {
-        console.error('경기 상태 업데이트 오류:', error);
+        console.error('경기 상황 업데이트 오류:', error);
         res.status(500).json({ error: '서버 오류가 발생했습니다.' });
     }
 });
@@ -1884,7 +1891,7 @@ const gameSelectionSchema = new mongoose.Schema({
     userId: { type: String, required: true },
     gameNumber: { type: Number, required: true },
     selectedAt: { type: Date, default: Date.now },
-    gameDate: { type: Date, required: true }
+    gameDate: { type: String, required: true } // YYYYMMDD 형식
 });
 
 const GameSelection = mongoose.model('GameSelection', gameSelectionSchema, 'game-selections');
@@ -1899,15 +1906,14 @@ app.post('/api/game-selection', async (req, res) => {
         }
         
         const today = new Date();
-        today.setHours(0, 0, 0, 0);
+        const todayString = today.getFullYear().toString() + 
+                           String(today.getMonth() + 1).padStart(2, '0') + 
+                           String(today.getDate()).padStart(2, '0');
         
         // 같은 날짜에 이미 선택한 경기가 있는지 확인
         const existingSelection = await GameSelection.findOne({
             userId,
-            gameDate: {
-                $gte: today,
-                $lt: new Date(today.getTime() + 24 * 60 * 60 * 1000)
-            }
+            gameDate: todayString
         });
         
         if (existingSelection) {
@@ -1920,7 +1926,7 @@ app.post('/api/game-selection', async (req, res) => {
             const gameSelection = new GameSelection({
                 userId,
                 gameNumber: parseInt(gameNumber),
-                gameDate: today
+                gameDate: todayString
             });
             await gameSelection.save();
         }
@@ -1945,14 +1951,13 @@ app.get('/api/game-selection/:userId', async (req, res) => {
         }
         
         const today = new Date();
-        today.setHours(0, 0, 0, 0);
+        const todayString = today.getFullYear().toString() + 
+                           String(today.getMonth() + 1).padStart(2, '0') + 
+                           String(today.getDate()).padStart(2, '0');
         
         const selection = await GameSelection.findOne({
             userId,
-            gameDate: {
-                $gte: today,
-                $lt: new Date(today.getTime() + 24 * 60 * 60 * 1000)
-            }
+            gameDate: todayString
         });
         
         res.json({ selection });
@@ -1970,14 +1975,13 @@ app.delete('/api/daily-games/:gameNumber', async (req, res) => {
         const { gameNumber } = req.params;
         
         const today = new Date();
-        today.setHours(0, 0, 0, 0);
+        const todayString = today.getFullYear().toString() + 
+                           String(today.getMonth() + 1).padStart(2, '0') + 
+                           String(today.getDate()).padStart(2, '0');
         
         const result = await DailyGame.deleteOne({
-            gameNumber: parseInt(gameNumber),
-            gameDate: {
-                $gte: today,
-                $lt: new Date(today.getTime() + 24 * 60 * 60 * 1000)
-            }
+            number: parseInt(gameNumber),
+            date: todayString
         });
         
         if (result.deletedCount === 0) {
@@ -1998,16 +2002,16 @@ app.delete('/api/daily-games/:gameNumber', async (req, res) => {
 // 오늘의 경기 생성 API (관리자용)
 app.post('/api/daily-games', async (req, res) => {
     try {
-        const { gameNumber, homeTeam, awayTeam, gameDate, gameTime } = req.body;
+        const { number, homeTeam, awayTeam, date, startTime, endTime, noGame, isActive } = req.body;
         
-        if (!gameNumber || !homeTeam || !awayTeam || !gameDate || !gameTime) {
+        if (!number || !homeTeam || !awayTeam || !date || !startTime || !endTime || !noGame) {
             return res.status(400).json({ error: '모든 필드를 입력해주세요.' });
         }
         
         // 같은 날짜에 같은 경기 번호가 있는지 확인
         const existingGame = await DailyGame.findOne({
-            gameNumber: parseInt(gameNumber),
-            gameDate: new Date(gameDate)
+            number: parseInt(number),
+            date: date
         });
         
         if (existingGame) {
@@ -2015,12 +2019,14 @@ app.post('/api/daily-games', async (req, res) => {
         }
         
         const game = new DailyGame({
-            gameNumber: parseInt(gameNumber),
+            number: parseInt(number),
             homeTeam,
             awayTeam,
-            gameDate: new Date(gameDate),
-            gameTime,
-            status: 'before'
+            date: date,
+            startTime,
+            endTime,
+            noGame,
+            isActive: isActive !== undefined ? isActive : true
         });
         
         await game.save();

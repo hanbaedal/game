@@ -44,7 +44,7 @@
                     <img src="/img/menu1.png" width="50" height="50" alt="경기 이미지" class="rounded">
                     <div class="flex-1">
                         <p class="text-sm">경기선택</p>
-                        <div id="gameSelectionContainer" class="space-y-2">
+                        <div id="gameSelectionContainer" class="flex overflow-x-auto space-x-2 bg-gray-800 rounded p-2 border border-gray-600">
                             <!-- 경기 목록이 여기에 동적으로 추가됨 -->
                         </div>
                     </div>
@@ -676,27 +676,27 @@
                 if (data.games && data.games.length > 0) {
                     data.games.forEach(game => {
                         const gameItem = document.createElement('div');
-                        gameItem.className = `border rounded-lg p-2 ${getGameStatusClass(game.status)}`;
+                        gameItem.className = `game-item border rounded-lg p-2 ${getGameStatusClass(game.noGame)}`;
                         
-                        const statusText = getStatusText(game.status);
-                        const isSelectable = game.status === 'during';
-                        const isSelected = userSelection && userSelection.gameNumber === game.gameNumber;
+                        const statusText = getStatusText(game.noGame);
+                        const isSelectable = game.isActive && (game.noGame === '정상게임' || game.noGame === '경기중');
+                        const isSelected = userSelection && userSelection.gameNumber === game.number;
                         
                         gameItem.innerHTML = `
                             <div class="flex justify-between items-center">
                                 <div class="flex-1">
                                     <div class="text-xs font-bold">${game.homeTeam} vs ${game.awayTeam}</div>
-                                    <div class="text-xs text-gray-400">경기 ${game.gameNumber} • ${game.gameTime}</div>
+                                    <div class="text-xs text-gray-400">경기 ${game.number} • ${game.startTime}~${game.endTime}</div>
                                     ${isSelected ? '<div class="text-xs text-green-400">✓ 선택됨</div>' : ''}
                                 </div>
                                 <div class="flex items-center space-x-2">
-                                    <span class="text-xs px-1 py-1 rounded ${getStatusBadgeClass(game.status)}">
+                                    <span class="text-xs px-1 py-1 rounded ${getStatusBadgeClass(game.noGame)}">
                                         ${statusText}
                                     </span>
                                     ${isSelectable ? 
                                         (isSelected ? 
                                             `<span class="text-xs text-green-500 px-2 py-1">선택됨</span>` :
-                                            `<button onclick="selectGame(${game.gameNumber})" class="bg-blue-500 hover:bg-blue-600 text-white text-xs px-2 py-1 rounded">
+                                            `<button onclick="selectGame(${game.number})" class="bg-blue-500 hover:bg-blue-600 text-white text-xs px-2 py-1 rounded">
                                                 선택
                                             </button>`
                                         ) : 
@@ -709,7 +709,7 @@
                         // 선택된 경기인 경우 selected 클래스와 데이터 속성 추가
                         if (isSelected) {
                             gameItem.classList.add('selected');
-                            gameItem.dataset.gameNumber = game.gameNumber;
+                            gameItem.dataset.gameNumber = game.number;
                             gameItem.dataset.homeTeam = game.homeTeam;
                             gameItem.dataset.awayTeam = game.awayTeam;
                         }
@@ -732,44 +732,50 @@
         }
 
         // 경기 상태에 따른 CSS 클래스 반환
-        function getGameStatusClass(status) {
-            switch (status) {
-                case 'before':
-                    return 'border-yellow-500 bg-yellow-900 bg-opacity-20';
-                case 'during':
+        function getGameStatusClass(noGame) {
+            switch (noGame) {
+                case '정상게임':
                     return 'border-green-500 bg-green-900 bg-opacity-20';
-                case 'after':
-                    return 'border-gray-500 bg-gray-600';
+                case '경기중':
+                    return 'border-blue-500 bg-blue-900 bg-opacity-20';
+                case '우천취소':
+                    return 'border-red-500 bg-red-900 bg-opacity-20';
+                case '경기연기':
+                    return 'border-yellow-500 bg-yellow-900 bg-opacity-20';
                 default:
                     return 'border-gray-600 bg-gray-700';
             }
         }
 
         // 경기 상태에 따른 배지 클래스 반환
-        function getStatusBadgeClass(status) {
-            switch (status) {
-                case 'before':
-                    return 'bg-yellow-500 text-black';
-                case 'during':
+        function getStatusBadgeClass(noGame) {
+            switch (noGame) {
+                case '정상게임':
                     return 'bg-green-500 text-white';
-                case 'after':
-                    return 'bg-gray-500 text-white';
+                case '경기중':
+                    return 'bg-blue-500 text-white';
+                case '우천취소':
+                    return 'bg-red-500 text-white';
+                case '경기연기':
+                    return 'bg-yellow-500 text-black';
                 default:
                     return 'bg-gray-500 text-white';
             }
         }
 
         // 경기 상태 텍스트 반환
-        function getStatusText(status) {
-            switch (status) {
-                case 'before':
-                    return '경기전';
-                case 'during':
+        function getStatusText(noGame) {
+            switch (noGame) {
+                case '정상게임':
+                    return '정상게임';
+                case '경기중':
                     return '경기중';
-                case 'after':
-                    return '경기후';
+                case '우천취소':
+                    return '우천취소';
+                case '경기연기':
+                    return '경기연기';
                 default:
-                    return '알 수 없음';
+                    return noGame || '알 수 없음';
             }
         }
 
@@ -970,7 +976,7 @@
             
             // 선택된 값들 확인
             if (!selectedGameType || !selectedBetChoice || !selectedBetAmount) {
-                alert('게임 타입, 배팅 선택, 포인트를 모두 선택해주세요.');
+                alert('게임 타입, 배팅 선택, 배팅 포인트를 선택해주세요.');
                 return;
             }
             
@@ -1035,6 +1041,37 @@
             color: #666;
             margin: 10px 0;
             text-align: center;
+        }
+        
+        /* 가로 스크롤바 스타일링 */
+        #gameSelectionContainer::-webkit-scrollbar {
+            height: 6px;
+        }
+        
+        #gameSelectionContainer::-webkit-scrollbar-track {
+            background: #374151;
+            border-radius: 3px;
+        }
+        
+        #gameSelectionContainer::-webkit-scrollbar-thumb {
+            background: #6B7280;
+            border-radius: 3px;
+        }
+        
+        #gameSelectionContainer::-webkit-scrollbar-thumb:hover {
+            background: #9CA3AF;
+        }
+        
+        /* Firefox 가로 스크롤바 스타일링 */
+        #gameSelectionContainer {
+            scrollbar-width: thin;
+            scrollbar-color: #6B7280 #374151;
+        }
+        
+        /* 경기 아이템 스타일링 */
+        .game-item {
+            min-width: 140px;
+            flex-shrink: 0;
         }
     </style>
 

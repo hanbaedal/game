@@ -32,7 +32,7 @@
             <!-- 경기 추가 폼 -->
             <div class="mb-8 p-4 bg-gray-700 rounded-lg">
                 <h3 class="text-lg font-bold mb-4">새 경기 추가</h3>
-                <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
+                <div class="grid grid-cols-1 md:grid-cols-6 gap-4">
                     <div>
                         <label class="block text-sm font-bold mb-2">경기 번호</label>
                         <select id="gameNumber" class="w-full p-2 rounded bg-gray-600 text-white">
@@ -52,14 +52,26 @@
                         <input type="text" id="awayTeam" class="w-full p-2 rounded bg-gray-600 text-white" placeholder="원정팀명">
                     </div>
                     <div>
-                        <label class="block text-sm font-bold mb-2">경기 시간</label>
-                        <input type="time" id="gameTime" class="w-full p-2 rounded bg-gray-600 text-white">
+                        <label class="block text-sm font-bold mb-2">시작 시간</label>
+                        <input type="time" id="startTime" class="w-full p-2 rounded bg-gray-600 text-white">
                     </div>
-                    <div class="flex items-end">
-                        <button onclick="addGame()" class="w-full bg-blue-500 hover:bg-blue-600 px-4 py-2 rounded">
-                            경기 추가
-                        </button>
+                    <div>
+                        <label class="block text-sm font-bold mb-2">종료 시간</label>
+                        <input type="time" id="endTime" class="w-full p-2 rounded bg-gray-600 text-white">
                     </div>
+                    <div>
+                        <label class="block text-sm font-bold mb-2">게임상황</label>
+                        <select id="noGame" class="w-full p-2 rounded bg-gray-600 text-white">
+                            <option value="정상게임">정상게임</option>
+                            <option value="우천취소">우천취소</option>
+                            <option value="경기연기">경기연기</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="mt-4">
+                    <button onclick="addGame()" class="bg-blue-500 hover:bg-blue-600 px-4 py-2 rounded">
+                        경기 추가
+                    </button>
                 </div>
             </div>
 
@@ -73,19 +85,22 @@
         </div>
     </main>
 
-    <!-- 경기 상태 변경 모달 -->
+    <!-- 경기 상황 변경 모달 -->
     <div id="statusModal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center z-50">
         <div class="bg-gray-800 p-6 rounded-lg max-w-sm w-full mx-4">
-            <h3 class="text-lg font-bold mb-4">경기 상태 변경</h3>
+            <h3 class="text-lg font-bold mb-4">경기 상황 변경</h3>
             <div class="space-y-3">
-                <button onclick="updateGameStatus('before')" class="w-full bg-yellow-500 hover:bg-yellow-600 text-black px-4 py-2 rounded">
-                    경기전
+                <button onclick="updateGameStatus('정상게임')" class="w-full bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded">
+                    정상게임
                 </button>
-                <button onclick="updateGameStatus('during')" class="w-full bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded">
+                <button onclick="updateGameStatus('경기중')" class="w-full bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded">
                     경기중
                 </button>
-                <button onclick="updateGameStatus('after')" class="w-full bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded">
-                    경기후
+                <button onclick="updateGameStatus('우천취소')" class="w-full bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded">
+                    우천취소
+                </button>
+                <button onclick="updateGameStatus('경기연기')" class="w-full bg-yellow-500 hover:bg-yellow-600 text-black px-4 py-2 rounded">
+                    경기연기
                 </button>
                 <button onclick="closeStatusModal()" class="w-full bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded">
                     취소
@@ -122,22 +137,22 @@
                 if (data.games && data.games.length > 0) {
                     data.games.forEach(game => {
                         const gameItem = document.createElement('div');
-                        gameItem.className = `border rounded-lg p-4 ${getGameStatusClass(game.status)}`;
+                        gameItem.className = `border rounded-lg p-4 ${getGameStatusClass(game.noGame)}`;
                         
-                        const statusText = getStatusText(game.status);
+                        const statusText = getStatusText(game.noGame);
                         
                         gameItem.innerHTML = `
                             <div class="flex justify-between items-center">
                                 <div class="flex-1">
                                     <div class="text-lg font-bold">${game.homeTeam} vs ${game.awayTeam}</div>
-                                    <div class="text-sm text-gray-400">경기 ${game.gameNumber} • ${game.gameTime}</div>
+                                    <div class="text-sm text-gray-400">경기 ${game.number} • ${game.startTime}~${game.endTime}</div>
                                     <div class="text-xs text-gray-500">상태: ${statusText}</div>
                                 </div>
                                 <div class="flex items-center space-x-2">
-                                    <button onclick="openStatusModal(${game.gameNumber})" class="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded text-sm">
-                                        상태 변경
+                                    <button onclick="openStatusModal(${game.number})" class="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded text-sm">
+                                        상황 변경
                                     </button>
-                                    <button onclick="deleteGame(${game.gameNumber})" class="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded text-sm">
+                                    <button onclick="deleteGame(${game.number})" class="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded text-sm">
                                         삭제
                                     </button>
                                 </div>
@@ -163,30 +178,34 @@
         }
 
         // 경기 상태에 따른 CSS 클래스 반환
-        function getGameStatusClass(status) {
-            switch (status) {
-                case 'before':
-                    return 'border-yellow-500 bg-yellow-900 bg-opacity-20';
-                case 'during':
+        function getGameStatusClass(noGame) {
+            switch (noGame) {
+                case '정상게임':
                     return 'border-green-500 bg-green-900 bg-opacity-20';
-                case 'after':
-                    return 'border-gray-500 bg-gray-600';
+                case '경기중':
+                    return 'border-blue-500 bg-blue-900 bg-opacity-20';
+                case '우천취소':
+                    return 'border-red-500 bg-red-900 bg-opacity-20';
+                case '경기연기':
+                    return 'border-yellow-500 bg-yellow-900 bg-opacity-20';
                 default:
                     return 'border-gray-600 bg-gray-700';
             }
         }
 
         // 경기 상태 텍스트 반환
-        function getStatusText(status) {
-            switch (status) {
-                case 'before':
-                    return '경기전';
-                case 'during':
+        function getStatusText(noGame) {
+            switch (noGame) {
+                case '정상게임':
+                    return '정상게임';
+                case '경기중':
                     return '경기중';
-                case 'after':
-                    return '경기후';
+                case '우천취소':
+                    return '우천취소';
+                case '경기연기':
+                    return '경기연기';
                 default:
-                    return '알 수 없음';
+                    return noGame || '알 수 없음';
             }
         }
 
@@ -195,14 +214,19 @@
             const gameNumber = document.getElementById('gameNumber').value;
             const homeTeam = document.getElementById('homeTeam').value;
             const awayTeam = document.getElementById('awayTeam').value;
-            const gameTime = document.getElementById('gameTime').value;
+            const startTime = document.getElementById('startTime').value;
+            const endTime = document.getElementById('endTime').value;
+            const noGame = document.getElementById('noGame').value;
             
-            if (!homeTeam || !awayTeam || !gameTime) {
+            if (!homeTeam || !awayTeam || !startTime || !endTime || !noGame) {
                 alert('모든 필드를 입력해주세요.');
                 return;
             }
             
-            const today = new Date().toISOString().split('T')[0];
+            const today = new Date();
+            const todayString = today.getFullYear().toString() + 
+                               String(today.getMonth() + 1).padStart(2, '0') + 
+                               String(today.getDate()).padStart(2, '0');
             
             try {
                 const response = await fetch('/api/daily-games', {
@@ -211,11 +235,14 @@
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({
-                        gameNumber: parseInt(gameNumber),
+                        number: parseInt(gameNumber),
                         homeTeam,
                         awayTeam,
-                        gameDate: today,
-                        gameTime
+                        date: todayString,
+                        startTime,
+                        endTime,
+                        noGame,
+                        isActive: true
                     })
                 });
                 
@@ -226,7 +253,9 @@
                     // 폼 초기화
                     document.getElementById('homeTeam').value = '';
                     document.getElementById('awayTeam').value = '';
-                    document.getElementById('gameTime').value = '';
+                    document.getElementById('startTime').value = '';
+                    document.getElementById('endTime').value = '';
+                    document.getElementById('noGame').value = '정상게임';
                     // 경기 목록 새로고침
                     loadGames();
                 } else {
@@ -250,8 +279,8 @@
             currentGameNumber = null;
         }
 
-        // 경기 상태 업데이트
-        async function updateGameStatus(status) {
+        // 경기 상황 업데이트
+        async function updateGameStatus(noGame) {
             if (!currentGameNumber) {
                 alert('경기 번호가 없습니다.');
                 return;
@@ -263,21 +292,21 @@
                     headers: {
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify({ status })
+                    body: JSON.stringify({ noGame })
                 });
                 
                 const data = await response.json();
                 
                 if (data.message) {
-                    alert('경기 상태가 업데이트되었습니다.');
+                    alert('경기 상황이 업데이트되었습니다.');
                     closeStatusModal();
                     loadGames();
                 } else {
-                    alert(data.error || '상태 업데이트에 실패했습니다.');
+                    alert(data.error || '상황 업데이트에 실패했습니다.');
                 }
             } catch (error) {
-                console.error('상태 업데이트 오류:', error);
-                alert('상태 업데이트 중 오류가 발생했습니다.');
+                console.error('상황 업데이트 오류:', error);
+                alert('상황 업데이트 중 오류가 발생했습니다.');
             }
         }
 
