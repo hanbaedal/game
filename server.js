@@ -62,93 +62,10 @@ const connectToMongoDB = async () => {
     }
 };
 
-// 오늘의 경기 데이터 자동 생성 함수
+// 오늘의 경기 데이터 자동 생성 함수 (비활성화)
+// 관리자 페이지에서만 경기를 추가하도록 변경
 const createTodayGames = async () => {
-    try {
-        console.log('🎯 오늘의 경기 데이터 생성 중...');
-        
-        // 한국 시간대로 오늘 날짜 계산
-        const today = new Date();
-        const koreaTime = new Date(today.getTime() + (9 * 60 * 60 * 1000)); // UTC+9
-        const todayString = koreaTime.getFullYear().toString() + 
-                           String(koreaTime.getMonth() + 1).padStart(2, '0') + 
-                           String(koreaTime.getDate()).padStart(2, '0');
-        
-        // 오늘 경기 데이터가 이미 있는지 확인
-        const existingGames = await DailyGame.find({
-            date: todayString
-        });
-        
-        if (existingGames.length > 0) {
-            console.log(`✅ 오늘의 경기 데이터가 이미 존재합니다: ${existingGames.length}개`);
-            return;
-        }
-        
-        // 오늘의 경기 데이터 생성 (사용자 제공 데이터 기반)
-        const todayGames = [
-            {
-                number: 1,
-                homeTeam: '키움',
-                awayTeam: '한화',
-                date: todayString,
-                startTime: '14:00',
-                endTime: '18:00',
-                noGame: '정상게임',
-                isActive: true
-            },
-            {
-                number: 2,
-                homeTeam: '두산',
-                awayTeam: 'KT',
-                date: todayString,
-                startTime: '18:00',
-                endTime: '01:00',
-                noGame: '정상게임',
-                isActive: true
-            },
-            {
-                number: 3,
-                homeTeam: '삼성',
-                awayTeam: 'LG',
-                date: todayString,
-                startTime: '18:00',
-                endTime: '20:00',
-                noGame: '정상게임',
-                isActive: true
-            },
-            {
-                number: 4,
-                homeTeam: 'KIA',
-                awayTeam: '롯데',
-                date: todayString,
-                startTime: '18:00',
-                endTime: '01:00',
-                noGame: '정상게임',
-                isActive: true
-            },
-            {
-                number: 5,
-                homeTeam: 'NC',
-                awayTeam: 'SSG',
-                date: todayString,
-                startTime: '18:00',
-                endTime: '22:00',
-                noGame: '정상게임',
-                isActive: true
-            }
-        ];
-        
-        const createdGames = await DailyGame.insertMany(todayGames);
-        console.log(`✅ 오늘의 경기 데이터 생성 완료: ${createdGames.length}개`);
-        
-        // 생성된 경기 목록 출력
-        createdGames.forEach(game => {
-            console.log(`   ${game.number}. ${game.homeTeam} vs ${game.awayTeam} (${game.noGame})`);
-        });
-        
-    } catch (error) {
-        console.error('❌ 오늘의 경기 데이터 생성 실패:', error);
-    }
+    console.log('📅 자동 경기 생성 비활성화 - 관리자 페이지에서 경기를 추가해주세요.');
 };
 
 // 서버 시작
@@ -165,10 +82,10 @@ const startServer = async () => {
             console.log(`📍 포트: ${PORT}`);
             console.log(`🗄️ MongoDB 상태: ${isConnected ? '연결됨' : '연결 안됨'}`);
             
-            // MongoDB 연결 성공 시 오늘의 경기 데이터 생성
-            if (isConnected) {
-                createTodayGames();
-            }
+                    // MongoDB 연결 성공 (자동 경기 생성 제거)
+        if (isConnected) {
+            console.log('✅ MongoDB 연결됨 - 관리자 페이지에서 경기를 추가해주세요.');
+        }
         });
     } catch (error) {
         console.error('❌ 서버 시작 실패:', error);
