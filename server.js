@@ -4,7 +4,7 @@ const mongoose = require('mongoose');
 const path = require('path');
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 3001;
 
 // 미들웨어 설정
 app.use(cors());
@@ -1746,9 +1746,20 @@ app.get('/api/daily-games', async (req, res) => {
                            String(koreaTime.getMonth() + 1).padStart(2, '0') + 
                            String(koreaTime.getDate()).padStart(2, '0');
         
-        console.log('🔍 조회 조건:', {
-            date: todayString
+        console.log('🔍 서버 - 조회 조건:', {
+            date: todayString,
+            originalDate: today.toISOString(),
+            koreaTime: koreaTime.toISOString()
         });
+        
+        // 모든 경기 데이터 확인 (디버깅용)
+        const allGames = await DailyGame.find({}).sort({ date: 1, number: 1 });
+        console.log('📊 전체 경기 데이터:', allGames.map(g => ({
+            number: g.number,
+            date: g.date,
+            homeTeam: g.homeTeam,
+            awayTeam: g.awayTeam
+        })));
         
         const games = await DailyGame.find({
             date: todayString,
