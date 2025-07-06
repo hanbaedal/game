@@ -690,10 +690,10 @@
                     const isSelected = userSelection && userSelection.gameNumber === displayGame.number;
                     
                                         dropdownContainer.innerHTML = `
-                        <div class="game-dropdown border border-gray-600 rounded-lg p-3 hover:bg-gray-700 cursor-pointer ${isSelected ? 'bg-red-500 text-white' : getGameStatusClass(displayGame)}" onclick="openGameModal()">
-                            <div class="flex justify-between items-center">
+                        <div class="game-dropdown border border-gray-600 rounded hover:bg-gray-700 cursor-pointer ${isSelected ? 'bg-red-500 text-white' : getGameStatusClass(displayGame)}" onclick="openGameModal()" style="height: 32px; display: flex; align-items: center; padding: 0 12px;">
+                            <div class="flex justify-between items-center w-full">
                                 <div class="flex-1">
-                                    <div class="text-sm font-bold">${displayGame.homeTeam} vs ${displayGame.awayTeam}</div>
+                                    <div class="text-xs font-bold">${displayGame.homeTeam} vs ${displayGame.awayTeam}</div>
                                     ${isSelected ? '' : `<div class="text-xs text-gray-400">경기 ${displayGame.number} • ${getStatusText(displayGame)}</div>`}
                                 </div>
                                 <div class="flex items-center space-x-2">
