@@ -674,47 +674,70 @@
                 gameSelectionContainer.innerHTML = '';
                 
                 if (data.games && data.games.length > 0) {
-                    data.games.forEach(game => {
-                        const gameItem = document.createElement('div');
-                        gameItem.className = `game-item border rounded-lg p-2 ${getGameStatusClass(game.noGame)}`;
-                        
-                        const statusText = getStatusText(game.noGame);
-                        const isSelectable = game.isActive && (game.noGame === '정상게임' || game.noGame === '경기중');
-                        const isSelected = userSelection && userSelection.gameNumber === game.number;
-                        
-                        gameItem.innerHTML = `
+                    // 선택된 경기 찾기
+                    const selectedGame = data.games.find(game => userSelection && userSelection.gameNumber === game.number);
+                    
+                    // 드롭다운 컨테이너 생성
+                    const dropdownContainer = document.createElement('div');
+                    dropdownContainer.className = 'relative';
+                    
+                    // 선택된 경기 또는 기본 경기 표시
+                    const displayGame = selectedGame || data.games[0];
+                    const isSelectable = displayGame.isActive && (displayGame.noGame === '정상게임' || displayGame.noGame === '경기중');
+                    const isSelected = userSelection && userSelection.gameNumber === displayGame.number;
+                    
+                    dropdownContainer.innerHTML = `
+                        <div class="game-dropdown border rounded-lg p-3 ${getGameStatusClass(displayGame.noGame)} cursor-pointer" onclick="toggleGameDropdown()">
                             <div class="flex justify-between items-center">
                                 <div class="flex-1">
-                                    <div class="text-xs font-bold">${game.homeTeam} vs ${game.awayTeam}</div>
-                                    <div class="text-xs text-gray-400">경기 ${game.number} • ${game.startTime}~${game.endTime}</div>
+                                    <div class="text-sm font-bold">${displayGame.homeTeam} vs ${displayGame.awayTeam}</div>
+                                    <div class="text-xs text-gray-400">경기 ${displayGame.number} • ${getStatusText(displayGame.noGame)}</div>
                                     ${isSelected ? '<div class="text-xs text-green-400">✓ 선택됨</div>' : ''}
                                 </div>
                                 <div class="flex items-center space-x-2">
-                                    <span class="text-xs px-1 py-1 rounded ${getStatusBadgeClass(game.noGame)}">
-                                        ${statusText}
+                                    <span class="text-xs px-2 py-1 rounded ${getStatusBadgeClass(displayGame.noGame)}">
+                                        ${getStatusText(displayGame.noGame)}
                                     </span>
-                                    ${isSelectable ? 
-                                        (isSelected ? 
-                                            `<span class="text-xs text-green-500 px-2 py-1">선택됨</span>` :
-                                            `<button onclick="selectGame(${game.number})" class="bg-blue-500 hover:bg-blue-600 text-white text-xs px-2 py-1 rounded">
-                                                선택
-                                            </button>`
-                                        ) : 
-                                        `<span class="text-xs text-gray-500 px-2 py-1">선택불가</span>`
-                                    }
+                                    <svg class="w-4 h-4 text-gray-400 transform transition-transform" id="dropdownArrow" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                                    </svg>
                                 </div>
                             </div>
-                        `;
-                        
-                        // 선택된 경기인 경우 selected 클래스와 데이터 속성 추가
-                        if (isSelected) {
-                            gameItem.classList.add('selected');
-                            gameItem.dataset.gameNumber = game.number;
-                            gameItem.dataset.homeTeam = game.homeTeam;
-                            gameItem.dataset.awayTeam = game.awayTeam;
-                        }
-                        gameSelectionContainer.appendChild(gameItem);
-                    });
+                        </div>
+                        <div id="gameDropdown" class="absolute top-full left-0 right-0 bg-gray-800 border border-gray-600 rounded-lg mt-1 z-10 hidden">
+                            ${data.games.map(game => {
+                                const gameIsSelectable = game.isActive && (game.noGame === '정상게임' || game.noGame === '경기중');
+                                const gameIsSelected = userSelection && userSelection.gameNumber === game.number;
+                                
+                                return `
+                                    <div class="game-option p-3 border-b border-gray-600 hover:bg-gray-700 cursor-pointer ${gameIsSelected ? 'bg-blue-900' : ''}" 
+                                         onclick="selectGameFromDropdown(${game.number}, '${game.homeTeam}', '${game.awayTeam}')">
+                                        <div class="flex justify-between items-center">
+                                            <div class="flex-1">
+                                                <div class="text-sm font-bold">${game.homeTeam} vs ${game.awayTeam}</div>
+                                                <div class="text-xs text-gray-400">경기 ${game.number} • ${getStatusText(game.noGame)}</div>
+                                                ${gameIsSelected ? '<div class="text-xs text-green-400">✓ 선택됨</div>' : ''}
+                                            </div>
+                                            <div class="flex items-center space-x-2">
+                                                <span class="text-xs px-2 py-1 rounded ${getStatusBadgeClass(game.noGame)}">
+                                                    ${getStatusText(game.noGame)}
+                                                </span>
+                                                ${gameIsSelectable ? 
+                                                    (gameIsSelected ? 
+                                                        `<span class="text-xs text-green-500 px-2 py-1">선택됨</span>` :
+                                                        `<span class="text-xs text-blue-500 px-2 py-1">선택가능</span>`
+                                                    ) : 
+                                                    `<span class="text-xs text-gray-500 px-2 py-1">선택불가</span>`
+                                                }
+                                            </div>
+                                        </div>
+                                    </div>
+                                `;
+                            }).join('')}
+                        </div>
+                    `;
+                    
+                    gameSelectionContainer.appendChild(dropdownContainer);
                 } else {
                     gameSelectionContainer.innerHTML = '<div class="text-center text-gray-400 py-2">오늘의 경기가 없습니다.</div>';
                 }
@@ -735,11 +758,9 @@
         function getGameStatusClass(noGame) {
             switch (noGame) {
                 case '정상게임':
-                    return 'border-yellow-500 bg-yellow-900 bg-opacity-20';
+                    return 'border-green-500 bg-green-900 bg-opacity-20';
                 case '경기중':
                     return 'border-blue-500 bg-blue-900 bg-opacity-20';
-                case '경기끝':
-                    return 'border-gray-500 bg-gray-600';
                 case '우천취소':
                     return 'border-red-500 bg-red-900 bg-opacity-20';
                 case '경기연기':
@@ -753,11 +774,9 @@
         function getStatusBadgeClass(noGame) {
             switch (noGame) {
                 case '정상게임':
-                    return 'bg-yellow-500 text-black';
+                    return 'bg-green-500 text-white';
                 case '경기중':
                     return 'bg-blue-500 text-white';
-                case '경기끝':
-                    return 'bg-gray-500 text-white';
                 case '우천취소':
                     return 'bg-red-500 text-white';
                 case '경기연기':
@@ -785,8 +804,22 @@
             }
         }
 
-        // 경기 선택 함수
-        async function selectGame(gameNumber) {
+        // 드롭다운 토글 함수
+        function toggleGameDropdown() {
+            const dropdown = document.getElementById('gameDropdown');
+            const arrow = document.getElementById('dropdownArrow');
+            
+            if (dropdown.classList.contains('hidden')) {
+                dropdown.classList.remove('hidden');
+                arrow.style.transform = 'rotate(180deg)';
+            } else {
+                dropdown.classList.add('hidden');
+                arrow.style.transform = 'rotate(0deg)';
+            }
+        }
+
+        // 드롭다운에서 경기 선택 함수
+        async function selectGameFromDropdown(gameNumber, homeTeam, awayTeam) {
             // 현재 사용자 정보 확인
             if (!currentUser || !currentUser.userId) {
                 alert('로그인이 필요합니다.');
@@ -809,8 +842,16 @@
                 const data = await response.json();
                 
                 if (data.message) {
-                    alert(`경기 ${gameNumber}이(가) 선택되었습니다.`);
-                    // 선택 후 경기 목록 새로고침
+                    // 드롭다운 닫기
+                    const dropdown = document.getElementById('gameDropdown');
+                    const arrow = document.getElementById('dropdownArrow');
+                    dropdown.classList.add('hidden');
+                    arrow.style.transform = 'rotate(0deg)';
+                    
+                    // 선택 완료 메시지
+                    alert(`${homeTeam} vs ${awayTeam} 경기가 선택되었습니다.`);
+                    
+                    // 경기 목록 새로고침
                     await loadDailyGames();
                 } else {
                     alert(data.error || '경기 선택에 실패했습니다.');
@@ -821,6 +862,11 @@
             }
         }
 
+        // 기존 경기 선택 함수 (호환성을 위해 유지)
+        async function selectGame(gameNumber) {
+            await selectGameFromDropdown(gameNumber, '', '');
+        }
+
         // 전역 변수로 선택된 값들 저장
         let selectedGameType = 'batter'; // 기본값은 타자
         let selectedBetChoice = '';
@@ -828,6 +874,20 @@
 
         // 페이지 로드 시 이벤트 리스너 설정
         document.addEventListener('DOMContentLoaded', function() {
+            // 드롭다운 외부 클릭 시 닫기
+            document.addEventListener('click', function(event) {
+                const dropdown = document.getElementById('gameDropdown');
+                const dropdownContainer = document.querySelector('.game-dropdown');
+                
+                if (dropdown && !dropdownContainer.contains(event.target) && !dropdown.contains(event.target)) {
+                    dropdown.classList.add('hidden');
+                    const arrow = document.getElementById('dropdownArrow');
+                    if (arrow) {
+                        arrow.style.transform = 'rotate(0deg)';
+                    }
+                }
+            });
+            
             // 게임 타입 버튼 이벤트
             document.querySelectorAll('.game-type-btn').forEach(btn => {
                 btn.addEventListener('click', function() {
