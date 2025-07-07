@@ -130,7 +130,6 @@
                         → <span class="font-bold">0포인트</span>
                     </span>
                 </p>
-                <p class="text-sm">예상 배당 포인트 : <span id="expectedPoints" class="font-bold">0포인트</span></p>
 
                 <!-- 배팅 상태 표시 -->
                 <div id="bettingStatusDisplay" class="mt-4 p-3 rounded-lg" style="display: none;">
@@ -473,43 +472,14 @@
                 // 배팅 상태 초기화
                 isBetting = false;
 
-                // 예상 배당금 업데이트
-                updateExpectedPoints();
+
             } catch (error) {
                 console.error('배팅 결과 처리 중 오류:', error);
                 alert('배팅 결과 처리 중 오류가 발생했습니다.');
             }
         }
 
-        // 예상 배당금 계산 및 표시 함수
-        function updateExpectedPoints() {
-            const selectedBet = document.querySelector('input[name="betChoice"]:checked');
-            const bettingPoints = parseInt(document.getElementById('betAmount').value) || 0;
-            
-            if (!selectedBet || bettingPoints === 0) {
-                document.getElementById('expectedPoints').textContent = '0';
-                const afterBettingSpan = document.getElementById('afterBettingPoints');
-                afterBettingSpan.style.display = 'none';
-                return;
-            }
-            
-            // 간단한 예상 배당금 계산 (배팅 포인트의 2배)
-            const expectedWinPoints = bettingPoints * 2;
-            
-            // 예상 배당금 표시
-            document.getElementById('expectedPoints').textContent = `${expectedWinPoints}`;
-            
-            // 배팅 후 예상 포인트 표시
-            const afterBettingSpan = document.getElementById('afterBettingPoints');
-            afterBettingSpan.style.display = 'inline';
-            afterBettingSpan.querySelector('span').textContent = `${currentUser.points - bettingPoints}`;
-        }
 
-        // 배팅 유형 선택 또는 배팅 포인트 변경 시 예상 배당금 업데이트
-        document.querySelectorAll('input[name="betChoice"]').forEach(radio => {
-            radio.addEventListener('change', updateExpectedPoints);
-        });
-        document.getElementById('betAmount').addEventListener('input', updateExpectedPoints);
 
         // 모달 관련 함수들은 그대로 유지
         function showGuestWinModal() {
@@ -596,6 +566,7 @@
         // 기부 처리 함수
         async function processDonation(donationAmount, percentage) {
             const finalPoints = currentUser.points - donationAmount;
+            const today = new Date().toISOString().split('T')[0].replace(/-/g, '');
             
             try {
                 const response = await fetch('/api/donation', {
@@ -608,7 +579,10 @@
                         userName: currentUser.name,
                         donationAmount: donationAmount,
                         percentage: percentage,
-                        finalPoints: finalPoints
+                        finalPoints: finalPoints,
+                        gameDate: today,
+                        gameNumber: 1,
+                        winAmount: donationAmount * 5 // 승리 포인트 (기부 금액의 5배로 추정)
                     })
                 });
                 
@@ -1362,7 +1336,7 @@
                 // 배팅 비활성화 상태
                 statusDisplay.style.display = 'block';
                 statusIndicator.className = 'w-4 h-4 rounded-full bg-red-500';
-                statusText.textContent = '배팅 대기중 (관리자가 배팅을 시작할 때까지 기다려주세요)';
+                statusText.innerHTML = '배팅 대기중<br>(관리자가 배팅 시작을 수락할때까지.)';
                 statusText.className = 'font-bold text-sm text-red-400';
                 
                 // 배팅 버튼 비활성화

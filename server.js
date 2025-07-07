@@ -202,6 +202,21 @@ const chargingSchema = new mongoose.Schema({
 
 const Charging = mongoose.model('Charging', chargingSchema, 'game-charging');
 
+// 기부 스키마 정의
+const donationSchema = new mongoose.Schema({
+    userId: { type: String, required: true },
+    userName: { type: String, required: true },
+    amount: { type: Number, required: true },
+    percentage: { type: Number, required: true },
+    gameDate: { type: String, required: true },
+    gameNumber: { type: Number, required: true },
+    winAmount: { type: Number, required: true }, // 승리 포인트
+    finalPoints: { type: Number, required: true }, // 기부 후 최종 포인트
+    createdAt: { type: Date, default: Date.now }
+});
+
+const Donation = mongoose.model('Donation', donationSchema, 'game-donations');
+
 // 초대 스키마 정의
 const inviteSchema = new mongoose.Schema({
     memberName: { type: String, required: true },
@@ -2405,9 +2420,9 @@ app.get('/api/betting/results', async (req, res) => {
 // 기부 처리 API
 app.post('/api/donation', async (req, res) => {
     try {
-        const { userId, userName, donationAmount, percentage, finalPoints } = req.body;
+        const { userId, userName, donationAmount, percentage, finalPoints, gameDate, gameNumber, winAmount } = req.body;
         
-        if (!userId || !userName || !donationAmount || !percentage || !finalPoints) {
+        if (!userId || !userName || !donationAmount || !percentage || !finalPoints || !gameDate || !gameNumber || !winAmount) {
             return res.status(400).json({ 
                 success: false, 
                 message: '필수 정보가 누락되었습니다.' 
@@ -2423,20 +2438,28 @@ app.post('/api/donation', async (req, res) => {
         }
         
         const userCollection = mongoose.connection.db.collection('game-member');
+        const donationCollection = mongoose.connection.db.collection('game-donations');
+        
+        // 기부 데이터 생성
+        const donationData = {
+            userId: userId,
+            userName: userName,
+            amount: donationAmount,
+            percentage: percentage,
+            gameDate: gameDate,
+            gameNumber: parseInt(gameNumber),
+            winAmount: winAmount,
+            finalPoints: finalPoints,
+            createdAt: new Date()
+        };
+        
+        // 기부 컬렉션에 저장
+        await donationCollection.insertOne(donationData);
         
         // 사용자 포인트 업데이트
         const result = await userCollection.updateOne(
             { userId: userId },
-            { 
-                $set: { points: finalPoints },
-                $push: { 
-                    donationHistory: {
-                        amount: donationAmount,
-                        percentage: percentage,
-                        donatedAt: new Date()
-                    }
-                }
-            }
+            { $set: { points: finalPoints } }
         );
         
         if (result.matchedCount === 0) {
@@ -2460,6 +2483,90 @@ app.post('/api/donation', async (req, res) => {
         res.status(500).json({
             success: false,
             message: '기부 처리 중 오류가 발생했습니다.'
+        });
+    }
+});
+
+// 기부 조회 API (사용자별)
+app.get('/api/donations/user/:userId', async (req, res) => {
+    try {
+        const { userId } = req.params;
+        
+        if (!userId) {
+            return res.status(400).json({ 
+                success: false, 
+                message: '사용자 ID가 필요합니다.' 
+            });
+        }
+        
+        // MongoDB 연결 상태 확인
+        if (mongoose.connection.readyState !== 1) {
+            return res.status(503).json({ 
+                success: false, 
+                message: '데이터베이스 연결이 준비되지 않았습니다.' 
+            });
+        }
+        
+        const donationCollection = mongoose.connection.db.collection('game-donations');
+        
+        // 사용자별 기부 내역 조회
+        const donations = await donationCollection.find({ userId: userId })
+            .sort({ createdAt: -1 })
+            .toArray();
+        
+        res.json({
+            success: true,
+            donations: donations,
+            totalCount: donations.length,
+            totalAmount: donations.reduce((sum, donation) => sum + donation.amount, 0)
+        });
+    } catch (error) {
+        console.error('기부 조회 오류:', error);
+        res.status(500).json({
+            success: false,
+            message: '기부 조회 중 오류가 발생했습니다.'
+        });
+    }
+});
+
+// 기부 통계 API (전체)
+app.get('/api/donations/stats', async (req, res) => {
+    try {
+        // MongoDB 연결 상태 확인
+        if (mongoose.connection.readyState !== 1) {
+            return res.status(503).json({ 
+                success: false, 
+                message: '데이터베이스 연결이 준비되지 않았습니다.' 
+            });
+        }
+        
+        const donationCollection = mongoose.connection.db.collection('game-donations');
+        
+        // 전체 기부 통계 조회
+        const totalDonations = await donationCollection.countDocuments();
+        const totalAmount = await donationCollection.aggregate([
+            { $group: { _id: null, total: { $sum: '$amount' } } }
+        ]).toArray();
+        
+        // 최근 기부 내역 (최근 10개)
+        const recentDonations = await donationCollection.find()
+            .sort({ createdAt: -1 })
+            .limit(10)
+            .toArray();
+        
+        res.json({
+            success: true,
+            stats: {
+                totalDonations: totalDonations,
+                totalAmount: totalAmount.length > 0 ? totalAmount[0].total : 0,
+                recentDonations: recentDonations
+            }
+        });
+    } catch (error) {
+        console.error('기부 통계 조회 오류:', error);
+        res.status(500).json({
+            success: false,
+            message: '기부 통계 조회 중 오류가 발생했습니다.'
         });
     }
 });
