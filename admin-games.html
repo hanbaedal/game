@@ -82,6 +82,118 @@
                     <!-- 경기 목록이 여기에 동적으로 추가됨 -->
                 </div>
             </div>
+
+            <!-- 배팅 제어 섹션 -->
+            <div class="mt-8 p-4 bg-gray-700 rounded-lg">
+                <h3 class="text-lg font-bold mb-4">배팅 제어</h3>
+                
+                <!-- 배팅 상태 표시 -->
+                <div id="bettingStatus" class="mb-4 p-3 rounded-lg">
+                    <div class="flex items-center space-x-3">
+                        <div id="statusIndicator" class="w-4 h-4 rounded-full"></div>
+                        <span id="statusText" class="font-bold">배팅 상태 확인 중...</span>
+                    </div>
+                </div>
+                
+                <!-- 배팅 제어 버튼 -->
+                <div class="flex space-x-4">
+                    <button id="startBettingBtn" onclick="startBetting()" class="bg-green-500 hover:bg-green-600 text-white px-6 py-3 rounded-lg font-bold flex items-center space-x-2">
+                        <i class="fas fa-play"></i>
+                        <span>배팅 시작</span>
+                    </button>
+                    <button id="stopBettingBtn" onclick="stopBetting()" class="bg-red-500 hover:bg-red-600 text-white px-6 py-3 rounded-lg font-bold flex items-center space-x-2" style="display: none;">
+                        <i class="fas fa-stop"></i>
+                        <span>배팅 중지</span>
+                    </button>
+                </div>
+                
+                <!-- 배팅 통계 -->
+                <div id="bettingStats" class="mt-4 p-3 bg-gray-600 rounded-lg" style="display: none;">
+                    <h4 class="font-bold mb-2">배팅 통계</h4>
+                    <div class="grid grid-cols-2 gap-4 text-sm">
+                        <div>
+                            <span class="text-gray-300">총 배팅 수:</span>
+                            <span id="totalBets" class="ml-2 font-bold">0</span>
+                        </div>
+                        <div>
+                            <span class="text-gray-300">총 배팅 금액:</span>
+                            <span id="totalAmount" class="ml-2 font-bold">0</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 배팅 결과 입력 섹션 -->
+            <div class="mt-8 p-4 bg-gray-700 rounded-lg">
+                <h3 class="text-lg font-bold mb-4">배팅 결과 입력</h3>
+                
+                <!-- 결과 입력 폼 -->
+                <div class="mb-4">
+                    <label class="block text-sm font-bold mb-2">실제 결과 선택</label>
+                    <div class="grid grid-cols-3 gap-2">
+                        <button onclick="setResult('1base')" class="result-btn bg-gray-600 hover:bg-gray-500 text-white px-4 py-2 rounded text-sm">
+                            1루
+                        </button>
+                        <button onclick="setResult('2base')" class="result-btn bg-gray-600 hover:bg-gray-500 text-white px-4 py-2 rounded text-sm">
+                            2루
+                        </button>
+                        <button onclick="setResult('3base')" class="result-btn bg-gray-600 hover:bg-gray-500 text-white px-4 py-2 rounded text-sm">
+                            3루
+                        </button>
+                        <button onclick="setResult('homerun')" class="result-btn bg-gray-600 hover:bg-gray-500 text-white px-4 py-2 rounded text-sm">
+                            홈런
+                        </button>
+                        <button onclick="setResult('strikeout')" class="result-btn bg-gray-600 hover:bg-gray-500 text-white px-4 py-2 rounded text-sm">
+                            삼진
+                        </button>
+                        <button onclick="setResult('out')" class="result-btn bg-gray-600 hover:bg-gray-500 text-white px-4 py-2 rounded text-sm">
+                            아웃
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- 선택된 결과 표시 -->
+                <div id="selectedResult" class="mb-4 p-3 bg-gray-600 rounded-lg" style="display: none;">
+                    <h4 class="font-bold mb-2">선택된 결과</h4>
+                    <div class="flex items-center space-x-3">
+                        <span id="resultText" class="font-bold text-lg"></span>
+                        <button onclick="clearResult()" class="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded text-sm">
+                            다시 선택
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- 결과 처리 버튼 -->
+                <div class="flex space-x-4">
+                    <button id="processResultBtn" onclick="processResult()" class="bg-blue-500 hover:bg-blue-600 text-white px-6 py-3 rounded-lg font-bold flex items-center space-x-2" disabled>
+                        <i class="fas fa-trophy"></i>
+                        <span>결과 처리</span>
+                    </button>
+                    <button onclick="viewResults()" class="bg-green-500 hover:bg-green-600 text-white px-6 py-3 rounded-lg font-bold flex items-center space-x-2">
+                        <i class="fas fa-chart-bar"></i>
+                        <span>결과 보기</span>
+                    </button>
+                </div>
+                
+                <!-- 결과 통계 -->
+                <div id="resultStats" class="mt-4 p-3 bg-gray-600 rounded-lg" style="display: none;">
+                    <h4 class="font-bold mb-2">결과 통계</h4>
+                    <div class="grid grid-cols-3 gap-4 text-sm">
+                        <div>
+                            <span class="text-gray-300">승리자 수:</span>
+                            <span id="winnerCount" class="ml-2 font-bold">0</span>
+                        </div>
+                        <div>
+                            <span class="text-gray-300">총 배당금:</span>
+                            <span id="totalPrize" class="ml-2 font-bold">0</span>
+                        </div>
+                        <div>
+                            <span class="text-gray-300">처리 상태:</span>
+                            <span id="processStatus" class="ml-2 font-bold">대기중</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </main>
 
@@ -115,7 +227,246 @@
         // 페이지 로드 시 초기화
         document.addEventListener('DOMContentLoaded', () => {
             loadGames();
+            checkBettingStatus(); // 배팅 상태 확인 추가
+            // 배팅 상태 주기적 확인 (0.1초마다 - 실시간)
+            setInterval(checkBettingStatus, 100);
         });
+
+        // 배팅 상태 확인 함수
+        async function checkBettingStatus() {
+            try {
+                const today = new Date().toISOString().split('T')[0].replace(/-/g, '');
+                const response = await fetch(`/api/betting/admin-status?date=${today}`);
+                const data = await response.json();
+                
+                updateBettingStatusUI(data.isActive);
+                updateBettingStats(data.stats);
+            } catch (error) {
+                console.error('배팅 상태 확인 오류:', error);
+                updateBettingStatusUI(false);
+            }
+        }
+
+        // 배팅 상태 UI 업데이트
+        function updateBettingStatusUI(isActive) {
+            const statusIndicator = document.getElementById('statusIndicator');
+            const statusText = document.getElementById('statusText');
+            const startBtn = document.getElementById('startBettingBtn');
+            const stopBtn = document.getElementById('stopBettingBtn');
+            
+            if (isActive) {
+                // 배팅 활성화 상태
+                statusIndicator.className = 'w-4 h-4 rounded-full bg-green-500';
+                statusText.textContent = '배팅 활성화됨';
+                statusText.className = 'font-bold text-green-400';
+                startBtn.style.display = 'none';
+                stopBtn.style.display = 'inline-flex';
+            } else {
+                // 배팅 비활성화 상태
+                statusIndicator.className = 'w-4 h-4 rounded-full bg-red-500';
+                statusText.textContent = '배팅 비활성화됨';
+                statusText.className = 'font-bold text-red-400';
+                startBtn.style.display = 'inline-flex';
+                stopBtn.style.display = 'none';
+            }
+        }
+
+        // 배팅 통계 업데이트
+        function updateBettingStats(stats) {
+            const statsDiv = document.getElementById('bettingStats');
+            const totalBets = document.getElementById('totalBets');
+            const totalAmount = document.getElementById('totalAmount');
+            
+            if (stats && (stats.totalBets > 0 || stats.totalAmount > 0)) {
+                statsDiv.style.display = 'block';
+                totalBets.textContent = stats.totalBets || 0;
+                totalAmount.textContent = `${stats.totalAmount || 0}포인트`;
+            } else {
+                statsDiv.style.display = 'none';
+            }
+        }
+
+        // 배팅 시작 함수
+        async function startBetting() {
+            try {
+                const today = new Date().toISOString().split('T')[0].replace(/-/g, '');
+                const response = await fetch('/api/betting/admin-start', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        date: today,
+                        gameNumber: 1 // 기본값, 필요시 수정
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    alert('배팅이 시작되었습니다!');
+                    checkBettingStatus(); // 상태 즉시 업데이트
+                } else {
+                    alert('배팅 시작 실패: ' + data.message);
+                }
+            } catch (error) {
+                console.error('배팅 시작 오류:', error);
+                alert('배팅 시작 중 오류가 발생했습니다.');
+            }
+        }
+
+        // 배팅 중지 함수
+        async function stopBetting() {
+            try {
+                const today = new Date().toISOString().split('T')[0].replace(/-/g, '');
+                const response = await fetch('/api/betting/admin-stop', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        date: today,
+                        gameNumber: 1 // 기본값, 필요시 수정
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    alert('배팅이 중지되었습니다!');
+                    checkBettingStatus(); // 상태 즉시 업데이트
+                } else {
+                    alert('배팅 중지 실패: ' + data.message);
+                }
+            } catch (error) {
+                console.error('배팅 중지 오류:', error);
+                alert('배팅 중지 중 오류가 발생했습니다.');
+            }
+        }
+
+        // 결과 선택 함수
+        let selectedResult = null;
+        
+        function setResult(result) {
+            selectedResult = result;
+            
+            // 모든 결과 버튼 비활성화
+            document.querySelectorAll('.result-btn').forEach(btn => {
+                btn.classList.remove('bg-blue-500');
+                btn.classList.add('bg-gray-600');
+            });
+            
+            // 선택된 버튼 활성화
+            event.target.classList.remove('bg-gray-600');
+            btn.classList.add('bg-blue-500');
+            
+            // 선택된 결과 표시
+            const resultText = document.getElementById('resultText');
+            const resultLabels = {
+                '1base': '1루',
+                '2base': '2루', 
+                '3base': '3루',
+                'homerun': '홈런',
+                'strikeout': '삼진',
+                'out': '아웃'
+            };
+            
+            resultText.textContent = resultLabels[result];
+            document.getElementById('selectedResult').style.display = 'block';
+            
+            // 결과 처리 버튼 활성화
+            document.getElementById('processResultBtn').disabled = false;
+        }
+        
+        // 결과 초기화 함수
+        function clearResult() {
+            selectedResult = null;
+            
+            // 모든 결과 버튼 초기화
+            document.querySelectorAll('.result-btn').forEach(btn => {
+                btn.classList.remove('bg-blue-500');
+                btn.classList.add('bg-gray-600');
+            });
+            
+            // 선택된 결과 숨기기
+            document.getElementById('selectedResult').style.display = 'none';
+            
+            // 결과 처리 버튼 비활성화
+            document.getElementById('processResultBtn').disabled = true;
+        }
+        
+        // 결과 처리 함수
+        async function processResult() {
+            if (!selectedResult) {
+                alert('결과를 선택해주세요.');
+                return;
+            }
+            
+            try {
+                const today = new Date().toISOString().split('T')[0].replace(/-/g, '');
+                const response = await fetch('/api/betting/process-result', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        date: today,
+                        gameNumber: 1,
+                        result: selectedResult
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    alert('결과가 처리되었습니다!');
+                    clearResult();
+                    updateResultStats(data.stats);
+                } else {
+                    alert('결과 처리 실패: ' + data.message);
+                }
+            } catch (error) {
+                console.error('결과 처리 오류:', error);
+                alert('결과 처리 중 오류가 발생했습니다.');
+            }
+        }
+        
+        // 결과 보기 함수
+        async function viewResults() {
+            try {
+                const today = new Date().toISOString().split('T')[0].replace(/-/g, '');
+                const response = await fetch(`/api/betting/results?date=${today}&gameNumber=1`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    updateResultStats(data.stats);
+                    alert(`결과 조회 완료!\n승리자: ${data.stats.winnerCount}명\n총 배당금: ${data.stats.totalPrize}포인트`);
+                } else {
+                    alert('결과 조회 실패: ' + data.message);
+                }
+            } catch (error) {
+                console.error('결과 조회 오류:', error);
+                alert('결과 조회 중 오류가 발생했습니다.');
+            }
+        }
+        
+        // 결과 통계 업데이트 함수
+        function updateResultStats(stats) {
+            const resultStats = document.getElementById('resultStats');
+            const winnerCount = document.getElementById('winnerCount');
+            const totalPrize = document.getElementById('totalPrize');
+            const processStatus = document.getElementById('processStatus');
+            
+            if (stats) {
+                resultStats.style.display = 'block';
+                winnerCount.textContent = stats.winnerCount || 0;
+                totalPrize.textContent = `${stats.totalPrize || 0}포인트`;
+                processStatus.textContent = stats.isProcessed ? '완료' : '대기중';
+                processStatus.className = stats.isProcessed ? 'ml-2 font-bold text-green-400' : 'ml-2 font-bold text-yellow-400';
+            } else {
+                resultStats.style.display = 'none';
+            }
+        }
 
         // 경기 목록 로드
         async function loadGames() {
