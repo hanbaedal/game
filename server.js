@@ -4,7 +4,7 @@ const mongoose = require('mongoose');
 const path = require('path');
 
 const app = express();
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT || 3002;
 
 // 미들웨어 설정
 app.use(cors());
@@ -20,6 +20,7 @@ const connectToMongoDB = async () => {
         
         if (!mongoURI) {
             console.error('❌ MONGODB_URI 환경 변수가 설정되지 않았습니다.');
+            console.log('⚠️ MongoDB 없이 서버를 시작합니다.');
             return false;
         }
         
@@ -289,7 +290,7 @@ const dailyGameSchema = new mongoose.Schema({
     updatedAt: { type: Date, default: Date.now }
 });
 
-const DailyGame = mongoose.model('DailyGame', dailyGameSchema, 'daily-games');
+const DailyGame = mongoose.model('DailyGame', dailyGameSchema, 'dailygames');
 
 // API 라우트
 
