@@ -106,19 +106,19 @@
                     <div class="flex-1">
                         <p class="text-sm">배팅포인트</p>
                         <div class="grid grid-cols-5 gap-1 mt-2">
-                            <button class="bet-amount-btn bg-gray-600 hover:bg-gray-500 text-white text-xs py-2 px-1 rounded" data-amount="100">
+                            <button class="bet-amount-btn bg-yellow-500 hover:bg-yellow-400 text-black text-xs py-2 px-1 rounded" data-amount="100">
                                 100
                             </button>
-                            <button class="bet-amount-btn bg-gray-600 hover:bg-gray-500 text-white text-xs py-2 px-1 rounded" data-amount="200">
+                            <button class="bet-amount-btn bg-gray-400 text-gray-600 text-xs py-2 px-1 rounded cursor-not-allowed opacity-50" data-amount="200" disabled>
                                 200
                             </button>
-                            <button class="bet-amount-btn bg-gray-600 hover:bg-gray-500 text-white text-xs py-2 px-1 rounded" data-amount="300">
+                            <button class="bet-amount-btn bg-gray-400 text-gray-600 text-xs py-2 px-1 rounded cursor-not-allowed opacity-50" data-amount="300" disabled>
                                 300
                             </button>
-                            <button class="bet-amount-btn bg-gray-600 hover:bg-gray-500 text-white text-xs py-2 px-1 rounded" data-amount="400">
+                            <button class="bet-amount-btn bg-gray-400 text-gray-600 text-xs py-2 px-1 rounded cursor-not-allowed opacity-50" data-amount="400" disabled>
                                 400
                             </button>
-                            <button class="bet-amount-btn bg-gray-600 hover:bg-gray-500 text-white text-xs py-2 px-1 rounded" data-amount="500">
+                            <button class="bet-amount-btn bg-gray-400 text-gray-600 text-xs py-2 px-1 rounded cursor-not-allowed opacity-50" data-amount="500" disabled>
                                 500
                             </button>
                         </div>
@@ -320,6 +320,22 @@
             
             // 버튼 이벤트 리스너 설정
             setupButtonEventListeners();
+            
+            // 타자 자동 선택
+            const batterBtn = document.querySelector('.game-type-btn[data-type="batter"]');
+            if (batterBtn) {
+                batterBtn.classList.remove('bg-gray-600');
+                batterBtn.classList.add('bg-blue-500', 'active');
+                selectedGameType = 'batter';
+            }
+            
+            // 100포인트 자동 선택
+            const hundredPointBtn = document.querySelector('.bet-amount-btn[data-amount="100"]');
+            if (hundredPointBtn) {
+                hundredPointBtn.classList.remove('bg-yellow-500');
+                hundredPointBtn.classList.add('bg-blue-500');
+                selectedBetAmount = 100;
+            }
             
             // 배팅 상태 확인 시작
             checkBettingStatus();
@@ -1132,17 +1148,24 @@
                 });
             });
 
-            // 배팅 포인트 버튼 이벤트
+            // 배팅 포인트 버튼 이벤트 (100포인트만 활성화)
             document.querySelectorAll('.bet-amount-btn').forEach(btn => {
                 btn.addEventListener('click', function() {
+                    // 비활성화된 버튼은 클릭 무시
+                    if (this.disabled) {
+                        return;
+                    }
+                    
                     // 모든 포인트 버튼 비활성화
                     document.querySelectorAll('.bet-amount-btn').forEach(b => {
-                        b.classList.remove('bg-blue-500');
-                        b.classList.add('bg-gray-600');
+                        if (!b.disabled) {
+                            b.classList.remove('bg-blue-500');
+                            b.classList.add('bg-yellow-500');
+                        }
                     });
                     
                     // 선택된 버튼 활성화
-                    this.classList.remove('bg-gray-600');
+                    this.classList.remove('bg-yellow-500');
                     this.classList.add('bg-blue-500');
                     
                     selectedBetAmount = parseInt(this.dataset.amount);
@@ -1170,14 +1193,14 @@
             const isBettingActive = statusIndicator && statusIndicator.classList.contains('bg-green-500');
             
             if (isBettingActive) {
-                // 모든 선택이 완료되었는지 확인
-                const canBet = selectedGameType && selectedBetChoice && selectedBetAmount > 0;
+                // 타자와 100포인트는 항상 선택되어 있으므로 배팅 선택만 확인
+                const canBet = selectedGameType === 'batter' && selectedBetChoice && selectedBetAmount === 100;
                 betBtn.disabled = !canBet;
                 betBtn.classList.remove('bg-gray-500');
                 betBtn.classList.add(canBet ? 'bg-yellow-300' : 'bg-gray-500');
                 betBtn.innerHTML = canBet ? 
                     '<i class="fas fa-user-tie"></i><span>배팅하기</span>' : 
-                    '<i class="fas fa-exclamation-triangle"></i><span>모든 항목을 선택해주세요</span>';
+                    '<i class="fas fa-exclamation-triangle"></i><span>배팅 선택을 해주세요</span>';
             }
         }
         
