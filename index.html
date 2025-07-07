@@ -456,7 +456,7 @@
                         if (currentUser.isGuest) {
                             showGuestWinModal();
                         } else {
-                            showDonationModal();
+                            showDonationModal(myResult.winAmount); // 승리 포인트를 매개변수로 전달
                             document.getElementById('donationOptions').style.display = 'block';
                         }
                     } else {
@@ -516,8 +516,37 @@
             document.getElementById('guestWinModal').style.display = 'flex';
         }
 
-        function showDonationModal() {
-            document.getElementById('donationModal').style.display = 'flex';
+        function showDonationModal(winPoints = 0) {
+            const modal = document.getElementById('donationModal');
+            modal.style.display = 'flex';
+            
+            // 기부 옵션 버튼들에 이벤트 리스너 추가
+            document.querySelectorAll('.donation-btn').forEach(btn => {
+                btn.onclick = function() {
+                    const percent = parseInt(this.dataset.percent);
+                    const donateAmount = Math.floor(winPoints * percent / 100);
+                    
+                    // 기부 확인 섹션 표시
+                    document.getElementById('selectedPercent').textContent = `${percent}% (${donateAmount}포인트)`;
+                    document.getElementById('donationConfirm').classList.remove('hidden');
+                    
+                    // 예 버튼 이벤트
+                    document.getElementById('confirmYesBtn').onclick = function() {
+                        processDonation(donateAmount, percent);
+                    };
+                    
+                    // 아니오 버튼 이벤트
+                    document.getElementById('confirmNoBtn').onclick = function() {
+                        document.getElementById('donationConfirm').classList.add('hidden');
+                    };
+                };
+            });
+            
+            // 기부안함 버튼 이벤트
+            document.getElementById('donateNoBtn').onclick = function() {
+                modal.style.display = 'none';
+                document.getElementById('donationConfirm').classList.add('hidden');
+            };
         }
 
         function showLoseModal() {
@@ -565,41 +594,58 @@
         }
 
         // 기부 처리 함수
-        async function handleDonation(percentage) {
-            const donationAmount = Math.floor(currentWinPoints * (percentage / 100));
+        async function processDonation(donationAmount, percentage) {
             const finalPoints = currentUser.points - donationAmount;
             
-            // 서버에 기부 및 포인트 업데이트
             try {
-                const response = await fetch('/api/donate', {
+                const response = await fetch('/api/donation', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({
                         userId: currentUser.userId,
-                        points: finalPoints,
-                        donationAmount: donationAmount
+                        userName: currentUser.name,
+                        donationAmount: donationAmount,
+                        percentage: percentage,
+                        finalPoints: finalPoints
                     })
                 });
-
+                
                 const data = await response.json();
+                
                 if (data.success) {
                     currentUser.points = finalPoints;
-                    document.getElementById('userPoints').textContent = `${finalPoints}`;
+                    document.getElementById('userPoints').textContent = `${finalPoints}포인트`;
                     localStorage.setItem('currentUser', JSON.stringify(currentUser));
                     
-                    // 기부 완료 모달 표시
-                    document.getElementById('donationCompleteMessage').textContent = `${donationAmount} 포인트를 기부하셨습니다. 감사합니다!`;
+                    // 기부 모달 닫기
                     document.getElementById('donationModal').style.display = 'none';
-                    document.getElementById('donationCompleteModal').style.display = 'flex';
+                    document.getElementById('donationConfirm').classList.add('hidden');
+                    
+                    // 기부 완료 모달 표시
+                    showDonationCompleteModal(donationAmount, percentage);
                 } else {
-                    alert('기부 처리 중 오류가 발생했습니다.');
+                    alert('기부 처리 중 오류가 발생했습니다: ' + data.message);
                 }
             } catch (error) {
                 console.error('기부 처리 오류:', error);
                 alert('기부 처리 중 오류가 발생했습니다.');
             }
+        }
+        
+        // 기부 완료 모달 표시 함수
+        function showDonationCompleteModal(donationAmount, percentage) {
+            const modal = document.getElementById('donationCompleteModal');
+            const message = document.getElementById('donationCompleteMessage');
+            
+            message.textContent = `${percentage}% (${donationAmount}포인트) 기부가 완료되었습니다. 감사합니다!`;
+            modal.style.display = 'flex';
+            
+            // 확인 버튼 이벤트
+            document.getElementById('donationCompleteBtn').onclick = function() {
+                modal.style.display = 'none';
+            };
         }
 
         // 기부 버튼 이벤트 리스너
@@ -1079,6 +1125,9 @@
                     
                     selectedGameType = this.dataset.type;
                     console.log('선택된 게임 타입:', selectedGameType);
+                    
+                    // 배팅 버튼 상태 업데이트
+                    updateBettingButtonState();
                 });
             });
 
@@ -1097,6 +1146,9 @@
                     
                     selectedBetChoice = this.dataset.choice;
                     console.log('선택된 배팅:', selectedBetChoice);
+                    
+                    // 배팅 버튼 상태 업데이트
+                    updateBettingButtonState();
                 });
             });
 
@@ -1115,6 +1167,9 @@
                     
                     selectedBetAmount = parseInt(this.dataset.amount);
                     console.log('선택된 포인트:', selectedBetAmount);
+                    
+                    // 배팅 버튼 상태 업데이트
+                    updateBettingButtonState();
                 });
             });
 
@@ -1122,6 +1177,27 @@
             const bettingButton = document.getElementById('betBtn');
             if (bettingButton) {
                 bettingButton.addEventListener('click', submitBetting);
+            }
+        }
+        
+        // 배팅 버튼 상태 업데이트 함수
+        function updateBettingButtonState() {
+            const betBtn = document.getElementById('betBtn');
+            if (!betBtn) return;
+            
+            // 배팅 상태 확인
+            const statusIndicator = document.getElementById('bettingStatusIndicator');
+            const isBettingActive = statusIndicator && statusIndicator.classList.contains('bg-green-500');
+            
+            if (isBettingActive) {
+                // 모든 선택이 완료되었는지 확인
+                const canBet = selectedGameType && selectedBetChoice && selectedBetAmount > 0;
+                betBtn.disabled = !canBet;
+                betBtn.classList.remove('bg-gray-500');
+                betBtn.classList.add(canBet ? 'bg-yellow-300' : 'bg-gray-500');
+                betBtn.innerHTML = canBet ? 
+                    '<i class="fas fa-user-tie"></i><span>배팅하기</span>' : 
+                    '<i class="fas fa-exclamation-triangle"></i><span>모든 항목을 선택해주세요</span>';
             }
         }
         
@@ -1228,6 +1304,13 @@
                     currentUser.points += winPoints;
                     document.getElementById('userPoints').textContent = `${currentUser.points}포인트`;
                     localStorage.setItem('currentUser', JSON.stringify(currentUser));
+                    
+                    // 승리 시 기부 모달 표시 (게스트가 아닌 경우)
+                    if (!currentUser.isGuest) {
+                        setTimeout(() => {
+                            showDonationModal(winPoints);
+                        }, 1000);
+                    }
                 } else {
                     winAmountDisplay.style.display = 'none';
                 }
@@ -1258,11 +1341,12 @@
                 statusText.textContent = '배팅 가능';
                 statusText.className = 'font-bold text-sm text-green-400';
                 
-                // 배팅 버튼 활성화
-                betBtn.disabled = false;
+                // 배팅 버튼 활성화 (모든 선택이 완료되었을 때만)
+                const canBet = selectedGameType && selectedBetChoice && selectedBetAmount > 0;
+                betBtn.disabled = !canBet;
                 betBtn.classList.remove('bg-gray-500');
-                betBtn.classList.add('bg-yellow-300');
-                betBtn.innerHTML = '<i class="fas fa-user-tie"></i><span>배팅하기</span>';
+                betBtn.classList.add(canBet ? 'bg-yellow-300' : 'bg-gray-500');
+                betBtn.innerHTML = canBet ? '<i class="fas fa-user-tie"></i><span>배팅하기</span>' : '<i class="fas fa-exclamation-triangle"></i><span>모든 항목을 선택해주세요</span>';
                 
                 // 모든 선택 버튼 활성화
                 gameTypeBtns.forEach(btn => {

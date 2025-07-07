@@ -2401,3 +2401,65 @@ app.get('/api/betting/results', async (req, res) => {
         });
     }
 });
+
+// 기부 처리 API
+app.post('/api/donation', async (req, res) => {
+    try {
+        const { userId, userName, donationAmount, percentage, finalPoints } = req.body;
+        
+        if (!userId || !userName || !donationAmount || !percentage || !finalPoints) {
+            return res.status(400).json({ 
+                success: false, 
+                message: '필수 정보가 누락되었습니다.' 
+            });
+        }
+        
+        // MongoDB 연결 상태 확인
+        if (mongoose.connection.readyState !== 1) {
+            return res.status(503).json({ 
+                success: false, 
+                message: '데이터베이스 연결이 준비되지 않았습니다.' 
+            });
+        }
+        
+        const userCollection = mongoose.connection.db.collection('game-member');
+        
+        // 사용자 포인트 업데이트
+        const result = await userCollection.updateOne(
+            { userId: userId },
+            { 
+                $set: { points: finalPoints },
+                $push: { 
+                    donationHistory: {
+                        amount: donationAmount,
+                        percentage: percentage,
+                        donatedAt: new Date()
+                    }
+                }
+            }
+        );
+        
+        if (result.matchedCount === 0) {
+            return res.status(404).json({
+                success: false,
+                message: '사용자를 찾을 수 없습니다.'
+            });
+        }
+        
+        console.log(`기부 처리: ${userName} - ${donationAmount}포인트 (${percentage}%)`);
+        
+        res.json({
+            success: true,
+            message: '기부가 완료되었습니다.',
+            donationAmount: donationAmount,
+            percentage: percentage,
+            finalPoints: finalPoints
+        });
+    } catch (error) {
+        console.error('기부 처리 오류:', error);
+        res.status(500).json({
+            success: false,
+            message: '기부 처리 중 오류가 발생했습니다.'
+        });
+    }
+});
