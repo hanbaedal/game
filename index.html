@@ -865,6 +865,9 @@
                     // 오늘의 경기가 없을 때 모달로 알림 표시
                     showNoGamesModal();
                     gameSelectionContainer.innerHTML = '<div class="text-center text-gray-400 py-2">오늘의 경기가 없습니다.</div>';
+                    
+                    // 경기가 없을 때 배팅 상태 비활성화
+                    updateBettingUI(false);
                 }
             } catch (error) {
                 console.error('경기 정보 로드 중 오류:', error);
@@ -876,6 +879,9 @@
                         </button>
                     </div>
                 `;
+                
+                // 오류 발생 시 배팅 상태 비활성화
+                updateBettingUI(false);
             }
         }
 
@@ -1197,6 +1203,16 @@
         // 배팅 상태 확인 함수
         async function checkBettingStatus() {
             try {
+                // 먼저 경기 정보 확인
+                const gamesResponse = await fetch('/api/games');
+                const gamesData = await gamesResponse.json();
+                
+                // 경기가 없으면 배팅 비활성화
+                if (!gamesData.success || !gamesData.games || gamesData.games.length === 0) {
+                    updateBettingUI(false);
+                    return;
+                }
+                
                 const today = new Date().toISOString().split('T')[0].replace(/-/g, '');
                 const response = await fetch(`/api/betting/status?date=${today}&gameNumber=1`);
                 const data = await response.json();
