@@ -290,7 +290,7 @@ const dailyGameSchema = new mongoose.Schema({
     updatedAt: { type: Date, default: Date.now }
 });
 
-const DailyGame = mongoose.model('DailyGame', dailyGameSchema, 'dailygames');
+const DailyGame = mongoose.model('DailyGame', dailyGameSchema, 'daily-games');
 
 // API 라우트
 
