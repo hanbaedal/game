@@ -2570,3 +2570,41 @@ app.get('/api/donations/stats', async (req, res) => {
         });
     }
 });
+
+// realtime-monitoring 컬렉션에서 pointsPerWinner 조회 API
+app.get('/api/realtime-monitoring/points-per-winner', async (req, res) => {
+    try {
+        // MongoDB 연결 상태 확인
+        if (mongoose.connection.readyState !== 1) {
+            return res.status(503).json({ 
+                success: false, 
+                message: '데이터베이스 연결이 준비되지 않았습니다.' 
+            });
+        }
+        
+        const realtimeCollection = mongoose.connection.db.collection('realtime-monitoring');
+        
+        // realtime-monitoring 컬렉션에서 pointsPerWinner 값 조회
+        const monitoringData = await realtimeCollection.findOne({});
+        
+        if (monitoringData && monitoringData.pointsPerWinner) {
+            res.json({
+                success: true,
+                pointsPerWinner: monitoringData.pointsPerWinner
+            });
+        } else {
+            // 기본값 설정
+            res.json({
+                success: true,
+                pointsPerWinner: 4000 // 기본값
+            });
+        }
+    } catch (error) {
+        console.error('pointsPerWinner 조회 오류:', error);
+        res.status(500).json({
+            success: false,
+            message: 'pointsPerWinner 조회 중 오류가 발생했습니다.',
+            pointsPerWinner: 4000 // 오류 시 기본값
+        });
+    }
+});
