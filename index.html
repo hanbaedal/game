@@ -319,6 +319,9 @@
             // 오늘의 경기 로드 (로그인 상태에 관계없이)
             await loadDailyGames();
             
+            // 버튼 이벤트 리스너 설정
+            setupButtonEventListeners();
+            
             // 배팅 상태 확인 시작
             checkBettingStatus();
             // 배팅 상태 주기적 확인 (0.1초마다 - 실시간)
@@ -1059,18 +1062,8 @@
         let selectedBetChoice = '';
         let selectedBetAmount = 0;
 
-        // 페이지 로드 시 이벤트 리스너 설정
-        document.addEventListener('DOMContentLoaded', function() {
-            // 모달 외부 클릭 시 닫기
-            document.addEventListener('click', function(event) {
-                const modal = document.getElementById('gameModal');
-                const modalContent = modal ? modal.querySelector('.bg-gray-800') : null;
-                
-                if (modal && event.target === modal) {
-                    closeGameModal();
-                }
-            });
-            
+        // 버튼 이벤트 리스너 설정 함수
+        function setupButtonEventListeners() {
             // 게임 타입 버튼 이벤트
             document.querySelectorAll('.game-type-btn').forEach(btn => {
                 btn.addEventListener('click', function() {
@@ -1130,7 +1123,7 @@
             if (bettingButton) {
                 bettingButton.addEventListener('click', submitBetting);
             }
-        });
+        }
         
         // 출석체크 함수
         async function checkAttendance() {
@@ -1273,16 +1266,13 @@
                 
                 // 모든 선택 버튼 활성화
                 gameTypeBtns.forEach(btn => {
-                    btn.disabled = false;
-                    btn.classList.remove('opacity-50');
+                    btn.classList.remove('opacity-50', 'cursor-not-allowed');
                 });
                 betChoiceBtns.forEach(btn => {
-                    btn.disabled = false;
-                    btn.classList.remove('opacity-50');
+                    btn.classList.remove('opacity-50', 'cursor-not-allowed');
                 });
                 betAmountBtns.forEach(btn => {
-                    btn.disabled = false;
-                    btn.classList.remove('opacity-50');
+                    btn.classList.remove('opacity-50', 'cursor-not-allowed');
                 });
             } else {
                 // 배팅 비활성화 상태
@@ -1297,18 +1287,15 @@
                 betBtn.classList.add('bg-gray-500');
                 betBtn.innerHTML = '<i class="fas fa-clock"></i><span>배팅 대기중...</span>';
                 
-                // 모든 선택 버튼 비활성화
+                // 모든 선택 버튼 비활성화 (disabled 제거, 시각적 비활성화만)
                 gameTypeBtns.forEach(btn => {
-                    btn.disabled = true;
-                    btn.classList.add('opacity-50');
+                    btn.classList.add('opacity-50', 'cursor-not-allowed');
                 });
                 betChoiceBtns.forEach(btn => {
-                    btn.disabled = true;
-                    btn.classList.add('opacity-50');
+                    btn.classList.add('opacity-50', 'cursor-not-allowed');
                 });
                 betAmountBtns.forEach(btn => {
-                    btn.disabled = true;
-                    btn.classList.add('opacity-50');
+                    btn.classList.add('opacity-50', 'cursor-not-allowed');
                 });
             }
         }
@@ -1390,10 +1377,9 @@
                     betBtn.classList.add('bg-gray-500');
                     betBtn.innerHTML = '<i class="fas fa-check"></i><span>배팅 완료</span>';
                     
-                    // 모든 선택 버튼 비활성화
+                    // 모든 선택 버튼 비활성화 (시각적만)
                     document.querySelectorAll('.game-type-btn, .bet-choice-btn, .bet-amount-btn').forEach(btn => {
-                        btn.disabled = true;
-                        btn.classList.add('opacity-50');
+                        btn.classList.add('opacity-50', 'cursor-not-allowed');
                     });
                 } else {
                     alert('배팅 실패: ' + result.message);
