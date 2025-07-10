@@ -2188,7 +2188,7 @@ app.use((err, req, res, next) => {
 // 404 핸들링
 app.use((req, res) => {
     res.status(404).json({ error: '요청한 리소스를 찾을 수 없습니다.' });
-});
+}); 
 
 // 배팅 중지 API (관리자용)
 app.post('/api/betting/admin-stop', async (req, res) => {
@@ -2607,4 +2607,4 @@ app.get('/api/realtime-monitoring/points-per-winner', async (req, res) => {
             pointsPerWinner: 4000 // 오류 시 기본값
         });
     }
-});
+}); 
