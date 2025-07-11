@@ -11,20 +11,21 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname)));
 
+// MongoDB 연결 설정
+const MONGODB_URI = process.env.MONGODB_URI || 'mongodb+srv://ppadun_user:ppadun8267@member-management.bppicvz.mongodb.net/?retryWrites=true&w=majority&appName=member-management';
+
 // MongoDB 연결
 const connectToMongoDB = async () => {
     try {
         console.log('MongoDB 연결 시도 중...');
         
-        const mongoURI = process.env.MONGODB_URI;
-        
-        if (!mongoURI) {
+        if (!MONGODB_URI) {
             console.error('❌ MONGODB_URI 환경 변수가 설정되지 않았습니다.');
             console.log('⚠️ MongoDB 없이 서버를 시작합니다.');
             return false;
         }
         
-        console.log('🔗 연결 문자열 확인:', mongoURI.substring(0, 20) + '...');
+        console.log('🔗 연결 문자열 확인:', MONGODB_URI.substring(0, 20) + '...');
         
         // 명시적으로 member-management 데이터베이스 사용
         const dbName = 'member-management';
@@ -42,7 +43,7 @@ const connectToMongoDB = async () => {
         
         console.log('🔧 연결 옵션:', connectionOptions);
         
-        await mongoose.connect(mongoURI, connectionOptions);
+        await mongoose.connect(MONGODB_URI, connectionOptions);
         
         console.log('✅ MongoDB 연결 성공!');
         console.log('📊 실제 연결된 데이터베이스:', mongoose.connection.db.databaseName);
@@ -2362,8 +2363,6 @@ app.post('/api/betting/process-result', async (req, res) => {
         // 전체 배팅 통계 계산
         let totalBetAmount = 0;
         let totalFailedAmount = 0;
-        let winnerCount = 0;
-        const winners = [];
         const allBets = [];
         
         // 모든 배팅 내역 수집

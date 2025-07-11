@@ -1330,6 +1330,11 @@
             // 게임 타입 버튼 이벤트
             document.querySelectorAll('.game-type-btn').forEach(btn => {
                 btn.addEventListener('click', function() {
+                    // 비활성화된 버튼은 클릭 무시
+                    if (this.disabled) {
+                        return;
+                    }
+                    
                     // 모든 게임 타입 버튼 비활성화
                     document.querySelectorAll('.game-type-btn').forEach(b => {
                         b.classList.remove('bg-blue-500', 'active');
@@ -1351,6 +1356,11 @@
             // 배팅 선택 버튼 이벤트
             document.querySelectorAll('.bet-choice-btn').forEach(btn => {
                 btn.addEventListener('click', function() {
+                    // 비활성화된 버튼은 클릭 무시
+                    if (this.disabled) {
+                        return;
+                    }
+                    
                     // 모든 배팅 선택 버튼 비활성화
                     document.querySelectorAll('.bet-choice-btn').forEach(b => {
                         b.classList.remove('bg-blue-500');
@@ -1447,16 +1457,6 @@
         // 배팅 상태 확인 함수
         async function checkBettingStatus() {
             try {
-                // 먼저 경기 정보 확인
-                const gamesResponse = await fetch('/api/games');
-                const gamesData = await gamesResponse.json();
-                
-                // 경기가 없으면 배팅 비활성화
-                if (!gamesData.success || !gamesData.games || gamesData.games.length === 0) {
-                    updateBettingUI(false);
-                    return;
-                }
-                
                 const today = new Date().toISOString().split('T')[0].replace(/-/g, '');
                 const response = await fetch(`/api/betting/status?date=${today}&gameNumber=1`);
                 const data = await response.json();
@@ -1589,12 +1589,15 @@
                 // 모든 선택 버튼 활성화
                 gameTypeBtns.forEach(btn => {
                     btn.classList.remove('opacity-50', 'cursor-not-allowed');
+                    btn.disabled = false;
                 });
                 betChoiceBtns.forEach(btn => {
                     btn.classList.remove('opacity-50', 'cursor-not-allowed');
+                    btn.disabled = false;
                 });
                 betAmountBtns.forEach(btn => {
                     btn.classList.remove('opacity-50', 'cursor-not-allowed');
+                    btn.disabled = false;
                 });
             } else {
                 // 배팅 비활성화 상태
@@ -1609,15 +1612,18 @@
                 betBtn.classList.add('bg-gray-500');
                 betBtn.innerHTML = '<i class="fas fa-clock"></i><span>배팅 대기중...</span>';
                 
-                // 모든 선택 버튼 비활성화 (disabled 제거, 시각적 비활성화만)
+                // 모든 선택 버튼 비활성화 (시각적 비활성화만, 클릭은 가능하도록)
                 gameTypeBtns.forEach(btn => {
                     btn.classList.add('opacity-50', 'cursor-not-allowed');
+                    btn.disabled = true;
                 });
                 betChoiceBtns.forEach(btn => {
                     btn.classList.add('opacity-50', 'cursor-not-allowed');
+                    btn.disabled = true;
                 });
                 betAmountBtns.forEach(btn => {
                     btn.classList.add('opacity-50', 'cursor-not-allowed');
+                    btn.disabled = true;
                 });
             }
         }
