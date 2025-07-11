@@ -2190,6 +2190,70 @@ app.use((req, res) => {
     res.status(404).json({ error: '요청한 리소스를 찾을 수 없습니다.' });
 }); 
 
+// 배팅 시작 API (관리자용)
+app.post('/api/betting/admin-start', async (req, res) => {
+    try {
+        const { date, gameNumber, inning = 1 } = req.body;
+        
+        if (!date || !gameNumber) {
+            return res.status(400).json({ 
+                success: false, 
+                message: '날짜와 경기 번호가 필요합니다.' 
+            });
+        }
+        
+        // MongoDB 연결 상태 확인
+        if (mongoose.connection.readyState !== 1) {
+            return res.status(503).json({ 
+                success: false, 
+                message: '데이터베이스 연결이 준비되지 않았습니다.' 
+            });
+        }
+        
+        const bettingCollection = mongoose.connection.db.collection('betting-sessions');
+        
+        // 기존 활성 세션이 있는지 확인
+        const existingActiveSession = await bettingCollection.findOne({
+            date: date,
+            gameNumber: parseInt(gameNumber),
+            status: 'active'
+        });
+        
+        if (existingActiveSession) {
+            return res.status(400).json({
+                success: false,
+                message: '이미 활성화된 배팅 세션이 있습니다.'
+            });
+        }
+        
+        // 새로운 배팅 세션 생성
+        const newSession = {
+            date: date,
+            gameNumber: parseInt(gameNumber),
+            inning: parseInt(inning),
+            status: 'active',
+            startedAt: new Date(),
+            createdAt: new Date()
+        };
+        
+        await bettingCollection.insertOne(newSession);
+        
+        console.log(`배팅 시작: ${date} 경기 ${gameNumber} ${inning}회`);
+        
+        res.json({
+            success: true,
+            message: '배팅이 시작되었습니다.',
+            session: newSession
+        });
+    } catch (error) {
+        console.error('배팅 시작 오류:', error);
+        res.status(500).json({
+            success: false,
+            message: '배팅 시작 중 오류가 발생했습니다.'
+        });
+    }
+});
+
 // 배팅 중지 API (관리자용)
 app.post('/api/betting/admin-stop', async (req, res) => {
     try {
@@ -2295,7 +2359,40 @@ app.post('/api/betting/process-result', async (req, res) => {
         let winnerCount = 0;
         const winners = [];
         
-        // 승리자 판정 및 포인트 지급
+        // 전체 배팅 통계 계산
+        let totalBetAmount = 0;
+        let totalFailedAmount = 0;
+        let winnerCount = 0;
+        const winners = [];
+        const allBets = [];
+        
+        // 모든 배팅 내역 수집
+        for (const user of users) {
+            const todayBets = user.bettingHistory.filter(bet => 
+                bet.date === date && bet.gameNumber === parseInt(gameNumber)
+            );
+            
+            for (const bet of todayBets) {
+                totalBetAmount += bet.points;
+                allBets.push({
+                    userId: user.userId,
+                    userName: user.name,
+                    prediction: bet.prediction,
+                    points: bet.points
+                });
+                
+                if (bet.prediction === result) {
+                    winnerCount++;
+                } else {
+                    totalFailedAmount += bet.points;
+                }
+            }
+        }
+        
+        // 승리 수당 계산: 실패한 배팅포인트 / 승리한 인원
+        const winAmountPerPerson = winnerCount > 0 ? Math.floor(totalFailedAmount / winnerCount) : 0;
+        
+        // 승리자들에게 포인트 지급
         for (const user of users) {
             const todayBets = user.bettingHistory.filter(bet => 
                 bet.date === date && bet.gameNumber === parseInt(gameNumber)
@@ -2303,15 +2400,13 @@ app.post('/api/betting/process-result', async (req, res) => {
             
             for (const bet of todayBets) {
                 if (bet.prediction === result) {
-                    // 승리자 발견
-                    const winAmount = bet.points * 2; // 2배 배당
-                    totalPrize += winAmount;
-                    winnerCount++;
+                    // 승리자 발견 - 원래 배팅 포인트 + 승리 수당
+                    const totalWinAmount = bet.points + winAmountPerPerson;
                     
                     // 사용자 포인트 업데이트
                     await userCollection.updateOne(
                         { userId: user.userId },
-                        { $inc: { points: winAmount } }
+                        { $inc: { points: totalWinAmount } }
                     );
                     
                     winners.push({
@@ -2319,7 +2414,8 @@ app.post('/api/betting/process-result', async (req, res) => {
                         userName: user.name,
                         prediction: bet.prediction,
                         betAmount: bet.points,
-                        winAmount: winAmount
+                        winAmount: totalWinAmount,
+                        winAmountPerPerson: winAmountPerPerson
                     });
                 }
             }
@@ -2335,8 +2431,11 @@ app.post('/api/betting/process-result', async (req, res) => {
                 $set: {
                     result: result,
                     winners: winners,
-                    totalPrize: totalPrize,
+                    totalPrize: winnerCount * winAmountPerPerson, // 총 지급된 승리 수당
                     winnerCount: winnerCount,
+                    totalBetAmount: totalBetAmount, // 총 배팅 금액
+                    totalFailedAmount: totalFailedAmount, // 총 실패 배팅 금액
+                    winAmountPerPerson: winAmountPerPerson, // 인당 승리 수당
                     processedAt: new Date(),
                     isProcessed: true
                 }
