@@ -30,6 +30,10 @@
                 <i class="fas fa-cog text-2xl"></i>
                 <p class="text-[0.4rem] mt-1">설정</p>
             </div>
+<<<<<<< HEAD
+=======
+
+>>>>>>> ea0a2f22917d610f44a839eade51f22399900726
         </div>
     </header>
 
@@ -132,6 +136,52 @@
                     <div class="flex items-center space-x-3">
                         <div id="bettingStatusIndicator" class="w-4 h-4 rounded-full"></div>
                         <span id="bettingStatusText" class="font-bold text-sm"></span>
+                    </div>
+                </div>
+
+                <!-- 관리자 배팅 시작 버튼 (관리자만 표시) -->
+                <div id="adminBettingControls" class="mt-4 p-3 rounded-lg bg-gray-700" style="display: none;">
+                    <h4 class="font-bold text-sm mb-3 text-yellow-400">관리자 전용</h4>
+                    <div class="space-y-3">
+                        <div class="flex space-x-2">
+                            <button id="startBettingBtn" class="flex-1 bg-green-600 hover:bg-green-700 text-white text-xs py-2 px-3 rounded">
+                                <i class="fas fa-play"></i>
+                                <span>배팅 시작</span>
+                            </button>
+                            <button id="stopBettingBtn" class="flex-1 bg-red-600 hover:bg-red-700 text-white text-xs py-2 px-3 rounded">
+                                <i class="fas fa-stop"></i>
+                                <span>배팅 중지</span>
+                            </button>
+                        </div>
+                        
+                        <!-- 예측 결과 선택 -->
+                        <div id="resultSelectionSection" class="border-t border-gray-600 pt-3" style="display: none;">
+                            <h5 class="font-bold text-sm mb-2 text-blue-400">예측 결과 선택</h5>
+                            <div class="grid grid-cols-3 gap-2">
+                                <button class="result-btn bg-gray-600 hover:bg-gray-500 text-white text-xs py-2 px-2 rounded" data-result="1base">
+                                    1루
+                                </button>
+                                <button class="result-btn bg-gray-600 hover:bg-gray-500 text-white text-xs py-2 px-2 rounded" data-result="2base">
+                                    2루
+                                </button>
+                                <button class="result-btn bg-gray-600 hover:bg-gray-500 text-white text-xs py-2 px-2 rounded" data-result="3base">
+                                    3루
+                                </button>
+                                <button class="result-btn bg-gray-600 hover:bg-gray-500 text-white text-xs py-2 px-2 rounded" data-result="homerun">
+                                    홈런
+                                </button>
+                                <button class="result-btn bg-gray-600 hover:bg-gray-500 text-white text-xs py-2 px-2 rounded" data-result="strikeout">
+                                    삼진
+                                </button>
+                                <button class="result-btn bg-gray-600 hover:bg-gray-500 text-white text-xs py-2 px-2 rounded" data-result="out">
+                                    아웃
+                                </button>
+                            </div>
+                            <button id="processResultBtn" class="w-full mt-2 bg-blue-600 hover:bg-blue-700 text-white text-xs py-2 px-3 rounded" style="display: none;">
+                                <i class="fas fa-check"></i>
+                                <span>결과 처리</span>
+                            </button>
+                        </div>
                     </div>
                 </div>
 
@@ -335,14 +385,191 @@
             
             // 배팅 상태 확인 시작
             checkBettingStatus();
+<<<<<<< HEAD
             // 배팅 상태 주기적 확인 (3초마다 - 안정성 향상)
             setInterval(checkBettingStatus, 3000);
+=======
+            // 배팅 상태 주기적 확인 (0.1초마다 - 실시간)
+            setInterval(checkBettingStatus, 100);
+            
+            // 관리자 확인 및 관리자 컨트롤 표시
+            checkAdminStatus();
+>>>>>>> ea0a2f22917d610f44a839eade51f22399900726
         });
 
         // 로그아웃 함수
         function logout() {
             localStorage.removeItem('currentUser');
             window.location.href = '/login.html';
+        }
+
+        // 관리자 확인 함수
+        function checkAdminStatus() {
+            if (currentUser && currentUser.isAdmin) {
+                document.getElementById('adminBettingControls').style.display = 'block';
+                setupAdminEventListeners();
+            }
+        }
+
+        // 관리자 이벤트 리스너 설정
+        function setupAdminEventListeners() {
+            const startBettingBtn = document.getElementById('startBettingBtn');
+            const stopBettingBtn = document.getElementById('stopBettingBtn');
+            const processResultBtn = document.getElementById('processResultBtn');
+            
+            if (startBettingBtn) {
+                startBettingBtn.addEventListener('click', startBetting);
+            }
+            
+            if (stopBettingBtn) {
+                stopBettingBtn.addEventListener('click', stopBetting);
+            }
+            
+            if (processResultBtn) {
+                processResultBtn.addEventListener('click', processResult);
+            }
+            
+            // 예측 결과 선택 버튼 이벤트 리스너
+            document.querySelectorAll('.result-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    // 모든 결과 버튼 비활성화
+                    document.querySelectorAll('.result-btn').forEach(b => {
+                        b.classList.remove('bg-blue-500');
+                        b.classList.add('bg-gray-600');
+                    });
+                    
+                    // 선택된 버튼 활성화
+                    this.classList.remove('bg-gray-600');
+                    this.classList.add('bg-blue-500');
+                    
+                    // 결과 처리 버튼 표시
+                    document.getElementById('processResultBtn').style.display = 'block';
+                });
+            });
+        }
+
+        // 배팅 시작 함수 (관리자용)
+        async function startBetting() {
+            if (!currentUser || !currentUser.isAdmin) {
+                alert('관리자만 사용할 수 있는 기능입니다.');
+                return;
+            }
+
+            try {
+                const today = new Date().toISOString().split('T')[0].replace(/-/g, '');
+                const response = await fetch('/api/betting/admin-start', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        date: today,
+                        gameNumber: 1,
+                        inning: 1
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (data.success) {
+                    alert('배팅이 시작되었습니다!');
+                    // 배팅 상태 즉시 확인
+                    checkBettingStatus();
+                } else {
+                    alert('배팅 시작 실패: ' + data.message);
+                }
+            } catch (error) {
+                console.error('배팅 시작 오류:', error);
+                alert('배팅 시작 중 오류가 발생했습니다.');
+            }
+        }
+
+        // 배팅 중지 함수 (관리자용)
+        async function stopBetting() {
+            if (!currentUser || !currentUser.isAdmin) {
+                alert('관리자만 사용할 수 있는 기능입니다.');
+                return;
+            }
+
+            try {
+                const today = new Date().toISOString().split('T')[0].replace(/-/g, '');
+                const response = await fetch('/api/betting/admin-stop', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        date: today,
+                        gameNumber: 1
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (data.success) {
+                    alert('배팅이 중지되었습니다!');
+                    // 예측 결과 선택 섹션 표시
+                    document.getElementById('resultSelectionSection').style.display = 'block';
+                    // 배팅 상태 즉시 확인
+                    checkBettingStatus();
+                } else {
+                    alert('배팅 중지 실패: ' + data.message);
+                }
+            } catch (error) {
+                console.error('배팅 중지 오류:', error);
+                alert('배팅 중지 중 오류가 발생했습니다.');
+            }
+        }
+
+        // 결과 처리 함수 (관리자용)
+        async function processResult() {
+            if (!currentUser || !currentUser.isAdmin) {
+                alert('관리자만 사용할 수 있는 기능입니다.');
+                return;
+            }
+
+            // 선택된 결과 확인
+            const selectedResultBtn = document.querySelector('.result-btn.bg-blue-500');
+            if (!selectedResultBtn) {
+                alert('예측 결과를 선택해주세요.');
+                return;
+            }
+
+            const selectedResult = selectedResultBtn.dataset.result;
+            
+            try {
+                const today = new Date().toISOString().split('T')[0].replace(/-/g, '');
+                const response = await fetch('/api/betting/process-result', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        date: today,
+                        gameNumber: 1,
+                        result: selectedResult
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (data.success) {
+                    alert(`결과가 처리되었습니다! (결과: ${selectedResult})`);
+                    // 결과 처리 후 섹션 숨기기
+                    document.getElementById('resultSelectionSection').style.display = 'none';
+                    document.getElementById('processResultBtn').style.display = 'none';
+                    // 모든 결과 버튼 초기화
+                    document.querySelectorAll('.result-btn').forEach(btn => {
+                        btn.classList.remove('bg-blue-500');
+                        btn.classList.add('bg-gray-600');
+                    });
+                } else {
+                    alert('결과 처리 실패: ' + data.message);
+                }
+            } catch (error) {
+                console.error('결과 처리 오류:', error);
+                alert('결과 처리 중 오류가 발생했습니다.');
+            }
         }
 
         // 배팅 처리 함수
@@ -884,23 +1111,21 @@
                     showNoGamesModal();
                     gameSelectionContainer.innerHTML = '<div class="text-center text-gray-400 py-2">오늘의 경기가 없습니다.</div>';
                     
-                    // 경기가 없을 때 배팅 상태 비활성화
-                    updateBettingUI(false);
+                    // 경기가 없어도 배팅 상태는 별도로 확인 (배팅 상태 확인 함수에서 처리)
                 }
-            } catch (error) {
-                console.error('경기 정보 로드 중 오류:', error);
-                gameSelectionContainer.innerHTML = `
-                    <div class="text-center text-red-400 py-2">
-                        <p class="text-xs">경기 정보를 불러오는 중 오류가 발생했습니다.</p>
-                        <button onclick="loadDailyGames()" class="mt-1 px-2 py-1 bg-blue-500 rounded hover:bg-blue-600 text-xs">
-                            다시 시도
-                        </button>
-                    </div>
-                `;
-                
-                // 오류 발생 시 배팅 상태 비활성화
-                updateBettingUI(false);
-            }
+                            } catch (error) {
+                    console.error('경기 정보 로드 중 오류:', error);
+                    gameSelectionContainer.innerHTML = `
+                        <div class="text-center text-red-400 py-2">
+                            <p class="text-xs">경기 정보를 불러오는 중 오류가 발생했습니다.</p>
+                            <button onclick="loadDailyGames()" class="mt-1 px-2 py-1 bg-blue-500 rounded hover:bg-blue-600 text-xs">
+                                다시 시도
+                            </button>
+                        </div>
+                    `;
+                    
+                    // 오류 발생 시에도 배팅 상태는 별도로 확인
+                }
         }
 
         // 경기 상태에 따른 CSS 클래스 반환 (시간 계산된 상태 기준)
@@ -1111,11 +1336,16 @@
             // 게임 타입 버튼 이벤트
             document.querySelectorAll('.game-type-btn').forEach(btn => {
                 btn.addEventListener('click', function() {
+<<<<<<< HEAD
                     // 배팅이 비활성화 상태면 클릭 무시
                     const statusIndicator = document.getElementById('bettingStatusIndicator');
                     const isBettingActive = statusIndicator && statusIndicator.classList.contains('bg-green-500');
                     
                     if (!isBettingActive) {
+=======
+                    // 비활성화된 버튼은 클릭 무시
+                    if (this.disabled) {
+>>>>>>> ea0a2f22917d610f44a839eade51f22399900726
                         return;
                     }
                     
@@ -1140,11 +1370,16 @@
             // 배팅 선택 버튼 이벤트
             document.querySelectorAll('.bet-choice-btn').forEach(btn => {
                 btn.addEventListener('click', function() {
+<<<<<<< HEAD
                     // 배팅이 비활성화 상태면 클릭 무시
                     const statusIndicator = document.getElementById('bettingStatusIndicator');
                     const isBettingActive = statusIndicator && statusIndicator.classList.contains('bg-green-500');
                     
                     if (!isBettingActive) {
+=======
+                    // 비활성화된 버튼은 클릭 무시
+                    if (this.disabled) {
+>>>>>>> ea0a2f22917d610f44a839eade51f22399900726
                         return;
                     }
                     
@@ -1332,45 +1567,25 @@
                 bettingResult.className = isWinner ? 'font-bold text-green-400' : 'font-bold text-red-400';
                 
                 if (isWinner) {
-                    // pointsPerWinner 값을 가져와서 승리 포인트 계산
-                    fetch('/api/realtime-monitoring/points-per-winner')
-                        .then(response => response.json())
-                        .then(data => {
-                            const pointsPerWinner = data.pointsPerWinner || 4000; // 기본값 4000
-                            const winPoints = myBet.points + pointsPerWinner; // 배팅 포인트 + 성공자당 분배 포인트
-                            
-                            winAmount.textContent = `${winPoints}포인트`;
-                            winAmountDisplay.style.display = 'flex';
-                            
-                            // 포인트 업데이트
-                            currentUser.points += winPoints;
-                            document.getElementById('userPoints').textContent = `${currentUser.points}포인트`;
-                            localStorage.setItem('currentUser', JSON.stringify(currentUser));
-                            
-                            // 승리 시 기부 모달 표시 (게스트가 아닌 경우)
-                            if (!currentUser.isGuest) {
-                                setTimeout(() => {
-                                    showDonationModal(winPoints);
-                                }, 1000);
-                            }
-                        })
-                        .catch(error => {
-                            console.error('pointsPerWinner 조회 오류:', error);
-                            // 오류 시 기본값 사용
-                            const winPoints = myBet.points + 4000;
-                            winAmount.textContent = `${winPoints}포인트`;
-                            winAmountDisplay.style.display = 'flex';
-                            
-                            currentUser.points += winPoints;
-                            document.getElementById('userPoints').textContent = `${currentUser.points}포인트`;
-                            localStorage.setItem('currentUser', JSON.stringify(currentUser));
-                            
-                            if (!currentUser.isGuest) {
-                                setTimeout(() => {
-                                    showDonationModal(winPoints);
-                                }, 1000);
-                            }
-                        });
+                    // 서버에서 처리된 승리 수당 사용
+                    const winPoints = session.winAmountPerPerson ? 
+                        myBet.points + session.winAmountPerPerson : 
+                        myBet.points + 4000; // 기본값
+                    
+                    winAmount.textContent = `${winPoints}포인트`;
+                    winAmountDisplay.style.display = 'flex';
+                    
+                    // 포인트 업데이트
+                    currentUser.points += winPoints;
+                    document.getElementById('userPoints').textContent = `${currentUser.points}포인트`;
+                    localStorage.setItem('currentUser', JSON.stringify(currentUser));
+                    
+                    // 승리 시 기부 모달 표시 (게스트가 아닌 경우)
+                    if (!currentUser.isGuest) {
+                        setTimeout(() => {
+                            showDonationModal(winPoints);
+                        }, 1000);
+                    }
                 } else {
                     winAmountDisplay.style.display = 'none';
                 }
@@ -1411,12 +1626,15 @@
                 // 모든 선택 버튼 활성화
                 gameTypeBtns.forEach(btn => {
                     btn.classList.remove('opacity-50', 'cursor-not-allowed');
+                    btn.disabled = false;
                 });
                 betChoiceBtns.forEach(btn => {
                     btn.classList.remove('opacity-50', 'cursor-not-allowed');
+                    btn.disabled = false;
                 });
                 betAmountBtns.forEach(btn => {
                     btn.classList.remove('opacity-50', 'cursor-not-allowed');
+                    btn.disabled = false;
                 });
                 
                 // 선택된 상태 복원
@@ -1434,15 +1652,18 @@
                 betBtn.classList.add('bg-gray-500');
                 betBtn.innerHTML = '<i class="fas fa-clock"></i><span>배팅 대기중...</span>';
                 
-                // 모든 선택 버튼 비활성화 (disabled 제거, 시각적 비활성화만)
+                // 모든 선택 버튼 비활성화 (시각적 비활성화만, 클릭은 가능하도록)
                 gameTypeBtns.forEach(btn => {
                     btn.classList.add('opacity-50', 'cursor-not-allowed');
+                    btn.disabled = true;
                 });
                 betChoiceBtns.forEach(btn => {
                     btn.classList.add('opacity-50', 'cursor-not-allowed');
+                    btn.disabled = true;
                 });
                 betAmountBtns.forEach(btn => {
                     btn.classList.add('opacity-50', 'cursor-not-allowed');
+                    btn.disabled = true;
                 });
             }
         }
@@ -1496,8 +1717,13 @@
             // 초기 확인
             checkBettingStatus();
             
+<<<<<<< HEAD
             // 3초마다 상태 확인 (너무 자주 호출되지 않도록)
             setInterval(checkBettingStatus, 3000);
+=======
+            // 0.1초마다 상태 확인 (실시간 반응)
+            setInterval(checkBettingStatus, 100);
+>>>>>>> ea0a2f22917d610f44a839eade51f22399900726
         }
         
         // 배팅 제출 함수
