@@ -2282,6 +2282,57 @@ app.post('/api/betting/admin-start', async (req, res) => {
 // (관리자용 배팅 중지 API 삭제됨 - 관리자 서버에서만 존재해야 함)
 // (관리자용 배팅 결과 처리 API 삭제됨 - 관리자 서버에서만 존재해야 함)
 
+// 수동 배팅 세션 생성 API (테스트용)
+app.post('/api/betting/create-session', async (req, res) => {
+    try {
+        const { date, gameNumber, inning = 1 } = req.body;
+        
+        if (!date || !gameNumber) {
+            return res.status(400).json({ 
+                success: false, 
+                message: '날짜와 경기 번호가 필요합니다.' 
+            });
+        }
+        
+        // MongoDB 연결 상태 확인
+        if (mongoose.connection.readyState !== 1) {
+            return res.status(503).json({ 
+                success: false, 
+                message: '데이터베이스 연결이 준비되지 않았습니다.' 
+            });
+        }
+        
+        const bettingCollection = mongoose.connection.db.collection('betting-sessions');
+        
+        // 새로운 배팅 세션 생성
+        const newSession = {
+            date: date,
+            gameNumber: parseInt(gameNumber),
+            inning: parseInt(inning),
+            status: 'active',
+            startedAt: new Date(),
+            createdAt: new Date()
+        };
+        
+        await bettingCollection.insertOne(newSession);
+        
+        console.log(`🔧 수동 배팅 세션 생성: ${date} 경기 ${gameNumber} ${inning}회`);
+        console.log('📊 생성된 세션:', newSession);
+        
+        res.json({
+            success: true,
+            message: '배팅 세션이 생성되었습니다.',
+            session: newSession
+        });
+    } catch (error) {
+        console.error('배팅 세션 생성 오류:', error);
+        res.status(500).json({
+            success: false,
+            message: '배팅 세션 생성 중 오류가 발생했습니다.'
+        });
+    }
+});
+
 // 배팅 결과 조회 API
 app.get('/api/betting/results', async (req, res) => {
     try {
