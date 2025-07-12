@@ -395,8 +395,8 @@
             
             // 배팅 상태 확인 시작
             checkBettingStatus();
-            // 배팅 상태 주기적 확인 (3초마다 - 안정성 향상)
-            setInterval(checkBettingStatus, 3000);
+            // 배팅 상태 주기적 확인 (1초마다 - 빠른 반응)
+            setInterval(checkBettingStatus, 1000);
         });
 
         // 로그아웃 함수
@@ -1471,9 +1471,12 @@
         }
 
         // 배팅 상태 확인 함수 (최적화)
+        let lastBettingStatus = null; // 이전 상태 저장
+        
         async function checkBettingStatus() {
             try {
                 const today = new Date().toISOString().split('T')[0].replace(/-/g, '');
+                
                 const response = await fetch(`/api/betting/status?date=${today}&gameNumber=1`, {
                     method: 'GET',
                     headers: {
@@ -1482,15 +1485,18 @@
                 });
                 const data = await response.json();
                 
-                console.log('배팅 상태 확인 결과:', data);
-                
-                if (data.success) {
+                // 상태가 변경된 경우에만 로그 출력 및 UI 업데이트
+                if (data.success && data.isActive !== lastBettingStatus) {
+                    console.log(`배팅 상태 변경: ${lastBettingStatus ? '비활성화' : '대기중'} → ${data.isActive ? '활성화' : '비활성화'}`);
+                    lastBettingStatus = data.isActive;
                     updateBettingUI(data.isActive);
+                    
                     // 배팅 결과는 별도로 확인 (성능 최적화)
                     if (data.isActive) {
                         checkBettingResult();
                     }
-                } else {
+                } else if (!data.success) {
+                    console.log('배팅 상태 확인 실패:', data.message);
                     updateBettingUI(false);
                 }
             } catch (error) {
@@ -1716,8 +1722,8 @@
             // 초기 확인
             checkBettingStatus();
             
-            // 1초마다 상태 확인 (더 빠른 반응)
-            setInterval(checkBettingStatus, 1000);
+            // 0.5초마다 상태 확인 (빠른 반응 + 안정성)
+            setInterval(checkBettingStatus, 500);
         }
         
         // 배팅 제출 함수

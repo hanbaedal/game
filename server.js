@@ -2020,12 +2020,14 @@ app.get('/api/betting/status', async (req, res) => {
         // 배팅 세션 컬렉션 사용
         const bettingCollection = mongoose.connection.db.collection('betting-sessions');
         
-        // 활성 배팅 세션 조회
+        // 활성 배팅 세션 조회 (관리자 서비스와 공유)
         const activeSession = await bettingCollection.findOne({
             date: date,
             gameNumber: parseInt(gameNumber),
             status: 'active'
         });
+        
+        console.log(`배팅 상태 확인: ${date} 경기 ${gameNumber} - 활성 세션:`, activeSession ? '있음' : '없음');
         
         res.json({
             success: true,
@@ -2239,7 +2241,8 @@ app.post('/api/betting/admin-start', async (req, res) => {
         
         await bettingCollection.insertOne(newSession);
         
-        console.log(`배팅 시작: ${date} 경기 ${gameNumber} ${inning}회`);
+        console.log(`✅ 배팅 시작: ${date} 경기 ${gameNumber} ${inning}회`);
+        console.log('📊 배팅 세션 정보:', newSession);
         
         res.json({
             success: true,
