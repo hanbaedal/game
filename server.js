@@ -2029,10 +2029,22 @@ app.get('/api/betting/status', async (req, res) => {
         
         console.log(`배팅 상태 확인: ${date} 경기 ${gameNumber} - 활성 세션:`, activeSession ? '있음' : '없음');
         
+        // 전체 배팅 세션 확인 (디버깅용)
+        const allSessions = await bettingCollection.find({
+            date: date,
+            gameNumber: parseInt(gameNumber)
+        }).toArray();
+        
+        console.log(`📋 전체 배팅 세션 (${date} 경기 ${gameNumber}):`, allSessions);
+        
         res.json({
             success: true,
             isActive: !!activeSession,
-            session: activeSession || null
+            session: activeSession || null,
+            debug: {
+                totalSessions: allSessions.length,
+                allSessions: allSessions
+            }
         });
     } catch (error) {
         console.error('배팅 상태 확인 오류:', error);
@@ -2243,6 +2255,15 @@ app.post('/api/betting/admin-start', async (req, res) => {
         
         console.log(`✅ 배팅 시작: ${date} 경기 ${gameNumber} ${inning}회`);
         console.log('📊 배팅 세션 정보:', newSession);
+        
+        // 생성된 세션 확인
+        const createdSession = await bettingCollection.findOne({
+            date: date,
+            gameNumber: parseInt(gameNumber),
+            status: 'active'
+        });
+        
+        console.log('🔍 생성된 세션 확인:', createdSession);
         
         res.json({
             success: true,

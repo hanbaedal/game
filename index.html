@@ -106,16 +106,16 @@
                             <button class="bet-amount-btn bg-yellow-500 hover:bg-yellow-400 text-black text-xs py-2 px-1 rounded" data-amount="100">
                                 100
                             </button>
-                            <button class="bet-amount-btn bg-gray-400 text-gray-600 text-xs py-2 px-1 rounded cursor-not-allowed opacity-50" data-amount="200" disabled>
+                            <button class="bet-amount-btn bg-yellow-500 hover:bg-yellow-400 text-black text-xs py-2 px-1 rounded" data-amount="200">
                                 200
                             </button>
-                            <button class="bet-amount-btn bg-gray-400 text-gray-600 text-xs py-2 px-1 rounded cursor-not-allowed opacity-50" data-amount="300" disabled>
+                            <button class="bet-amount-btn bg-yellow-500 hover:bg-yellow-400 text-black text-xs py-2 px-1 rounded" data-amount="300">
                                 300
                             </button>
-                            <button class="bet-amount-btn bg-gray-400 text-gray-600 text-xs py-2 px-1 rounded cursor-not-allowed opacity-50" data-amount="400" disabled>
+                            <button class="bet-amount-btn bg-yellow-500 hover:bg-yellow-400 text-black text-xs py-2 px-1 rounded" data-amount="400">
                                 400
                             </button>
-                            <button class="bet-amount-btn bg-gray-400 text-gray-600 text-xs py-2 px-1 rounded cursor-not-allowed opacity-50" data-amount="500" disabled>
+                            <button class="bet-amount-btn bg-yellow-500 hover:bg-yellow-400 text-black text-xs py-2 px-1 rounded" data-amount="500">
                                 500
                             </button>
                         </div>
@@ -1356,9 +1356,11 @@
                 });
             });
 
-            // 배팅 선택 버튼 이벤트 (최적화)
+            // 배팅 선택 버튼 이벤트 (디버깅 추가)
             document.querySelectorAll('.bet-choice-btn').forEach(btn => {
                 btn.addEventListener('click', function() {
+                    console.log('배팅 선택 버튼 클릭됨:', this.dataset.choice);
+                    
                     // 즉시 시각적 피드백
                     document.querySelectorAll('.bet-choice-btn').forEach(b => {
                         b.classList.remove('bg-blue-500');
@@ -1369,6 +1371,7 @@
                     this.classList.add('bg-blue-500');
                     
                     selectedBetChoice = this.dataset.choice;
+                    console.log('선택된 배팅:', selectedBetChoice);
                     
                     // 배팅 버튼 상태 즉시 업데이트
                     const betBtn = document.getElementById('betBtn');
@@ -1376,8 +1379,11 @@
                         const statusIndicator = document.getElementById('bettingStatusIndicator');
                         const isBettingActive = statusIndicator && statusIndicator.classList.contains('bg-green-500');
                         
+                        console.log('배팅 상태:', isBettingActive ? '활성화' : '비활성화');
+                        
                         if (isBettingActive) {
                             const canBet = selectedBetChoice && selectedGameType === 'batter' && selectedBetAmount === 100;
+                            console.log('배팅 가능 여부:', canBet);
                             betBtn.disabled = !canBet;
                             betBtn.classList.remove('bg-gray-500');
                             betBtn.classList.add(canBet ? 'bg-yellow-300' : 'bg-gray-500');
@@ -1470,7 +1476,7 @@
             window.location.href = '/attendance.html';
         }
 
-        // 배팅 상태 확인 함수 (최적화)
+        // 배팅 상태 확인 함수 (개선)
         let lastBettingStatus = null; // 이전 상태 저장
         
         async function checkBettingStatus() {
@@ -1484,6 +1490,15 @@
                     }
                 });
                 const data = await response.json();
+                
+                console.log('배팅 상태 확인 결과:', data);
+                
+                // 디버깅 정보 표시
+                if (data.debug) {
+                    console.log('🔍 디버깅 정보:', data.debug);
+                    console.log(`📊 전체 세션 수: ${data.debug.totalSessions}`);
+                    console.log('📋 모든 세션:', data.debug.allSessions);
+                }
                 
                 // 상태가 변경된 경우에만 로그 출력 및 UI 업데이트
                 if (data.success && data.isActive !== lastBettingStatus) {
@@ -1722,8 +1737,8 @@
             // 초기 확인
             checkBettingStatus();
             
-            // 0.5초마다 상태 확인 (빠른 반응 + 안정성)
-            setInterval(checkBettingStatus, 500);
+            // 0.2초마다 상태 확인 (매우 빠른 반응)
+            setInterval(checkBettingStatus, 200);
         }
         
         // 배팅 제출 함수
