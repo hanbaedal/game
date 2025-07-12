@@ -103,7 +103,7 @@ app.get('/', (req, res) => {
     res.json({
         message: 'Member Management System API',
         status: 'running',
-        timestamp: new Date().toISOString()
+        timestamp: new Date(new Date().getTime() + (9 * 60 * 60 * 1000)).toISOString() // 한국 시간대
     });
 });
 
@@ -111,7 +111,7 @@ app.get('/', (req, res) => {
 app.get('/health', (req, res) => {
     const health = {
         status: 'OK',
-        timestamp: new Date().toISOString(),
+        timestamp: new Date(new Date().getTime() + (9 * 60 * 60 * 1000)).toISOString(), // 한국 시간대
         uptime: process.uptime(),
         database: {
             status: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected',

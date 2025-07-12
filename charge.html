@@ -248,7 +248,7 @@
                         videoDuration: duration,
                         videoType: 'advertisement',
                         videoTitle: `${duration}초 광고 시청`,
-                        watchDate: new Date().toISOString(),
+                        watchDate: new Date(new Date().getTime() + (9 * 60 * 60 * 1000)).toISOString(), // 한국 시간대
                         completed: true
                     })
                 }).then(res => res.json()).then(data => {
