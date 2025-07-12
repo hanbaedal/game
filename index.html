@@ -75,22 +75,22 @@
                         <p class="text-sm">배팅선택</p>
                         <div id="bettingSection" class="space-y-2 mt-2">
                             <div class="grid grid-cols-3 gap-1">
-                                <button class="bet-choice-btn bg-gray-600 hover:bg-gray-500 text-white text-xs py-2 px-2 rounded" data-choice="1base">
+                                <button class="bet-choice-btn bg-gray-600 hover:bg-gray-500 text-white text-xs py-2 px-2 rounded cursor-pointer" data-choice="1base">
                                     1루
                                 </button>
-                                <button class="bet-choice-btn bg-gray-600 hover:bg-gray-500 text-white text-xs py-2 px-2 rounded" data-choice="2base">
+                                <button class="bet-choice-btn bg-gray-600 hover:bg-gray-500 text-white text-xs py-2 px-2 rounded cursor-pointer" data-choice="2base">
                                     2루
                                 </button>
-                                <button class="bet-choice-btn bg-gray-600 hover:bg-gray-500 text-white text-xs py-2 px-2 rounded" data-choice="3base">
+                                <button class="bet-choice-btn bg-gray-600 hover:bg-gray-500 text-white text-xs py-2 px-2 rounded cursor-pointer" data-choice="3base">
                                     3루
                                 </button>
-                                <button class="bet-choice-btn bg-gray-600 hover:bg-gray-500 text-white text-xs py-2 px-2 rounded" data-choice="homerun">
+                                <button class="bet-choice-btn bg-gray-600 hover:bg-gray-500 text-white text-xs py-2 px-2 rounded cursor-pointer" data-choice="homerun">
                                     홈런
                                 </button>
-                                <button class="bet-choice-btn bg-gray-600 hover:bg-gray-500 text-white text-xs py-2 px-2 rounded" data-choice="strikeout">
+                                <button class="bet-choice-btn bg-gray-600 hover:bg-gray-500 text-white text-xs py-2 px-2 rounded cursor-pointer" data-choice="strikeout">
                                     삼진
                                 </button>
-                                <button class="bet-choice-btn bg-gray-600 hover:bg-gray-500 text-white text-xs py-2 px-2 rounded" data-choice="out">
+                                <button class="bet-choice-btn bg-gray-600 hover:bg-gray-500 text-white text-xs py-2 px-2 rounded cursor-pointer" data-choice="out">
                                     아웃
                                 </button>
                             </div>
@@ -1325,14 +1325,6 @@
             // 게임 타입 버튼 이벤트
             document.querySelectorAll('.game-type-btn').forEach(btn => {
                 btn.addEventListener('click', function() {
-                    // 배팅이 비활성화 상태면 클릭 무시
-                    const statusIndicator = document.getElementById('bettingStatusIndicator');
-                    const isBettingActive = statusIndicator && statusIndicator.classList.contains('bg-green-500');
-                    
-                    if (!isBettingActive) {
-                        return;
-                    }
-                    
                     // 모든 게임 타입 버튼 비활성화
                     document.querySelectorAll('.game-type-btn').forEach(b => {
                         b.classList.remove('bg-blue-500', 'active');
@@ -1354,14 +1346,6 @@
             // 배팅 선택 버튼 이벤트
             document.querySelectorAll('.bet-choice-btn').forEach(btn => {
                 btn.addEventListener('click', function() {
-                    // 배팅이 비활성화 상태면 클릭 무시
-                    const statusIndicator = document.getElementById('bettingStatusIndicator');
-                    const isBettingActive = statusIndicator && statusIndicator.classList.contains('bg-green-500');
-                    
-                    if (!isBettingActive) {
-                        return;
-                    }
-                    
                     // 모든 배팅 선택 버튼 비활성화
                     document.querySelectorAll('.bet-choice-btn').forEach(b => {
                         b.classList.remove('bg-blue-500');
@@ -1392,14 +1376,6 @@
                 btn.addEventListener('click', function() {
                     // 비활성화된 버튼은 클릭 무시
                     if (this.disabled) {
-                        return;
-                    }
-                    
-                    // 배팅이 비활성화 상태면 클릭 무시
-                    const statusIndicator = document.getElementById('bettingStatusIndicator');
-                    const isBettingActive = statusIndicator && statusIndicator.classList.contains('bg-green-500');
-                    
-                    if (!isBettingActive) {
                         return;
                     }
                     
@@ -1440,14 +1416,20 @@
             const isBettingActive = statusIndicator && statusIndicator.classList.contains('bg-green-500');
             
             if (isBettingActive) {
-                // 타자와 100포인트는 항상 선택되어 있으므로 배팅 선택만 확인
-                const canBet = selectedGameType === 'batter' && selectedBetChoice && selectedBetAmount === 100;
+                // 배팅 선택만 확인 (타자와 100포인트는 자동 선택)
+                const canBet = selectedBetChoice && selectedGameType === 'batter' && selectedBetAmount === 100;
                 betBtn.disabled = !canBet;
                 betBtn.classList.remove('bg-gray-500');
                 betBtn.classList.add(canBet ? 'bg-yellow-300' : 'bg-gray-500');
                 betBtn.innerHTML = canBet ? 
                     '<i class="fas fa-user-tie"></i><span>배팅하기</span>' : 
                     '<i class="fas fa-exclamation-triangle"></i><span>배팅 선택을 해주세요</span>';
+            } else {
+                // 배팅이 비활성화된 경우 버튼 비활성화
+                betBtn.disabled = true;
+                betBtn.classList.remove('bg-yellow-300');
+                betBtn.classList.add('bg-gray-500');
+                betBtn.innerHTML = '<i class="fas fa-clock"></i><span>배팅 대기중...</span>';
             }
         }
 
@@ -1595,25 +1577,30 @@
                 statusText.textContent = '배팅 가능';
                 statusText.className = 'font-bold text-sm text-green-400';
                 
-                // 배팅 버튼 활성화 (모든 선택이 완료되었을 때만)
-                const canBet = selectedGameType && selectedBetChoice && selectedBetAmount > 0;
+                // 배팅 버튼 활성화 (배팅 선택만 완료되면 됨 - 타자와 100포인트는 자동 선택)
+                const canBet = selectedBetChoice && selectedGameType === 'batter' && selectedBetAmount === 100;
                 betBtn.disabled = !canBet;
                 betBtn.classList.remove('bg-gray-500');
                 betBtn.classList.add(canBet ? 'bg-yellow-300' : 'bg-gray-500');
-                betBtn.innerHTML = canBet ? '<i class="fas fa-user-tie"></i><span>배팅하기</span>' : '<i class="fas fa-exclamation-triangle"></i><span>모든 항목을 선택해주세요</span>';
+                betBtn.innerHTML = canBet ? 
+                    '<i class="fas fa-user-tie"></i><span>배팅하기</span>' : 
+                    '<i class="fas fa-exclamation-triangle"></i><span>배팅 선택을 해주세요</span>';
                 
-                // 모든 선택 버튼 활성화
+                // 모든 선택 버튼 활성화 (선택은 항상 가능)
                 gameTypeBtns.forEach(btn => {
                     btn.classList.remove('opacity-50', 'cursor-not-allowed');
                     btn.disabled = false;
+                    btn.style.pointerEvents = 'auto';
                 });
                 betChoiceBtns.forEach(btn => {
                     btn.classList.remove('opacity-50', 'cursor-not-allowed');
                     btn.disabled = false;
+                    btn.style.pointerEvents = 'auto';
                 });
                 betAmountBtns.forEach(btn => {
                     btn.classList.remove('opacity-50', 'cursor-not-allowed');
                     btn.disabled = false;
+                    btn.style.pointerEvents = 'auto';
                 });
                 
                 // 선택된 상태 복원
@@ -1631,19 +1618,25 @@
                 betBtn.classList.add('bg-gray-500');
                 betBtn.innerHTML = '<i class="fas fa-clock"></i><span>배팅 대기중...</span>';
                 
-                // 모든 선택 버튼 비활성화 (시각적 비활성화만, 클릭은 가능하도록)
+                // 모든 선택 버튼은 활성화 상태 유지 (선택은 항상 가능)
                 gameTypeBtns.forEach(btn => {
-                    btn.classList.add('opacity-50', 'cursor-not-allowed');
-                    btn.disabled = true;
+                    btn.classList.remove('opacity-50', 'cursor-not-allowed');
+                    btn.disabled = false;
+                    btn.style.pointerEvents = 'auto';
                 });
                 betChoiceBtns.forEach(btn => {
-                    btn.classList.add('opacity-50', 'cursor-not-allowed');
-                    btn.disabled = true;
+                    btn.classList.remove('opacity-50', 'cursor-not-allowed');
+                    btn.disabled = false;
+                    btn.style.pointerEvents = 'auto';
                 });
                 betAmountBtns.forEach(btn => {
-                    btn.classList.add('opacity-50', 'cursor-not-allowed');
-                    btn.disabled = true;
+                    btn.classList.remove('opacity-50', 'cursor-not-allowed');
+                    btn.disabled = false;
+                    btn.style.pointerEvents = 'auto';
                 });
+                
+                // 선택된 상태 복원
+                restoreSelectedStates();
             }
         }
         
@@ -1831,4 +1824,4 @@
     </style>
 
 </body>
-</html> 
+</html>
