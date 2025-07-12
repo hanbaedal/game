@@ -372,12 +372,25 @@
                 selectedGameType = 'batter';
             }
             
-            // 100포인트 자동 선택
+            // 100포인트 자동 선택 (강제)
             const hundredPointBtn = document.querySelector('.bet-amount-btn[data-amount="100"]');
             if (hundredPointBtn) {
+                // 모든 포인트 버튼 초기화
+                document.querySelectorAll('.bet-amount-btn').forEach(btn => {
+                    btn.classList.remove('bg-blue-500');
+                    btn.classList.add('bg-yellow-500');
+                });
+                
+                // 100포인트만 선택
                 hundredPointBtn.classList.remove('bg-yellow-500');
                 hundredPointBtn.classList.add('bg-blue-500');
                 selectedBetAmount = 100;
+                
+                // 다른 포인트 버튼들 비활성화
+                document.querySelectorAll('.bet-amount-btn:not([data-amount="100"])').forEach(btn => {
+                    btn.disabled = true;
+                    btn.classList.add('opacity-50', 'cursor-not-allowed');
+                });
             }
             
             // 배팅 상태 확인 시작
@@ -1343,31 +1356,36 @@
                 });
             });
 
-            // 배팅 선택 버튼 이벤트
+            // 배팅 선택 버튼 이벤트 (최적화)
             document.querySelectorAll('.bet-choice-btn').forEach(btn => {
                 btn.addEventListener('click', function() {
-                    // 모든 배팅 선택 버튼 비활성화
+                    // 즉시 시각적 피드백
                     document.querySelectorAll('.bet-choice-btn').forEach(b => {
                         b.classList.remove('bg-blue-500');
                         b.classList.add('bg-gray-600');
                     });
                     
-                    // 선택된 버튼 활성화
                     this.classList.remove('bg-gray-600');
                     this.classList.add('bg-blue-500');
                     
                     selectedBetChoice = this.dataset.choice;
-                    console.log('선택된 배팅:', selectedBetChoice);
                     
-                    // 배팅 버튼 상태 업데이트
-                    updateBettingButtonState();
-                    
-                    // 디버깅: 선택 상태 확인
-                    console.log('현재 선택 상태:', {
-                        gameType: selectedGameType,
-                        betChoice: selectedBetChoice,
-                        betAmount: selectedBetAmount
-                    });
+                    // 배팅 버튼 상태 즉시 업데이트
+                    const betBtn = document.getElementById('betBtn');
+                    if (betBtn) {
+                        const statusIndicator = document.getElementById('bettingStatusIndicator');
+                        const isBettingActive = statusIndicator && statusIndicator.classList.contains('bg-green-500');
+                        
+                        if (isBettingActive) {
+                            const canBet = selectedBetChoice && selectedGameType === 'batter' && selectedBetAmount === 100;
+                            betBtn.disabled = !canBet;
+                            betBtn.classList.remove('bg-gray-500');
+                            betBtn.classList.add(canBet ? 'bg-yellow-300' : 'bg-gray-500');
+                            betBtn.innerHTML = canBet ? 
+                                '<i class="fas fa-user-tie"></i><span>배팅하기</span>' : 
+                                '<i class="fas fa-exclamation-triangle"></i><span>배팅 선택을 해주세요</span>';
+                        }
+                    }
                 });
             });
 
@@ -1452,17 +1470,26 @@
             window.location.href = '/attendance.html';
         }
 
-        // 배팅 상태 확인 함수 (통합)
+        // 배팅 상태 확인 함수 (최적화)
         async function checkBettingStatus() {
             try {
                 const today = new Date().toISOString().split('T')[0].replace(/-/g, '');
-                const response = await fetch(`/api/betting/status?date=${today}&gameNumber=1`);
+                const response = await fetch(`/api/betting/status?date=${today}&gameNumber=1`, {
+                    method: 'GET',
+                    headers: {
+                        'Cache-Control': 'no-cache'
+                    }
+                });
                 const data = await response.json();
+                
+                console.log('배팅 상태 확인 결과:', data);
                 
                 if (data.success) {
                     updateBettingUI(data.isActive);
-                    // 배팅 결과도 함께 확인
-                    checkBettingResult();
+                    // 배팅 결과는 별도로 확인 (성능 최적화)
+                    if (data.isActive) {
+                        checkBettingResult();
+                    }
                 } else {
                     updateBettingUI(false);
                 }
@@ -1689,8 +1716,8 @@
             // 초기 확인
             checkBettingStatus();
             
-            // 3초마다 상태 확인 (너무 자주 호출되지 않도록)
-            setInterval(checkBettingStatus, 3000);
+            // 1초마다 상태 확인 (더 빠른 반응)
+            setInterval(checkBettingStatus, 1000);
         }
         
         // 배팅 제출 함수
