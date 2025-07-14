@@ -201,11 +201,6 @@
                     <span>결과 확인</span>
                 </button>
 
-                <!-- 수동 배팅 세션 생성 버튼 (테스트용) -->
-                <button id="createSessionBtn" class="flex items-center justify-center space-x-2 w-full py-2 mt-2 bg-purple-600 text-white text-sm rounded">
-                    <i class="fas fa-magic"></i>
-                    <span>배팅 세션 생성 (테스트)</span>
-                </button>
             </div>
 
             <!-- 승리 포인트 기부 모달 -->
@@ -1187,34 +1182,33 @@
             document.getElementById('gameModal').style.display = 'none';
         }
 
-        function selectGameFromModal(gameNumber, homeTeam, awayTeam) {
-            const gameSelectionContainer = document.getElementById('gameSelectionContainer');
-            const dropdownContainer = document.querySelector('.game-dropdown.selected');
-            if (dropdownContainer) {
-                dropdownContainer.classList.remove('bg-red-500', 'text-white');
-                dropdownContainer.classList.add(getGameStatusClass({ number: gameNumber, homeTeam: homeTeam, awayTeam: awayTeam }));
-                dropdownContainer.innerHTML = `
-                    <div class="flex justify-between items-center w-full">
-                        <div class="flex-1">
-                            <div class="text-xs font-bold">${homeTeam} vs ${awayTeam}</div>
-                            <div class="text-xs text-gray-400">경기 ${gameNumber} • ${getStatusText({ number: gameNumber, homeTeam: homeTeam, awayTeam: awayTeam })}</div>
-                        </div>
-                        <div class="flex items-center space-x-2">
-                            <span class="text-xs px-2 py-1 rounded ${getStatusBadgeClass({ number: gameNumber, homeTeam: homeTeam, awayTeam: awayTeam })}">
-                                ${getGameSituationText({ number: gameNumber, homeTeam: homeTeam, awayTeam: awayTeam })}
-                            </span>
-                            <span class="text-xs text-blue-500 px-2 py-1">선택중</span>
-                        </div>
-                    </div>
-                `;
-                dropdownContainer.dataset.gameNumber = gameNumber;
-                dropdownContainer.dataset.homeTeam = homeTeam;
-                dropdownContainer.dataset.awayTeam = awayTeam;
-                dropdownContainer.classList.add('selected');
-                document.getElementById('gameSelectionContainer').appendChild(dropdownContainer); // 컨테이너 맨 뒤로 이동
-                closeGameModal();
+        async function selectGameFromModal(gameNumber, homeTeam, awayTeam) {
+            if (!currentUser || !currentUser.userId) {
+                alert('로그인이 필요합니다.');
+                return;
+            }
+            try {
+                const response = await fetch('/api/game-selection', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        userId: currentUser.userId,
+                        gameNumber: gameNumber
+                    })
+                });
+                const data = await response.json();
+                if (data && data.message) {
+                    closeGameModal();
+                    await loadDailyGames();
+                } else {
+                    alert(data.error || '경기 선택에 실패했습니다.');
+                }
+            } catch (error) {
+                console.error('경기 선택 오류:', error);
+                alert('경기 선택 중 오류가 발생했습니다.');
             }
         }
+        window.selectGameFromModal = selectGameFromModal;
 
         // 경기 상태 텍스트 및 클래스 함수
         function getStatusText(game) {
@@ -1266,7 +1260,6 @@
         function setupButtonEventListeners() {
             const betBtn = document.getElementById('betBtn');
             const resultBtn = document.getElementById('resultBtn');
-            const createSessionBtn = document.getElementById('createSessionBtn');
 
             if (betBtn) {
                 betBtn.addEventListener('click', handleBetting);
@@ -1274,10 +1267,6 @@
 
             if (resultBtn) {
                 resultBtn.addEventListener('click', showBettingResult);
-            }
-
-            if (createSessionBtn) {
-                createSessionBtn.addEventListener('click', createBettingSession);
             }
         }
 
