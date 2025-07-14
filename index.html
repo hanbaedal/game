@@ -1053,15 +1053,23 @@
                     dropdownContainer.className = 'relative';
                     
                     // 선택된 경기 또는 기본 경기 표시
-                    const displayGame = selectedGame || data.games[0];
-                    const gameStatus = getStatusText(displayGame);
-                    console.log('경기 데이터:', displayGame);
-                    console.log('계산된 상태:', gameStatus);
-                    const isSelectable = displayGame.isActive && gameStatus.includes('경기중');
-                    const isSelected = userSelection && userSelection.gameNumber === displayGame.number;
-                    
-                    // 전체 경기가 경기전이면 파란색으로 표시
-                    if (allGamesBeforeStart) {
+                    if (selectedGame) {
+                        // 이미 경기 선택이 된 경우: 선택된 경기만 표시, 클릭해도 모달 안 뜸
+                        dropdownContainer.innerHTML = `
+                            <div class="game-dropdown border border-blue-500 bg-blue-900 bg-opacity-20 rounded" style="height: 32px; display: flex; align-items: center; padding: 0 12px;">
+                                <div class="flex justify-between items-center w-full">
+                                    <div class="flex-1">
+                                        <div class="text-xs font-bold">${selectedGame.homeTeam} vs ${selectedGame.awayTeam}</div>
+                                        <div class="text-xs text-gray-400">경기 ${selectedGame.number} • ${getStatusText(selectedGame)}</div>
+                                    </div>
+                                    <div class="flex items-center space-x-2">
+                                        <span class="text-xs bg-blue-500 text-white px-2 py-1 rounded">선택됨</span>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    } else {
+                        // 선택 안 된 경우: 기존처럼 드롭다운/모달
                         dropdownContainer.innerHTML = `
                             <div class="game-dropdown border border-blue-500 bg-blue-900 bg-opacity-20 rounded hover:bg-blue-800 cursor-pointer" onclick="openGameModal()" style="height: 32px; display: flex; align-items: center; padding: 0 12px;">
                                 <div class="flex justify-between items-center w-full">
@@ -1070,34 +1078,6 @@
                                     </div>
                                     <div class="flex items-center space-x-2">
                                         <svg class="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-                                        </svg>
-                                    </div>
-                                </div>
-                            </div>
-                        `;
-                    } else {
-                        dropdownContainer.innerHTML = `
-                            <div class="game-dropdown border border-gray-600 rounded hover:bg-gray-700 cursor-pointer ${isSelected ? 'bg-red-500 text-white' : getGameStatusClass(displayGame)}" onclick="openGameModal()" style="height: 32px; display: flex; align-items: center; padding: 0 12px;">
-                                <div class="flex justify-between items-center w-full">
-                                    <div class="flex-1">
-                                        <div class="text-xs font-bold">${displayGame.homeTeam} vs ${displayGame.awayTeam}</div>
-                                        ${isSelected ? '' : `<div class="text-xs text-gray-400">경기 ${displayGame.number} • ${getStatusText(displayGame)}</div>`}
-                                    </div>
-                                    <div class="flex items-center space-x-2">
-                                        ${!isSelected ? `
-                                            <span class="text-xs px-2 py-1 rounded ${getStatusBadgeClass(displayGame)}">
-                                                ${getGameSituationText(displayGame)}
-                                            </span>
-                                            ${isSelectable ? 
-                                                (isSelected ? 
-                                                    `<span class="text-xs bg-red-500 text-white px-2 py-1 rounded">선택중</span>` :
-                                                    `<span class="text-xs text-blue-500 px-2 py-1">선택가능</span>`
-                                                ) : 
-                                                `<span class="text-xs text-gray-500 px-2 py-1">선택불가</span>`
-                                            }
-                                        ` : ''}
-                                        <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
                                         </svg>
                                     </div>
