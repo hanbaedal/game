@@ -1,7 +1,7 @@
 // 배팅 처리 함수
 async function handleBet(bettingType) {
     try {
-        const response = await fetch('/api/bet', {
+        const response = await fetch('/api/betting/submit', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
@@ -76,7 +76,7 @@ document.getElementById('donateButton').addEventListener('click', async () => {
             return;
         }
 
-        const response = await fetch('/api/donate', {
+        const response = await fetch('/api/donation', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
@@ -153,7 +153,8 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // 게스트 로그인 버튼 이벤트
+    // 게스트 로그인 버튼 이벤트 (서버에 해당 API가 없으므로 주석 처리)
+    /*
     const guestLoginButton = document.getElementById('guestLogin');
     if (guestLoginButton) {
         guestLoginButton.addEventListener('click', async () => {
@@ -181,4 +182,5 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
+    */
 }); 

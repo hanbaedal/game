@@ -9,8 +9,16 @@ services:
         value: production
       - key: MONGODB_URI
         sync: false
-      - key: DB_NAME
+      - key: MONGODB_DATABASE
         value: member-management
-    healthCheckPath: /
+      - key: MONGODB_USERNAME
+        sync: false
+      - key: MONGODB_PASSWORD
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: PORT
+        value: 10000
+    healthCheckPath: /health
     autoDeploy: true
     plan: free 
