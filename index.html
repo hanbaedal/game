@@ -625,7 +625,7 @@
             }
 
             // 서버로 배팅 데이터 전송
-            fetch('/api/betting/bet', {
+            fetch('/api/betting', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -1032,7 +1032,7 @@
                     }
                 }
                 
-                const response = await fetch('/api/daily-games');
+                const response = await fetch('/api/daily-games?debug=true');
                 if (!response.ok) {
                     throw new Error(`HTTP error! status: ${response.status}`);
                 }
@@ -1110,8 +1110,8 @@
                                     ` : ''}
                                     ${data.games.map(game => {
                                         const gameStatus = getStatusText(game);
-                                        // 경기 선택 조건 (team-games 컬렉션 기준)
-                                        const gameIsSelectable = game.noGame === '경기전' || game.noGame === '경기중' || game.noGame === '경기종료' || game.noGame === '정상게임';
+                                        // 경기 선택 조건 (team-games 컬렉션 기준 - progressStatus 사용)
+                                        const gameIsSelectable = game.progressStatus === '경기전' || game.progressStatus === '경기중' || game.progressStatus === '경기종료';
                                         const gameIsSelected = userSelection && userSelection.gameNumber === game.number;
                                         return `
                                             <div class="game-option p-3 border border-gray-600 rounded-lg hover:bg-gray-700 cursor-pointer ${gameIsSelected ? 'bg-blue-900 border-blue-500' : ''}" 
@@ -1192,8 +1192,10 @@
 
         // 경기 상태 텍스트 및 클래스 함수
         function getStatusText(game) {
-            // noGame 필드를 기준으로 상태 판단
-            if (game.noGame === '경기중') {
+            // progressStatus 필드를 기준으로 상태 판단
+            if (game.progressStatus) {
+                return game.progressStatus;
+            } else if (game.noGame === '경기중') {
                 return '경기중';
             } else if (game.noGame === '경기종료') {
                 return '경기종료';
@@ -1217,7 +1219,14 @@
         }
 
         function getGameSituationText(game) {
-            return game.noGame || '경기전';
+            // team-games 컬렉션의 gameStatus 필드 사용
+            if (game.gameStatus) {
+                return game.gameStatus;
+            } else if (game.noGame) {
+                return game.noGame;
+            } else {
+                return '경기전';
+            }
         }
 
         function getStatusBadgeClass(game) {
@@ -1234,7 +1243,10 @@
 
         // 모든 경기가 경기전인지 확인하는 함수
         function checkAllGamesStatus(games) {
-            return games.every(game => game.noGame === '경기전' || game.noGame === '정상게임');
+            return games.every(game => 
+                (game.progressStatus === '경기전') || 
+                (game.noGame === '경기전' || game.noGame === '정상게임')
+            );
         }
 
         // 버튼 이벤트 리스너 설정
@@ -1259,13 +1271,19 @@
             }
 
             try {
+                const selectedGame = getSelectedGame();
+                if (!selectedGame) {
+                    document.getElementById('bettingStatusDisplay').style.display = 'none';
+                    return;
+                }
+
                 const now = new Date();
                 const koreaTime = new Date(now.getTime() + (9 * 60 * 60 * 1000)); // UTC+9
                 const today = koreaTime.getFullYear().toString() + 
                              String(koreaTime.getMonth() + 1).padStart(2, '0') + 
                              String(koreaTime.getDate()).padStart(2, '0');
                 
-                const response = await fetch(`/api/betting/status?date=${today}&gameNumber=1`);
+                const response = await fetch(`/api/betting/status?date=${today}&gameNumber=${selectedGame.gameNumber}`);
                 const data = await response.json();
 
                 if (data.success) {
