@@ -1110,8 +1110,8 @@
                                     ` : ''}
                                     ${data.games.map(game => {
                                         const gameStatus = getStatusText(game);
-                                        // 경기전, 경기중, 경기종료 모두 선택 가능하도록 수정
-                                        const gameIsSelectable = game.isActive && (game.noGame === '경기전' || game.noGame === '경기중' || game.noGame === '경기종료');
+                                        // 경기 선택 조건 (team-games 컬렉션 기준)
+                                        const gameIsSelectable = game.noGame === '경기전' || game.noGame === '경기중' || game.noGame === '경기종료' || game.noGame === '정상게임';
                                         const gameIsSelected = userSelection && userSelection.gameNumber === game.number;
                                         return `
                                             <div class="game-option p-3 border border-gray-600 rounded-lg hover:bg-gray-700 cursor-pointer ${gameIsSelected ? 'bg-blue-900 border-blue-500' : ''}" 
