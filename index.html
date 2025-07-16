@@ -1090,6 +1090,50 @@
             }
         }
 
+        // 출석체크 함수
+        async function checkAttendance() {
+            try {
+                if (!currentUser || !currentUser.userId) {
+                    alert('로그인이 필요합니다.');
+                    window.location.href = '/login.html';
+                    return;
+                }
+
+                const today = new Date();
+                const koreaTime = new Date(today.getTime() + (9 * 60 * 60 * 1000)); // UTC+9
+                const formattedDate = koreaTime.getFullYear().toString() + 
+                                     String(koreaTime.getMonth() + 1).padStart(2, '0') + 
+                                     String(koreaTime.getDate()).padStart(2, '0');
+                
+                const response = await fetch('/api/attendance', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        userId: currentUser.userId,
+                        date: formattedDate
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (data.success) {
+                    // 포인트 업데이트
+                    currentUser.points += data.points;
+                    document.getElementById('userPoints').textContent = `${currentUser.points}포인트`;
+                    localStorage.setItem('currentUser', JSON.stringify(currentUser));
+                    
+                    alert(`출석체크 완료! ${data.points}포인트를 획득했습니다.`);
+                } else {
+                    alert(data.message || '출석체크에 실패했습니다.');
+                }
+            } catch (error) {
+                console.error('출석 체크 오류:', error);
+                alert('출석 체크 중 오류가 발생했습니다.');
+            }
+        }
+
         // 배팅 상태 주기적 확인 시작 함수
         function startBettingStatusCheck() {
             checkBettingStatus();
