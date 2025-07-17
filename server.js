@@ -1772,8 +1772,33 @@ app.get('/api/daily-games', async (req, res) => {
             koreaTime: koreaTime.toISOString()
         });
         
-        // team-games 컬렉션에서 조회 (개별 문서 구조)
-        const teamGames = await TeamGame.find({ date: todayString }).sort({ gameNumber: 1 });
+        // member-management 컬렉션에서 team-games 데이터 조회
+        let teamGames = [];
+        
+        try {
+            // member-management 컬렉션에서 team-games 필드 조회
+            const memberManagementCollection = mongoose.connection.db.collection('member-management');
+            const memberManagementDoc = await memberManagementCollection.findOne({});
+            
+            if (memberManagementDoc && memberManagementDoc['team-games']) {
+                console.log('✅ member-management 컬렉션에서 team-games 데이터 발견');
+                const teamGamesData = memberManagementDoc['team-games'];
+                
+                // 오늘 날짜의 경기 필터링
+                teamGames = teamGamesData.filter(game => game.date === todayString);
+                console.log(`📅 오늘 날짜(${todayString})의 경기: ${teamGames.length}개`);
+                
+                if (teamGames.length === 0) {
+                    // 오늘 날짜가 없으면 모든 경기 데이터 반환 (테스트용)
+                    teamGames = teamGamesData;
+                    console.log(`📅 전체 경기 데이터: ${teamGames.length}개`);
+                }
+            } else {
+                console.log('❌ member-management 컬렉션에서 team-games 데이터를 찾을 수 없습니다.');
+            }
+        } catch (error) {
+            console.log('❌ member-management 컬렉션 조회 실패:', error.message);
+        }
         
         if (teamGames && teamGames.length > 0) {
             console.log(`✅ 오늘의 경기 조회 완료: ${teamGames.length}개 경기`);
@@ -1819,21 +1844,40 @@ app.get('/api/daily-games', async (req, res) => {
             
             // 디버깅용: 모든 문서 확인
             if (req.query.debug === 'true') {
-                const allDocs = await TeamGame.find({});
-                console.log('🔧 디버그 모드: 모든 문서 반환');
-                return res.json({ 
-                    games: [],
-                    todayString: todayString,
-                    debug: {
-                        totalDocs: allDocs.length,
-                        allDocs: allDocs.map(doc => ({
-                            _id: doc._id,
-                            date: doc.date,
-                            gameNumber: doc.gameNumber,
-                            matchup: doc.matchup
-                        }))
-                    }
-                });
+                try {
+                    const memberManagementCollection = mongoose.connection.db.collection('member-management');
+                    const memberManagementDoc = await memberManagementCollection.findOne({});
+                    
+                    console.log('🔧 디버그 모드: member-management 문서 반환');
+                    return res.json({ 
+                        games: [],
+                        todayString: todayString,
+                        debug: {
+                            hasMemberManagement: !!memberManagementDoc,
+                            hasTeamGames: !!(memberManagementDoc && memberManagementDoc['team-games']),
+                            teamGamesCount: memberManagementDoc && memberManagementDoc['team-games'] ? memberManagementDoc['team-games'].length : 0,
+                            memberManagementDoc: memberManagementDoc ? {
+                                _id: memberManagementDoc._id,
+                                teamGames: memberManagementDoc['team-games'] ? memberManagementDoc['team-games'].map(game => ({
+                                    gameNumber: game.gameNumber,
+                                    matchup: game.matchup,
+                                    date: game.date,
+                                    gameStatus: game.gameStatus,
+                                    progressStatus: game.progressStatus
+                                })) : []
+                            } : null
+                        }
+                    });
+                } catch (error) {
+                    console.log('❌ 디버그 정보 조회 실패:', error.message);
+                    return res.json({ 
+                        games: [],
+                        todayString: todayString,
+                        debug: {
+                            error: error.message
+                        }
+                    });
+                }
             }
             
             res.json({ games: [] });
@@ -2029,20 +2073,20 @@ app.post('/api/daily-games', async (req, res) => {
         if (teamGamesDoc) {
             // 기존 문서에 경기 추가
             const existingGame = teamGamesDoc.games.find(g => g.number === parseInt(number));
-            if (existingGame) {
-                return res.status(400).json({ error: '이미 존재하는 경기입니다.' });
-            }
-            
+        if (existingGame) {
+            return res.status(400).json({ error: '이미 존재하는 경기입니다.' });
+        }
+        
             teamGamesDoc.games.push({
-                number: parseInt(number),
-                homeTeam,
-                awayTeam,
-                startTime,
-                endTime,
-                noGame,
-                isActive: isActive !== undefined ? isActive : true
-            });
-            
+            number: parseInt(number),
+            homeTeam,
+            awayTeam,
+            startTime,
+            endTime,
+            noGame,
+            isActive: isActive !== undefined ? isActive : true
+        });
+        
             await teamGamesDoc.save();
             
             res.json({ 
@@ -2067,11 +2111,11 @@ app.post('/api/daily-games', async (req, res) => {
             });
             
             await newTeamGamesDoc.save();
-            
-            res.status(201).json({ 
-                message: '경기가 생성되었습니다.',
+        
+        res.status(201).json({ 
+            message: '경기가 생성되었습니다.',
                 game: newGame
-            });
+        });
         }
     } catch (error) {
         console.error('경기 생성 오류:', error);
@@ -2158,7 +2202,6 @@ app.post('/api/betting/submit', async (req, res) => {
         }
         
         const bettingCollection = mongoose.connection.db.collection('betting-sessions');
-        const userCollection = mongoose.connection.db.collection('game-member');
         
         // 활성 배팅 세션 확인
         const activeSession = await bettingCollection.findOne({
@@ -2173,6 +2216,8 @@ app.post('/api/betting/submit', async (req, res) => {
                 message: '현재 배팅이 활성화되지 않았습니다.'
             });
         }
+        
+        const userCollection = mongoose.connection.db.collection('game-member');
         
         // 사용자 정보 확인
         const user = await userCollection.findOne({ userId: userId });
@@ -2285,7 +2330,7 @@ app.use((err, req, res, next) => {
 // 404 핸들링
 app.use((req, res) => {
     res.status(404).json({ error: '요청한 리소스를 찾을 수 없습니다.' });
-}); 
+});
 
 // 배팅 시작 API (관리자용)
 app.post('/api/betting/admin-start', async (req, res) => {
@@ -2311,9 +2356,9 @@ app.post('/api/betting/admin-start', async (req, res) => {
         
         // 기존 활성 세션이 있는지 확인
         const existingActiveSession = await bettingCollection.findOne({
-            date: date,
-            gameNumber: parseInt(gameNumber),
-            status: 'active'
+                date: date,
+                gameNumber: parseInt(gameNumber),
+                status: 'active'
         });
         
         if (existingActiveSession) {
@@ -2675,13 +2720,23 @@ app.put('/api/admin/game/:gameNumber/start-betting', async (req, res) => {
                            String(koreaTime.getMonth() + 1).padStart(2, '0') + 
                            String(koreaTime.getDate()).padStart(2, '0');
         
-        // 해당 경기 찾기
-        const game = await TeamGame.findOne({ 
-            date: todayString, 
-            gameNumber: parseInt(gameNumber) 
-        });
+        // member-management 컬렉션에서 해당 경기 찾기
+        const memberManagementCollection = mongoose.connection.db.collection('member-management');
+        const memberManagementDoc = await memberManagementCollection.findOne({});
         
-        if (!game) {
+        if (!memberManagementDoc || !memberManagementDoc['team-games']) {
+            return res.status(404).json({ 
+                success: false, 
+                message: '경기 데이터를 찾을 수 없습니다.' 
+            });
+        }
+        
+        // 해당 경기 찾기
+        const gameIndex = memberManagementDoc['team-games'].findIndex(game => 
+            game.date === todayString && game.gameNumber === parseInt(gameNumber)
+        );
+        
+        if (gameIndex === -1) {
             return res.status(404).json({ 
                 success: false, 
                 message: '경기를 찾을 수 없습니다.' 
@@ -2689,10 +2744,14 @@ app.put('/api/admin/game/:gameNumber/start-betting', async (req, res) => {
         }
         
         // 베팅 시작 상태로 업데이트
-        game.bettingStart = '시작';
-        game.progressStatus = '경기중';
-        game.updatedAt = new Date();
-        await game.save();
+        memberManagementDoc['team-games'][gameIndex].bettingStart = '시작';
+        memberManagementDoc['team-games'][gameIndex].progressStatus = '경기중';
+        memberManagementDoc['team-games'][gameIndex].updatedAt = new Date();
+        
+        await memberManagementCollection.updateOne(
+            { _id: memberManagementDoc._id },
+            { $set: { 'team-games': memberManagementDoc['team-games'] } }
+        );
         
         console.log(`✅ 베팅 시작: 경기 ${gameNumber} (${game.matchup})`);
         
@@ -2727,13 +2786,23 @@ app.put('/api/admin/game/:gameNumber/stop-betting', async (req, res) => {
                            String(koreaTime.getMonth() + 1).padStart(2, '0') + 
                            String(koreaTime.getDate()).padStart(2, '0');
         
-        // 해당 경기 찾기
-        const game = await TeamGame.findOne({ 
-            date: todayString, 
-            gameNumber: parseInt(gameNumber) 
-        });
+        // member-management 컬렉션에서 해당 경기 찾기
+        const memberManagementCollection = mongoose.connection.db.collection('member-management');
+        const memberManagementDoc = await memberManagementCollection.findOne({});
         
-        if (!game) {
+        if (!memberManagementDoc || !memberManagementDoc['team-games']) {
+            return res.status(404).json({ 
+                success: false, 
+                message: '경기 데이터를 찾을 수 없습니다.' 
+            });
+        }
+        
+        // 해당 경기 찾기
+        const gameIndex = memberManagementDoc['team-games'].findIndex(game => 
+            game.date === todayString && game.gameNumber === parseInt(gameNumber)
+        );
+        
+        if (gameIndex === -1) {
             return res.status(404).json({ 
                 success: false, 
                 message: '경기를 찾을 수 없습니다.' 
@@ -2741,9 +2810,13 @@ app.put('/api/admin/game/:gameNumber/stop-betting', async (req, res) => {
         }
         
         // 베팅 종료 상태로 업데이트
-        game.bettingStop = '시작';
-        game.updatedAt = new Date();
-        await game.save();
+        memberManagementDoc['team-games'][gameIndex].bettingStop = '시작';
+        memberManagementDoc['team-games'][gameIndex].updatedAt = new Date();
+        
+        await memberManagementCollection.updateOne(
+            { _id: memberManagementDoc._id },
+            { $set: { 'team-games': memberManagementDoc['team-games'] } }
+        );
         
         console.log(`✅ 베팅 종료: 경기 ${gameNumber} (${game.matchup})`);
         
@@ -2778,13 +2851,23 @@ app.put('/api/admin/game/:gameNumber/end-game', async (req, res) => {
                            String(koreaTime.getMonth() + 1).padStart(2, '0') + 
                            String(koreaTime.getDate()).padStart(2, '0');
         
-        // 해당 경기 찾기
-        const game = await TeamGame.findOne({ 
-            date: todayString, 
-            gameNumber: parseInt(gameNumber) 
-        });
+        // member-management 컬렉션에서 해당 경기 찾기
+        const memberManagementCollection = mongoose.connection.db.collection('member-management');
+        const memberManagementDoc = await memberManagementCollection.findOne({});
         
-        if (!game) {
+        if (!memberManagementDoc || !memberManagementDoc['team-games']) {
+            return res.status(404).json({ 
+                success: false, 
+                message: '경기 데이터를 찾을 수 없습니다.' 
+            });
+        }
+        
+        // 해당 경기 찾기
+        const gameIndex = memberManagementDoc['team-games'].findIndex(game => 
+            game.date === todayString && game.gameNumber === parseInt(gameNumber)
+        );
+        
+        if (gameIndex === -1) {
             return res.status(404).json({ 
                 success: false, 
                 message: '경기를 찾을 수 없습니다.' 
@@ -2792,12 +2875,16 @@ app.put('/api/admin/game/:gameNumber/end-game', async (req, res) => {
         }
         
         // 게임 종료 상태로 업데이트
-        game.progressStatus = '경기종료';
+        memberManagementDoc['team-games'][gameIndex].progressStatus = '경기종료';
         if (predictionResult) {
-            game.predictionResult = predictionResult;
+            memberManagementDoc['team-games'][gameIndex].predictionResult = predictionResult;
         }
-        game.updatedAt = new Date();
-        await game.save();
+        memberManagementDoc['team-games'][gameIndex].updatedAt = new Date();
+        
+        await memberManagementCollection.updateOne(
+            { _id: memberManagementDoc._id },
+            { $set: { 'team-games': memberManagementDoc['team-games'] } }
+        );
         
         console.log(`✅ 게임 종료: 경기 ${gameNumber} (${game.matchup})`);
         
@@ -2830,13 +2917,24 @@ app.get('/api/admin/games/status', async (req, res) => {
                            String(koreaTime.getMonth() + 1).padStart(2, '0') + 
                            String(koreaTime.getDate()).padStart(2, '0');
         
-        // 오늘의 모든 경기 조회
-        const games = await TeamGame.find({ date: todayString }).sort({ gameNumber: 1 });
+        // member-management 컬렉션에서 오늘의 모든 경기 조회
+        const memberManagementCollection = mongoose.connection.db.collection('member-management');
+        const memberManagementDoc = await memberManagementCollection.findOne({});
+        
+        if (!memberManagementDoc || !memberManagementDoc['team-games']) {
+            return res.status(404).json({
+                success: false,
+                message: '경기 데이터를 찾을 수 없습니다.'
+            });
+        }
+        
+        // 오늘 날짜의 경기 필터링
+        const todayGames = memberManagementDoc['team-games'].filter(game => game.date === todayString);
         
         res.json({
             success: true,
             date: todayString,
-            games: games.map(game => ({
+            games: todayGames.map(game => ({
                 gameNumber: game.gameNumber,
                 matchup: game.matchup,
                 startTime: game.startTime,
@@ -2869,13 +2967,23 @@ app.put('/api/admin/game/:gameNumber/reset', async (req, res) => {
                            String(koreaTime.getMonth() + 1).padStart(2, '0') + 
                            String(koreaTime.getDate()).padStart(2, '0');
         
-        // 해당 경기 찾기
-        const game = await TeamGame.findOne({ 
-            date: todayString, 
-            gameNumber: parseInt(gameNumber) 
-        });
+        // member-management 컬렉션에서 해당 경기 찾기
+        const memberManagementCollection = mongoose.connection.db.collection('member-management');
+        const memberManagementDoc = await memberManagementCollection.findOne({});
         
-        if (!game) {
+        if (!memberManagementDoc || !memberManagementDoc['team-games']) {
+            return res.status(404).json({ 
+                success: false, 
+                message: '경기 데이터를 찾을 수 없습니다.' 
+            });
+        }
+        
+        // 해당 경기 찾기
+        const gameIndex = memberManagementDoc['team-games'].findIndex(game => 
+            game.date === todayString && game.gameNumber === parseInt(gameNumber)
+        );
+        
+        if (gameIndex === -1) {
             return res.status(404).json({ 
                 success: false, 
                 message: '경기를 찾을 수 없습니다.' 
@@ -2883,12 +2991,16 @@ app.put('/api/admin/game/:gameNumber/reset', async (req, res) => {
         }
         
         // 상태 초기화
-        game.progressStatus = '경기전';
-        game.bettingStart = '중지';
-        game.bettingStop = '중지';
-        game.predictionResult = '';
-        game.updatedAt = new Date();
-        await game.save();
+        memberManagementDoc['team-games'][gameIndex].progressStatus = '경기전';
+        memberManagementDoc['team-games'][gameIndex].bettingStart = '중지';
+        memberManagementDoc['team-games'][gameIndex].bettingStop = '중지';
+        memberManagementDoc['team-games'][gameIndex].predictionResult = '';
+        memberManagementDoc['team-games'][gameIndex].updatedAt = new Date();
+        
+        await memberManagementCollection.updateOne(
+            { _id: memberManagementDoc._id },
+            { $set: { 'team-games': memberManagementDoc['team-games'] } }
+        );
         
         console.log(`✅ 게임 상태 초기화: 경기 ${gameNumber} (${game.matchup})`);
         
