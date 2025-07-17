@@ -847,15 +847,70 @@
                     // 선택된 경기 찾기
                     const selectedGame = data.games.find(game => userSelection && userSelection.gameNumber === game.number);
                     
+                    // 먼저 기존 모달 제거 (있다면)
+                    const existingModal = document.getElementById('gameModal');
+                    if (existingModal) {
+                        existingModal.remove();
+                    }
+                    
+                    // 항상 모달 생성 (표시하지 않음)
+                    const modal = document.createElement('div');
+                    modal.id = 'gameModal';
+                    modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden';
+                    modal.innerHTML = `
+                        <div class="bg-gray-800 rounded-lg p-4 max-w-sm w-full mx-4 max-h-96 overflow-y-auto">
+                            <div class="flex justify-between items-center mb-4">
+                                <h3 class="text-lg font-bold">경기 선택</h3>
+                                <button onclick="closeGameModal()" class="text-gray-400 hover:text-white">
+                                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                    </svg>
+                                </button>
+                            </div>
+                            <div class="space-y-2">
+                                ${data.games.map(game => {
+                                    const gameStatus = getStatusText(game);
+                                    // 경기 선택 조건 수정 - 데이터베이스 상태 기준으로 경기중일 때만 선택 가능
+                                    const gameIsSelectable = (game.progressStatus === '경기중');
+                                    const gameIsSelected = userSelection && userSelection.gameNumber === game.number;
+                                    return `
+                                        <div class="game-option p-3 border border-gray-600 rounded-lg hover:bg-gray-700 cursor-pointer ${gameIsSelected ? 'bg-blue-900 border-blue-500' : ''}" 
+                                                     onclick="${gameIsSelectable ? `selectGameFromModal(${game.number}, '${game.homeTeam}', '${game.awayTeam}')` : 'alert(\'경기중인 경기만 선택할 수 있습니다.\')'}">
+                                            <div class="flex justify-between items-center">
+                                                <div class="flex-1">
+                                                    <div class="text-sm font-bold">${game.homeTeam} vs ${game.awayTeam}</div>
+                                                    <div class="text-xs text-gray-400">경기 ${game.number} • ${gameStatus}</div>
+                                                </div>
+                                                <div class="flex items-center space-x-2">
+                                                    <span class="text-xs px-2 py-1 rounded ${getStatusBadgeClass(game)}">
+                                                        ${getGameSituationText(game)}
+                                                    </span>
+                                                    ${gameIsSelected ? 
+                                                        `<span class="text-xs bg-green-500 text-white px-2 py-1 rounded">현재선택</span>` :
+                                                        (gameIsSelectable ? 
+                                                            `<span class="text-xs bg-blue-500 text-white px-2 py-1 rounded">선택가능</span>` :
+                                                            `<span class="text-xs bg-gray-500 text-white px-2 py-1 rounded">선택불가</span>`
+                                                        )
+                                                    }
+                                                </div>
+                                            </div>
+                                        </div>
+                                    `;
+                                }).join('')}
+                            </div>
+                        </div>
+                    `;
+                    document.body.appendChild(modal);
+                    
                     // 드롭다운 컨테이너 생성
                     const dropdownContainer = document.createElement('div');
                     dropdownContainer.className = 'relative';
                     
                     // 선택된 경기 또는 기본 경기 표시
                     if (selectedGame) {
-                        // 이미 경기 선택이 된 경우: 선택된 경기만 표시, 모달 생성/표시하지 않음
+                        // 이미 경기 선택이 된 경우: 선택된 경기 표시하되 수정 가능하도록 클릭 가능
                         dropdownContainer.innerHTML = `
-                            <div class="game-dropdown border border-blue-500 bg-blue-900 bg-opacity-20 rounded" style="height: 32px; display: flex; align-items: center; padding: 0 12px;">
+                            <div class="game-dropdown border border-blue-500 bg-blue-900 bg-opacity-20 rounded hover:bg-blue-800 cursor-pointer" onclick="openGameModal()" style="height: 32px; display: flex; align-items: center; padding: 0 12px;">
                                 <div class="flex justify-between items-center w-full">
                                     <div class="flex-1">
                                         <div class="text-xs font-bold">${selectedGame.homeTeam} vs ${selectedGame.awayTeam}</div>
@@ -863,11 +918,13 @@
                                     </div>
                                     <div class="flex items-center space-x-2">
                                         <span class="text-xs bg-blue-500 text-white px-2 py-1 rounded">선택됨</span>
+                                        <svg class="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                                        </svg>
                                     </div>
                                 </div>
                             </div>
                         `;
-                        // 모달 생성/표시하지 않음
                     } else {
                         // 선택 안 된 경우: 클릭 가능한 드롭다운 표시
                         dropdownContainer.innerHTML = `
@@ -884,62 +941,6 @@
                                 </div>
                             </div>
                         `;
-                    
-                        // 기존 모달 제거 (있다면)
-                        const existingModal = document.getElementById('gameModal');
-                        if (existingModal) {
-                            existingModal.remove();
-                        }
-                        
-                        // 모달 생성 (표시하지 않음)
-                        const modal = document.createElement('div');
-                        modal.id = 'gameModal';
-                        modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden';
-                        modal.innerHTML = `
-                            <div class="bg-gray-800 rounded-lg p-4 max-w-sm w-full mx-4 max-h-96 overflow-y-auto">
-                                <div class="flex justify-between items-center mb-4">
-                                    <h3 class="text-lg font-bold">경기 선택</h3>
-                                    <button onclick="closeGameModal()" class="text-gray-400 hover:text-white">
-                                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                                        </svg>
-                                    </button>
-                                </div>
-                                <div class="space-y-2">
-                                    ${data.games.map(game => {
-                                        const gameStatus = getStatusText(game);
-                                        // 경기 선택 조건 수정 - team-games 컬렉션 데이터 구조에 맞게
-                                        const gameIsSelectable = (game.progressStatus === '경기전' || game.progressStatus === '경기중' || game.progressStatus === '경기종료') ||
-                                                               (game.noGame === '정상게임' || game.noGame === '경기전' || game.noGame === '경기중');
-                                        const gameIsSelected = userSelection && userSelection.gameNumber === game.number;
-                                        return `
-                                            <div class="game-option p-3 border border-gray-600 rounded-lg hover:bg-gray-700 cursor-pointer ${gameIsSelected ? 'bg-blue-900 border-blue-500' : ''}" 
-                                                         onclick="${gameIsSelectable ? `selectGameFromModal(${game.number}, '${game.homeTeam}', '${game.awayTeam}')` : 'alert(\'선택할 수 없는 경기입니다.\')'}">
-                                                <div class="flex justify-between items-center">
-                                                    <div class="flex-1">
-                                                        <div class="text-sm font-bold">${game.homeTeam} vs ${game.awayTeam}</div>
-                                                        <div class="text-xs text-gray-400">경기 ${game.number} • ${gameStatus}</div>
-                                                    </div>
-                                                    <div class="flex items-center space-x-2">
-                                                        <span class="text-xs px-2 py-1 rounded ${getStatusBadgeClass(game)}">
-                                                            ${getGameSituationText(game)}
-                                                        </span>
-                                                        ${gameIsSelectable ? 
-                                                            (gameIsSelected ? 
-                                                                `<span class="text-xs bg-red-500 text-white px-2 py-1 rounded">선택중</span>` :
-                                                                `<span class="text-xs text-blue-500 px-2 py-1">선택가능</span>`
-                                                            ) : 
-                                                            `<span class="text-xs text-gray-500 px-2 py-1">선택불가</span>`
-                                                        }
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        `;
-                                    }).join('')}
-                                </div>
-                            </div>
-                        `;
-                        document.body.appendChild(modal);
                     }
                     
                     // 드롭다운 컨테이너를 gameSelectionContainer에 추가
@@ -956,7 +957,11 @@
         // 모달 관련 함수들
         function openGameModal() {
             const modal = document.getElementById('gameModal');
-            modal.style.display = 'flex';
+            if (modal) {
+                modal.style.display = 'flex';
+            } else {
+                console.error('게임 모달을 찾을 수 없습니다.');
+            }
         }
 
         function closeGameModal() {
