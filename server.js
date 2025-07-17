@@ -1759,12 +1759,12 @@ app.get('/api/daily-games', async (req, res) => {
             return res.json({ games: [] });
         }
         
-        // 한국 시간대로 오늘 날짜 계산
+        // 한국 시간대로 오늘 날짜 계산 (YYYY-MM-DD 형식)
         const today = new Date();
         const koreaTime = new Date(today.getTime() + (9 * 60 * 60 * 1000)); // UTC+9
         const todayString = koreaTime.getFullYear().toString() + 
-                           String(koreaTime.getMonth() + 1).padStart(2, '0') + 
-                           String(koreaTime.getDate()).padStart(2, '0');
+                           '-' + String(koreaTime.getMonth() + 1).padStart(2, '0') + 
+                           '-' + String(koreaTime.getDate()).padStart(2, '0');
         
         console.log('🔍 서버 - 조회 조건:', {
             date: todayString,
@@ -1883,12 +1883,12 @@ app.put('/api/daily-games/:gameNumber/status', async (req, res) => {
             return res.status(400).json({ error: '게임상황을 입력해주세요.' });
         }
         
-        // 한국 시간대로 오늘 날짜 계산
+        // 한국 시간대로 오늘 날짜 계산 (YYYY-MM-DD 형식)
         const today = new Date();
         const koreaTime = new Date(today.getTime() + (9 * 60 * 60 * 1000)); // UTC+9
         const todayString = koreaTime.getFullYear().toString() + 
-                           String(koreaTime.getMonth() + 1).padStart(2, '0') + 
-                           String(koreaTime.getDate()).padStart(2, '0');
+                           '-' + String(koreaTime.getMonth() + 1).padStart(2, '0') + 
+                           '-' + String(koreaTime.getDate()).padStart(2, '0');
         
         const teamGamesDoc = await TeamGame.findOne({ date: todayString });
         
@@ -1924,7 +1924,7 @@ const gameSelectionSchema = new mongoose.Schema({
     userId: { type: String, required: true },
     gameNumber: { type: Number, required: true },
     selectedAt: { type: Date, default: Date.now },
-    gameDate: { type: String, required: true } // YYYYMMDD 형식
+    gameDate: { type: String, required: true } // YYYY-MM-DD 형식
 });
 
 const GameSelection = mongoose.model('GameSelection', gameSelectionSchema, 'game-selections');
@@ -1938,12 +1938,12 @@ app.post('/api/game-selection', async (req, res) => {
             return res.status(400).json({ error: '사용자 ID와 경기 번호가 필요합니다.' });
         }
         
-        // 한국 시간대로 오늘 날짜 계산
+        // 한국 시간대로 오늘 날짜 계산 (YYYY-MM-DD 형식)
         const today = new Date();
         const koreaTime = new Date(today.getTime() + (9 * 60 * 60 * 1000)); // UTC+9
         const todayString = koreaTime.getFullYear().toString() + 
-                           String(koreaTime.getMonth() + 1).padStart(2, '0') + 
-                           String(koreaTime.getDate()).padStart(2, '0');
+                           '-' + String(koreaTime.getMonth() + 1).padStart(2, '0') + 
+                           '-' + String(koreaTime.getDate()).padStart(2, '0');
         
         // 같은 날짜에 이미 선택한 경기가 있는지 확인
         const existingSelection = await GameSelection.findOne({
@@ -1985,12 +1985,12 @@ app.get('/api/game-selection/:userId', async (req, res) => {
             return res.status(400).json({ error: '사용자 ID가 필요합니다.' });
         }
         
-        // 한국 시간대로 오늘 날짜 계산
+        // 한국 시간대로 오늘 날짜 계산 (YYYY-MM-DD 형식)
         const today = new Date();
         const koreaTime = new Date(today.getTime() + (9 * 60 * 60 * 1000)); // UTC+9
         const todayString = koreaTime.getFullYear().toString() + 
-                           String(koreaTime.getMonth() + 1).padStart(2, '0') + 
-                           String(koreaTime.getDate()).padStart(2, '0');
+                           '-' + String(koreaTime.getMonth() + 1).padStart(2, '0') + 
+                           '-' + String(koreaTime.getDate()).padStart(2, '0');
         
         const selection = await GameSelection.findOne({
             userId,
@@ -2011,12 +2011,12 @@ app.delete('/api/daily-games/:gameNumber', async (req, res) => {
     try {
         const { gameNumber } = req.params;
         
-        // 한국 시간대로 오늘 날짜 계산
+        // 한국 시간대로 오늘 날짜 계산 (YYYY-MM-DD 형식)
         const today = new Date();
         const koreaTime = new Date(today.getTime() + (9 * 60 * 60 * 1000)); // UTC+9
         const todayString = koreaTime.getFullYear().toString() + 
-                           String(koreaTime.getMonth() + 1).padStart(2, '0') + 
-                           String(koreaTime.getDate()).padStart(2, '0');
+                           '-' + String(koreaTime.getMonth() + 1).padStart(2, '0') + 
+                           '-' + String(koreaTime.getDate()).padStart(2, '0');
         
         const teamGamesDoc = await TeamGame.findOne({ date: todayString });
         
@@ -2698,12 +2698,12 @@ app.put('/api/admin/game/:gameNumber/start-betting', async (req, res) => {
     try {
         const { gameNumber } = req.params;
         
-        // 한국 시간대로 오늘 날짜 계산
+        // 한국 시간대로 오늘 날짜 계산 (YYYY-MM-DD 형식)
         const today = new Date();
         const koreaTime = new Date(today.getTime() + (9 * 60 * 60 * 1000));
         const todayString = koreaTime.getFullYear().toString() + 
-                           String(koreaTime.getMonth() + 1).padStart(2, '0') + 
-                           String(koreaTime.getDate()).padStart(2, '0');
+                           '-' + String(koreaTime.getMonth() + 1).padStart(2, '0') + 
+                           '-' + String(koreaTime.getDate()).padStart(2, '0');
         
         // team-games 컬렉션에서 해당 경기 찾기
         const teamGamesCollection = mongoose.connection.db.collection('team-games');
@@ -2757,12 +2757,12 @@ app.put('/api/admin/game/:gameNumber/stop-betting', async (req, res) => {
     try {
         const { gameNumber } = req.params;
         
-        // 한국 시간대로 오늘 날짜 계산
+        // 한국 시간대로 오늘 날짜 계산 (YYYY-MM-DD 형식)
         const today = new Date();
         const koreaTime = new Date(today.getTime() + (9 * 60 * 60 * 1000));
         const todayString = koreaTime.getFullYear().toString() + 
-                           String(koreaTime.getMonth() + 1).padStart(2, '0') + 
-                           String(koreaTime.getDate()).padStart(2, '0');
+                           '-' + String(koreaTime.getMonth() + 1).padStart(2, '0') + 
+                           '-' + String(koreaTime.getDate()).padStart(2, '0');
         
         // team-games 컬렉션에서 해당 경기 찾기
         const teamGamesCollection = mongoose.connection.db.collection('team-games');
@@ -2815,12 +2815,12 @@ app.put('/api/admin/game/:gameNumber/end-game', async (req, res) => {
         const { gameNumber } = req.params;
         const { predictionResult } = req.body; // 예측 결과 (선택사항)
         
-        // 한국 시간대로 오늘 날짜 계산
+        // 한국 시간대로 오늘 날짜 계산 (YYYY-MM-DD 형식)
         const today = new Date();
         const koreaTime = new Date(today.getTime() + (9 * 60 * 60 * 1000));
         const todayString = koreaTime.getFullYear().toString() + 
-                           String(koreaTime.getMonth() + 1).padStart(2, '0') + 
-                           String(koreaTime.getDate()).padStart(2, '0');
+                           '-' + String(koreaTime.getMonth() + 1).padStart(2, '0') + 
+                           '-' + String(koreaTime.getDate()).padStart(2, '0');
         
         // team-games 컬렉션에서 해당 경기 찾기
         const teamGamesCollection = mongoose.connection.db.collection('team-games');
@@ -2872,12 +2872,12 @@ app.put('/api/admin/game/:gameNumber/end-game', async (req, res) => {
 // 4. 게임 상태 조회 API (관리자용)
 app.get('/api/admin/games/status', async (req, res) => {
     try {
-        // 한국 시간대로 오늘 날짜 계산
+        // 한국 시간대로 오늘 날짜 계산 (YYYY-MM-DD 형식)
         const today = new Date();
         const koreaTime = new Date(today.getTime() + (9 * 60 * 60 * 1000));
         const todayString = koreaTime.getFullYear().toString() + 
-                           String(koreaTime.getMonth() + 1).padStart(2, '0') + 
-                           String(koreaTime.getDate()).padStart(2, '0');
+                           '-' + String(koreaTime.getMonth() + 1).padStart(2, '0') + 
+                           '-' + String(koreaTime.getDate()).padStart(2, '0');
         
         // team-games 컬렉션에서 오늘의 모든 경기 조회
         const teamGamesCollection = mongoose.connection.db.collection('team-games');
@@ -2912,12 +2912,12 @@ app.put('/api/admin/game/:gameNumber/reset', async (req, res) => {
     try {
         const { gameNumber } = req.params;
         
-        // 한국 시간대로 오늘 날짜 계산
+        // 한국 시간대로 오늘 날짜 계산 (YYYY-MM-DD 형식)
         const today = new Date();
         const koreaTime = new Date(today.getTime() + (9 * 60 * 60 * 1000));
         const todayString = koreaTime.getFullYear().toString() + 
-                           String(koreaTime.getMonth() + 1).padStart(2, '0') + 
-                           String(koreaTime.getDate()).padStart(2, '0');
+                           '-' + String(koreaTime.getMonth() + 1).padStart(2, '0') + 
+                           '-' + String(koreaTime.getDate()).padStart(2, '0');
         
         // team-games 컬렉션에서 해당 경기 찾기
         const teamGamesCollection = mongoose.connection.db.collection('team-games');
