@@ -972,9 +972,22 @@
 
         // 경기 상태 텍스트 및 클래스 함수
         function getStatusText(game) {
+            console.log('🔍 경기 상태 확인:', {
+                gameNumber: game.number,
+                progressStatus: game.progressStatus,
+                gameStatus: game.gameStatus,
+                noGame: game.noGame
+            });
+            
             // progressStatus 필드를 기준으로 상태 판단
             if (game.progressStatus) {
                 return game.progressStatus;
+            } else if (game.gameStatus === '경기중') {
+                return '경기중';
+            } else if (game.gameStatus === '경기종료' || game.gameStatus === '경기끝') {
+                return '경기종료';
+            } else if (game.gameStatus === '우천취소' || game.gameStatus === '경기취소') {
+                return game.gameStatus;
             } else if (game.noGame === '경기중') {
                 return '경기중';
             } else if (game.noGame === '경기종료') {
@@ -999,12 +1012,18 @@
         }
         
         function getGameSituationText(game) {
+            console.log('🔍 경기 상황 확인:', {
+                gameNumber: game.number,
+                gameStatus: game.gameStatus,
+                noGame: game.noGame
+            });
+            
             // team-games 컬렉션의 gameStatus 필드 사용
             if (game.gameStatus) {
                 return game.gameStatus;
             } else if (game.noGame) {
                 return game.noGame;
-                } else {
+            } else {
                 return '경기전';
             }
         }
@@ -1023,8 +1042,16 @@
 
         // 모든 경기가 경기전인지 확인하는 함수
         function checkAllGamesStatus(games) {
+            console.log('🔍 전체 경기 상태 확인:', games.map(game => ({
+                gameNumber: game.number,
+                progressStatus: game.progressStatus,
+                gameStatus: game.gameStatus,
+                noGame: game.noGame
+            })));
+            
             return games.every(game => 
                 (game.progressStatus === '경기전') || 
+                (game.gameStatus === '경기전') ||
                 (game.noGame === '경기전' || game.noGame === '정상게임')
             );
         }
