@@ -1783,9 +1783,7 @@ app.get('/api/daily-games', async (req, res) => {
             console.log(`📅 오늘 날짜(${todayString})의 경기: ${teamGames.length}개`);
             
             if (teamGames.length === 0) {
-                // 오늘 날짜가 없으면 모든 경기 데이터 반환 (테스트용)
-                teamGames = await teamGamesCollection.find({}).sort({ gameNumber: 1 }).toArray();
-                console.log(`📅 전체 경기 데이터: ${teamGames.length}개`);
+                console.log(`📅 오늘 날짜(${todayString})에 경기가 없습니다.`);
             }
         } catch (error) {
             console.log('❌ team-games 컬렉션 조회 실패:', error.message);
@@ -1833,19 +1831,19 @@ app.get('/api/daily-games', async (req, res) => {
         } else {
             console.log('❌ 오늘 날짜의 경기 데이터가 없습니다.');
             
-            // 디버깅용: 모든 문서 확인
+            // 디버깅용: 오늘 날짜 경기만 확인
             if (req.query.debug === 'true') {
                 try {
                     const teamGamesCollection = mongoose.connection.db.collection('team-games');
-                    const allGames = await teamGamesCollection.find({}).toArray();
+                    const todayGames = await teamGamesCollection.find({ date: todayString }).toArray();
                     
-                    console.log('🔧 디버그 모드: team-games 컬렉션 반환');
+                    console.log('🔧 디버그 모드: 오늘 날짜 경기만 반환');
                     return res.json({ 
                         games: [],
                         todayString: todayString,
                         debug: {
-                            totalGames: allGames.length,
-                            allGames: allGames.map(game => ({
+                            todayGames: todayGames.length,
+                            todayGamesList: todayGames.map(game => ({
                                 _id: game._id,
                                 gameNumber: game.gameNumber,
                                 matchup: game.matchup,
