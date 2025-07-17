@@ -351,7 +351,7 @@
 
 
         // 배팅 처리 함수
-        function handleBetting() {
+        async function handleBetting() {
             // 로그인 상태 확인
             if (!currentUser || !currentUser.userId) {
                 alert('로그인이 필요한 서비스입니다.');
@@ -388,7 +388,7 @@
                          String(koreaTime.getMonth() + 1).padStart(2, '0') + 
                          String(koreaTime.getDate()).padStart(2, '0');
             
-            const selectedGame = getSelectedGame();
+            const selectedGame = await getSelectedGame();
             
             if (!selectedGame) {
                 alert('경기를 선택해주세요.');
@@ -437,13 +437,35 @@
         }
 
         // 선택된 경기 정보 가져오기
-        function getSelectedGame() {
-            const selectedGameElement = document.querySelector('.game-item.selected');
-            if (selectedGameElement) {
-                const gameNumber = selectedGameElement.dataset.gameNumber;
-                const homeTeam = selectedGameElement.dataset.homeTeam;
-                const awayTeam = selectedGameElement.dataset.awayTeam;
-                return { gameNumber, homeTeam, awayTeam };
+        async function getSelectedGame() {
+            if (!currentUser || !currentUser.userId) {
+                return null;
+            }
+            
+            try {
+                const selectionResponse = await fetch(`/api/game-selection/${currentUser.userId}`);
+                if (selectionResponse.ok) {
+                    const selectionData = await selectionResponse.json();
+                    if (selectionData.selection) {
+                        // 경기 목록에서 선택된 경기 찾기
+                        const dailyGamesResponse = await fetch('/api/daily-games');
+                        if (dailyGamesResponse.ok) {
+                            const gamesData = await dailyGamesResponse.json();
+                            const selectedGameData = gamesData.games.find(game => 
+                                game.number === selectionData.selection.gameNumber
+                            );
+                            if (selectedGameData) {
+                                return {
+                                    gameNumber: selectedGameData.number,
+                                    homeTeam: selectedGameData.homeTeam,
+                                    awayTeam: selectedGameData.awayTeam
+                                };
+                            }
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error('선택된 경기 정보 조회 오류:', error);
             }
             return null;
         }
@@ -490,7 +512,7 @@
             if (!isBetting) return;
             
             try {
-                const selectedGame = getSelectedGame();
+                const selectedGame = await getSelectedGame();
                 if (!selectedGame) {
                     alert('선택된 경기가 없습니다.');
                     return;
@@ -863,55 +885,61 @@
                             </div>
                         `;
                     
+                        // 기존 모달 제거 (있다면)
+                        const existingModal = document.getElementById('gameModal');
+                        if (existingModal) {
+                            existingModal.remove();
+                        }
+                        
                         // 모달 생성 (표시하지 않음)
-                    const modal = document.createElement('div');
-                    modal.id = 'gameModal';
-                    modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden';
-                    modal.innerHTML = `
-                        <div class="bg-gray-800 rounded-lg p-4 max-w-sm w-full mx-4 max-h-96 overflow-y-auto">
-                            <div class="flex justify-between items-center mb-4">
-                                <h3 class="text-lg font-bold">경기 선택</h3>
-                                <button onclick="closeGameModal()" class="text-gray-400 hover:text-white">
-                                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                                    </svg>
-                                </button>
-                            </div>
-                            <div class="space-y-2">
-                                ${data.games.map(game => {
-                                    const gameStatus = getStatusText(game);
-                                        // 경기 선택 조건 수정 - 실제 데이터 구조에 맞게
+                        const modal = document.createElement('div');
+                        modal.id = 'gameModal';
+                        modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden';
+                        modal.innerHTML = `
+                            <div class="bg-gray-800 rounded-lg p-4 max-w-sm w-full mx-4 max-h-96 overflow-y-auto">
+                                <div class="flex justify-between items-center mb-4">
+                                    <h3 class="text-lg font-bold">경기 선택</h3>
+                                    <button onclick="closeGameModal()" class="text-gray-400 hover:text-white">
+                                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                        </svg>
+                                    </button>
+                                </div>
+                                <div class="space-y-2">
+                                    ${data.games.map(game => {
+                                        const gameStatus = getStatusText(game);
+                                        // 경기 선택 조건 수정 - team-games 컬렉션 데이터 구조에 맞게
                                         const gameIsSelectable = (game.progressStatus === '경기전' || game.progressStatus === '경기중' || game.progressStatus === '경기종료') ||
-                                                               (game.gameStatus === '정상게임' || game.gameStatus === '경기전' || game.gameStatus === '경기중');
-                                    const gameIsSelected = userSelection && userSelection.gameNumber === game.number;
-                                    return `
-                                        <div class="game-option p-3 border border-gray-600 rounded-lg hover:bg-gray-700 cursor-pointer ${gameIsSelected ? 'bg-blue-900 border-blue-500' : ''}" 
-                                                     onclick="${gameIsSelectable ? `selectGameFromModal(${game.number}, '${game.homeTeam}', '${game.awayTeam}')` : 'alert(\'선택할 수 없는 경기입니다.\')'}">
-                                            <div class="flex justify-between items-center">
-                                                <div class="flex-1">
-                                                    <div class="text-sm font-bold">${game.homeTeam} vs ${game.awayTeam}</div>
-                                                    <div class="text-xs text-gray-400">경기 ${game.number} • ${gameStatus}</div>
-                                                </div>
-                                                <div class="flex items-center space-x-2">
-                                                    <span class="text-xs px-2 py-1 rounded ${getStatusBadgeClass(game)}">
-                                                        ${getGameSituationText(game)}
-                                                    </span>
-                                                    ${gameIsSelectable ? 
-                                                        (gameIsSelected ? 
-                                                            `<span class="text-xs bg-red-500 text-white px-2 py-1 rounded">선택중</span>` :
-                                                            `<span class="text-xs text-blue-500 px-2 py-1">선택가능</span>`
-                                                        ) : 
-                                                        `<span class="text-xs text-gray-500 px-2 py-1">선택불가</span>`
-                                                    }
+                                                               (game.noGame === '정상게임' || game.noGame === '경기전' || game.noGame === '경기중');
+                                        const gameIsSelected = userSelection && userSelection.gameNumber === game.number;
+                                        return `
+                                            <div class="game-option p-3 border border-gray-600 rounded-lg hover:bg-gray-700 cursor-pointer ${gameIsSelected ? 'bg-blue-900 border-blue-500' : ''}" 
+                                                         onclick="${gameIsSelectable ? `selectGameFromModal(${game.number}, '${game.homeTeam}', '${game.awayTeam}')` : 'alert(\'선택할 수 없는 경기입니다.\')'}">
+                                                <div class="flex justify-between items-center">
+                                                    <div class="flex-1">
+                                                        <div class="text-sm font-bold">${game.homeTeam} vs ${game.awayTeam}</div>
+                                                        <div class="text-xs text-gray-400">경기 ${game.number} • ${gameStatus}</div>
+                                                    </div>
+                                                    <div class="flex items-center space-x-2">
+                                                        <span class="text-xs px-2 py-1 rounded ${getStatusBadgeClass(game)}">
+                                                            ${getGameSituationText(game)}
+                                                        </span>
+                                                        ${gameIsSelectable ? 
+                                                            (gameIsSelected ? 
+                                                                `<span class="text-xs bg-red-500 text-white px-2 py-1 rounded">선택중</span>` :
+                                                                `<span class="text-xs text-blue-500 px-2 py-1">선택가능</span>`
+                                                            ) : 
+                                                            `<span class="text-xs text-gray-500 px-2 py-1">선택불가</span>`
+                                                        }
+                                                    </div>
                                                 </div>
                                             </div>
-                                        </div>
-                                    `;
-                                }).join('')}
+                                        `;
+                                    }).join('')}
+                                </div>
                             </div>
-                        </div>
-                    `;
-                    document.body.appendChild(modal);
+                        `;
+                        document.body.appendChild(modal);
                     }
                     
                     // 드롭다운 컨테이너를 gameSelectionContainer에 추가
@@ -975,8 +1003,8 @@
             });
             
             // 우천취소, 경기취소 등 특별한 상황은 우선 처리
-            if (game.gameStatus === '우천' || game.gameStatus === '번개/천둥' || game.gameStatus === '경기취소') {
-                return game.gameStatus;
+            if (game.noGame === '우천' || game.noGame === '번개/천둥' || game.noGame === '경기취소' || game.noGame === '우천취소') {
+                return game.noGame;
             }
             
             // 시간 기반 진행상태 계산
@@ -994,23 +1022,19 @@
                 return game.progressStatus;
             }
             
-            if (game.gameStatus) {
-                if (game.gameStatus === '정상게임') {
+            // team-games 컬렉션에서 변환된 noGame 필드 사용
+            if (game.noGame) {
+                if (game.noGame === '정상게임') {
                     if (game.progressStatus === '경기중') return '경기중';
                     if (game.progressStatus === '경기종료' || game.progressStatus === '경기끝') return '경기끝';
                     return '경기전';
                 }
-                if (game.gameStatus === '경기중') return '경기중';
-                if (game.gameStatus === '경기종료' || game.gameStatus === '경기끝') return '경기끝';
-                return game.gameStatus;
-            }
-            
-            if (game.noGame) {
                 if (game.noGame === '경기중') return '경기중';
                 if (game.noGame === '경기종료' || game.noGame === '경기끝') return '경기끝';
                 if (game.noGame === '우천취소' || game.noGame === '취소') return game.noGame;
                 return game.noGame;
             }
+
             
             return '경기전';
         }
@@ -1081,16 +1105,14 @@
         function getGameSituationText(game) {
             console.log('🔍 경기 상황 확인:', {
                 gameNumber: game.number,
-                gameStatus: game.gameStatus,
-                noGame: game.noGame
+                noGame: game.noGame,
+                progressStatus: game.progressStatus
             });
             
-            // team-games 컬렉션의 gameStatus 필드 사용
-            if (game.gameStatus) {
-                return game.gameStatus;
-            } else if (game.noGame) {
+            // team-games 컬렉션에서 변환된 데이터 사용
+            if (game.noGame) {
                 return game.noGame;
-                } else {
+            } else {
                 return '경기전';
             }
         }
@@ -1149,7 +1171,7 @@
             }
             
             try {
-                const selectedGame = getSelectedGame();
+                const selectedGame = await getSelectedGame();
                 if (!selectedGame) {
                     document.getElementById('bettingStatusDisplay').style.display = 'none';
                 return;
