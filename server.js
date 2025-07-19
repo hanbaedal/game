@@ -3228,60 +3228,7 @@ app.get('/api/today-games', async (req, res) => {
     }
 });
 
-// 오늘의 경기 조회 API (기존)
-app.get('/api/today-games', async (req, res) => {
-    try {
-        console.log('📅 오늘의 경기 조회 요청');
-        
-        // MongoDB 연결 상태 확인
-        if (mongoose.connection.readyState !== 1) {
-            console.log('❌ MongoDB 연결 안됨, 기본 응답 반환');
-            return res.json({ 
-                success: false,
-                games: [],
-                message: 'DB 연결 오류'
-            });
-        }
-        
-        // 날짜 파라미터 사용 (클라이언트에서 전달) 또는 오늘 날짜
-        const dateParam = req.query.date;
-        let todayString;
-        
-        if (dateParam) {
-            todayString = dateParam;
-        } else {
-            // 한국 시간대로 오늘 날짜 계산 (YYYY-MM-DD 형식)
-            const today = new Date();
-            const koreaTime = new Date(today.getTime() + (9 * 60 * 60 * 1000)); // UTC+9
-            todayString = koreaTime.getFullYear().toString() + 
-                         '-' + String(koreaTime.getMonth() + 1).padStart(2, '0') + 
-                         '-' + String(koreaTime.getDate()).padStart(2, '0');
-        }
-        
-        console.log('🔍 서버 - 조회 조건:', {
-            date: todayString,
-            requestDate: dateParam
-        });
-        
-        // team-games 컬렉션에서 직접 조회
-        let teamGames = [];
-        
-        try {
-            // team-games 컬렉션에서 해당 날짜의 경기 조회
-            const teamGamesCollection = mongoose.connection.db.collection('team-games');
-            
-                         // 🔍 디버깅: 전체 데이터 확인
-             const allGames = await teamGamesCollection.find({}).limit(5).toArray();
-             console.log('🔍 team-games 컬렉션의 샘플 데이터:', allGames.map(game => ({
-                 _id: game._id,
-                 date: game.date,
-                 gameDate: game.gameDate,
-                 gameNumber: game.gameNumber,
-                 number: game.number,
-                 matchup: game.matchup,
-                 homeTeam: game.homeTeam,
-                 awayTeam: game.awayTeam,
-                 gameStatus: game.gameStatus,
+
                  progressStatus: game.progressStatus,
                  situationStatus: game.situationStatus,
                  bettingStart: game.bettingStart,
