@@ -363,29 +363,26 @@
         // team-games 컬렉션의 경기 로드 (실제 DB 데이터)
         async function loadTeamGames() {
             try {
-                console.log('🔍 /api/test-games API 호출 시작 (임시)');
-                const response = await fetch('/api/test-games');
+                console.log('🔍 /api/today-games API 호출 시작 (임시)');
+                const response = await fetch('/api/today-games');
                 console.log('📡 응답 상태:', response.status, response.statusText);
                 
                 if (!response.ok) {
                     throw new Error(`HTTP error! status: ${response.status}`);
                 }
                 
-                const data = await response.json();
-                console.log('📋 서버 응답:', data);
+                const games = await response.json();
+                console.log('📊 받은 경기 데이터:', games);
                 
-                if (data.success && data.games && data.games.length > 0) {
-                    console.log(`✅ ${data.games.length}개의 실제 DB 경기 데이터 로드됨`);
-                    showGameSelectionModal(data.games);
-                } else {
-                    console.log('❌ 경기 데이터 없음:', data);
+                if (!games || games.length === 0) {
+                    console.log('⚠️ 경기 데이터가 없습니다.');
                     document.getElementById('gameSelectionContainer').innerHTML = `
                         <p class="text-gray-400">경기 없음</p>
-                        <button onclick="createTestGames()" class="px-3 py-1 bg-green-600 text-white text-xs rounded hover:bg-green-700 mt-2">
-                            테스트 데이터 생성
-                        </button>
                     `;
+                    return;
                 }
+                
+                showGameSelectionModal(games);
             } catch (error) {
                 console.error('❌ 경기 로드 오류:', error);
                 document.getElementById('gameSelectionContainer').innerHTML = 
