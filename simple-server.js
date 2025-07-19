@@ -10,10 +10,10 @@ app.use(express.static('.'));
 // MongoDB 연결
 const connectToMongoDB = async () => {
     try {
-        const mongoUri = 'mongodb+srv://ppadun:ppadun123@cluster0.mongodb.net/member-management?retryWrites=true&w=majority';
+        const mongoUri = process.env.MONGODB_URI || 'mongodb+srv://ppadun_user:ppadun8267@member-management.bppicvz.mongodb.net/?retryWrites=true&w=majority&appName=member-management';
         await mongoose.connect(mongoUri, {
             maxPoolSize: 10,
-            serverSelectionTimeoutMS: 10000,
+            serverSelectionTimeoutMS: 30000,
             socketTimeoutMS: 45000,
             dbName: 'member-management',
             retryWrites: true,
