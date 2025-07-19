@@ -402,36 +402,23 @@
                 gameBtn.onclick = () => selectGame(game);
                 gameBtn.dataset.gameNumber = gameNumber;
                 
-                // 경기시작이 '시작'인 경우에만 클릭 가능
-                if (game.bettingStart === '시작') {
-                    gameBtn.disabled = false;
-                } else {
-                    gameBtn.disabled = true;
-                    gameBtn.className += ' opacity-50 cursor-not-allowed';
-                }
+                // 경기선택은 항상 가능 (bettingStart와 무관)
+                gameBtn.disabled = false;
                 
                 container.appendChild(gameBtn);
             });
         }
 
-        // 게임 버튼 클래스 결정
+        // 게임 버튼 클래스 결정 (경기선택은 항상 활성화)
         function getGameButtonClass(game) {
-            if (game.bettingStart === '시작') {
-                return 'bg-green-600 hover:bg-green-700 text-white border-green-500';
-            } else {
-                return 'bg-gray-600 text-gray-300 border-gray-500';
-            }
+            return 'bg-blue-600 hover:bg-blue-700 text-white border-blue-500';
         }
 
         // 게임 선택 함수
         async function selectGame(game) {
             console.log('🎯 게임 선택:', game);
             
-            // 경기시작이 '시작'인지 확인
-            if (game.bettingStart !== '시작') {
-                alert('아직 배팅이 시작되지 않은 경기입니다.');
-                return;
-            }
+            // 경기는 항상 선택 가능 (bettingStart는 배팅 단계에서만 확인)
             
             selectedGame = game;
             
@@ -482,10 +469,12 @@
             });
         }
 
-        // 예측하기 버튼 활성화
+        // 예측하기 버튼 활성화 (bettingStart가 '시작'이고 bettingStop이 '중지'가 아닐 때)
         function enablePredictionButton() {
             const betBtn = document.getElementById('betBtn');
-            if (selectedGame && selectedChoice && selectedGame.bettingStop !== '중지') {
+            if (selectedGame && selectedChoice && 
+                selectedGame.bettingStart === '시작' && 
+                selectedGame.bettingStop !== '중지') {
                 betBtn.disabled = false;
                 betBtn.classList.remove('opacity-50', 'cursor-not-allowed');
                 betBtn.classList.add('cursor-pointer');
@@ -513,7 +502,12 @@
                 return;
             }
             
-            // bettingStop이 '중지'인지 확인
+            // bettingStart가 '시작'이 아니거나 bettingStop이 '중지'일 때는 배팅 불가
+            if (selectedGame.bettingStart !== '시작') {
+                alert('아직 배팅이 시작되지 않았습니다.');
+                return;
+            }
+            
             if (selectedGame.bettingStop === '중지') {
                 showWaitingModal();
                 return;

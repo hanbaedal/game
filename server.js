@@ -3143,25 +3143,15 @@ app.get('/api/today-games', async (req, res) => {
                  allFields: Object.keys(game)
              })));
              
-                           // 여러 날짜 필드로 조회 시도
-              let dateQuery = {};
-              if (allGames.length > 0) {
-                  const sampleGame = allGames[0];
-                  if (sampleGame.date) {
-                      dateQuery.date = todayString;
-                  } else if (sampleGame.gameDate) {
-                      dateQuery.gameDate = todayString;
-                  } else {
-                      // 날짜 필드가 없으면 전체 조회하여 확인
-                      console.log('⚠️ 날짜 필드를 찾을 수 없어 전체 경기를 조회합니다.');
-                      dateQuery = {};
-                  }
-              } else {
-                  console.log('⚠️ 컬렉션에 데이터가 없습니다.');
-                  dateQuery = {};
-              }
+                           // 일단 전체 경기 조회 (날짜와 관계없이 모든 경기 표시)
+              teamGames = await teamGamesCollection.find({}).sort({ gameNumber: 1, number: 1 }).toArray();
               
-              teamGames = await teamGamesCollection.find(dateQuery).sort({ gameNumber: 1, number: 1 }).toArray();
+              console.log('📋 전체 경기 조회 결과:', teamGames.map(game => ({
+                  date: game.date,
+                  gameNumber: game.gameNumber,
+                  matchup: game.matchup,
+                  bettingStart: game.bettingStart
+              })));
             
             console.log(`📅 ${todayString} 날짜의 경기: ${teamGames.length}개`);
             
