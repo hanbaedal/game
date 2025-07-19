@@ -1,7 +1,7 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const app = express();
-const port = 3002;
+const port = process.env.PORT || 10000;
 
 // 미들웨어
 app.use(express.json());
@@ -20,9 +20,10 @@ const connectToMongoDB = async () => {
             w: 'majority'
         });
         console.log('✅ MongoDB 연결 성공!');
-        console.log('📊 연결된 데이터베이스:', mongoose.connection.db.databaseName);
+        return true;
     } catch (error) {
         console.error('❌ MongoDB 연결 실패:', error.message);
+        return false;
     }
 };
 
@@ -64,6 +65,18 @@ app.get('/api/team-games', async (req, res) => {
     }
 });
 
-app.listen(port, () => {
+// 서버 시작
+const server = app.listen(port, () => {
     console.log(`✅ 간단한 서버가 포트 ${port}에서 시작되었습니다!`);
+});
+
+// 서버 오류 처리
+server.on('error', (error) => {
+    if (error.code === 'EADDRINUSE') {
+        console.error('❌ 포트가 이미 사용 중입니다:', port);
+        process.exit(1);
+    } else {
+        console.error('❌ 서버 오류:', error);
+        process.exit(1);
+    }
 }); 
