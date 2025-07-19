@@ -411,8 +411,29 @@
                 }
             } catch (error) {
                 console.error('❌ team-games 경기 로드 오류:', error);
-                document.getElementById('gameSelectionContainer').innerHTML = 
-                    '<p class="text-red-400 text-sm">경기 정보 로드 실패</p>';
+                console.error('❌ 오류 상세 정보:', {
+                    message: error.message,
+                    stack: error.stack,
+                    name: error.name
+                });
+                
+                const container = document.getElementById('gameSelectionContainer');
+                if (container) {
+                    container.innerHTML = `
+                        <div class="text-red-400 text-sm">
+                            <p>경기 정보 로드 실패</p>
+                            <p class="text-xs text-gray-500 mt-1">오류: ${error.message}</p>
+                            <div class="mt-2 space-y-2">
+                                <button onclick="loadTodayGames()" class="px-3 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700">
+                                    다시 시도
+                                </button>
+                                <button onclick="createTestGames()" class="ml-2 px-3 py-1 bg-green-600 text-white text-xs rounded hover:bg-green-700">
+                                    테스트 데이터 생성
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                }
             }
         }
 
@@ -1478,6 +1499,33 @@
                 alert('로그인이 필요합니다.');
             }
         };
+
+        // 테스트 데이터 생성 함수
+        async function createTestGames() {
+            try {
+                console.log('🧪 테스트 데이터 생성 시작');
+                
+                const response = await fetch('/api/create-test-games', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                const data = await response.json();
+                console.log('🧪 테스트 데이터 생성 결과:', data);
+                
+                if (data.success) {
+                    alert('테스트 데이터가 생성되었습니다. 페이지를 새로고침하세요.');
+                    location.reload();
+                } else {
+                    alert('테스트 데이터 생성 실패: ' + data.message);
+                }
+            } catch (error) {
+                console.error('❌ 테스트 데이터 생성 오류:', error);
+                alert('테스트 데이터 생성 중 오류가 발생했습니다.');
+            }
+        }
 
         // 경기 상태 텍스트 및 클래스 함수
         function getStatusText(game) {

@@ -3585,6 +3585,83 @@ app.get('/api/test-games', async (req, res) => {
     }
 });
 
+// 간단한 경기 데이터 생성 API (테스트용)
+app.post('/api/create-test-games', async (req, res) => {
+    try {
+        console.log('🧪 테스트 경기 데이터 생성');
+        
+        // MongoDB 연결 상태 확인
+        if (mongoose.connection.readyState !== 1) {
+            return res.json({
+                success: false,
+                message: 'MongoDB 연결 안됨'
+            });
+        }
+        
+        const teamGamesCollection = mongoose.connection.db.collection('team-games');
+        const todayString = getKoreaDateString();
+        
+        // 테스트 경기 데이터 생성
+        const testGames = [
+            {
+                date: todayString,
+                gameNumber: 1,
+                number: 1,
+                matchup: '삼성 vs 두산',
+                homeTeam: '삼성',
+                awayTeam: '두산',
+                startTime: '18:00',
+                endTime: '21:00',
+                gameStatus: '정상게임',
+                progressStatus: '경기전',
+                bettingStart: '중지',
+                bettingStop: '중지',
+                createdAt: new Date(),
+                updatedAt: new Date()
+            },
+            {
+                date: todayString,
+                gameNumber: 2,
+                number: 2,
+                matchup: 'LG vs 키움',
+                homeTeam: 'LG',
+                awayTeam: '키움',
+                startTime: '18:30',
+                endTime: '21:30',
+                gameStatus: '정상게임',
+                progressStatus: '경기전',
+                bettingStart: '중지',
+                bettingStop: '중지',
+                createdAt: new Date(),
+                updatedAt: new Date()
+            }
+        ];
+        
+        // 기존 테스트 데이터 삭제
+        await teamGamesCollection.deleteMany({ date: todayString });
+        
+        // 새 테스트 데이터 삽입
+        const result = await teamGamesCollection.insertMany(testGames);
+        
+        console.log('✅ 테스트 경기 데이터 생성 완료:', result.insertedCount, '개');
+        
+        res.json({
+            success: true,
+            message: `${result.insertedCount}개의 테스트 경기가 생성되었습니다.`,
+            games: testGames,
+            date: todayString
+        });
+        
+    } catch (error) {
+        console.error('❌ 테스트 경기 생성 오류:', error);
+        res.json({
+            success: false,
+            message: '테스트 경기 생성 실패',
+            error: error.message
+        });
+    }
+});
+
 // 경기 날짜를 오늘로 업데이트하는 API
 app.get('/api/team-games-display', async (req, res) => {
     try {
