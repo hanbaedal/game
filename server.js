@@ -3334,13 +3334,40 @@ app.post('/api/update-games-to-today', async (req, res) => {
 // 경기 전체 조회 API (가장 단순하게)
 app.get('/api/team-games', async (req, res) => {
     try {
+        console.log('🏟️ /api/team-games API 호출됨');
+        
         if (!checkMongoDBConnection()) {
+            console.log('❌ MongoDB 연결 안됨');
             return sendMongoDBErrorResponse(res, 'DB 연결 오류');
         }
+        
+        console.log('✅ MongoDB 연결 확인됨');
+        console.log('📊 연결된 데이터베이스:', mongoose.connection.db.databaseName);
+        
         const teamGamesCollection = getTeamGamesCollection();
+        console.log('📊 team-games 컬렉션 접근');
+        
+        // 전체 컬렉션 목록 확인
+        const collections = await mongoose.connection.db.listCollections().toArray();
+        console.log('📋 데이터베이스의 모든 컬렉션:', collections.map(c => c.name));
+        
+        // team-games 컬렉션의 전체 문서 수 확인
+        const totalCount = await teamGamesCollection.countDocuments();
+        console.log('📊 team-games 컬렉션 총 문서 수:', totalCount);
+        
         const games = await teamGamesCollection.find({}).sort({ gameNumber: 1 }).toArray();
+        console.log(`📋 조회된 경기 수: ${games.length}개`);
+        
+        if (games.length > 0) {
+            console.log('📋 첫 번째 경기 샘플:', JSON.stringify(games[0], null, 2));
+            console.log('📋 모든 경기 데이터:', JSON.stringify(games, null, 2));
+        } else {
+            console.log('❌ team-games 컬렉션에 데이터가 없습니다.');
+        }
+        
         res.json({ success: true, games });
     } catch (error) {
+        console.error('❌ /api/team-games 오류:', error);
         res.status(500).json({ success: false, message: error.message });
     }
 });
