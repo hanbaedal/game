@@ -360,55 +360,48 @@
             startBettingStatusCheck();
         });
 
-        // 새로운 경기 선택 기능
+        // team-games 컬렉션의 경기 로드 (실제 DB 데이터)
         async function loadTeamGames() {
             try {
-                console.log('🔍 새로운 경기 선택 기능 시작');
+                console.log('🔍 /api/team-games API 호출 시작');
+                const response = await fetch('/api/team-games');
+                console.log('📡 응답 상태:', response.status, response.statusText);
                 
-                // 간단한 경기 데이터 (실제 DB 연결 전 임시)
-                const games = [
-                    {
-                        gameNumber: 1,
-                        matchup: '두산 vs LG',
-                        startTime: '18:30',
-                        progressStatus: '경기중'
-                    },
-                    {
-                        gameNumber: 2,
-                        matchup: '삼성 vs 키움',
-                        startTime: '19:00',
-                        progressStatus: '경기전'
-                    },
-                    {
-                        gameNumber: 3,
-                        matchup: '한화 vs 롯데',
-                        startTime: '18:30',
-                        progressStatus: '우천취소'
-                    },
-                    {
-                        gameNumber: 4,
-                        matchup: 'SSG vs KT',
-                        startTime: '19:00',
-                        progressStatus: '경기끝'
-                    },
-                    {
-                        gameNumber: 5,
-                        matchup: 'NC vs KIA',
-                        startTime: '18:30',
-                        progressStatus: '경기중'
-                    }
-                ];
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
                 
-                console.log('📊 경기 데이터:', games);
+                const data = await response.json();
+                console.log('📊 받은 응답 데이터:', data);
+                
+                if (!data.success) {
+                    console.log('❌ API 응답 실패:', data.message);
+                    document.getElementById('gameSelectionContainer').innerHTML = `
+                        <p class="text-red-400">경기 데이터 로드 실패: ${data.message}</p>
+                    `;
+                    return;
+                }
+                
+                const games = data.games || [];
+                console.log('📊 받은 경기 데이터:', games);
+                
+                if (!games || games.length === 0) {
+                    console.log('⚠️ 경기 데이터가 없습니다.');
+                    document.getElementById('gameSelectionContainer').innerHTML = `
+                        <p class="text-gray-400">경기 없음</p>
+                    `;
+                    return;
+                }
+                
                 showGameSelectionModal(games);
-                
             } catch (error) {
                 console.error('❌ 경기 로드 오류:', error);
-                alert('경기 데이터를 불러오는 중 오류가 발생했습니다.');
+                document.getElementById('gameSelectionContainer').innerHTML = 
+                    `<p class="text-red-400">경기 로드 실패: ${error.message}</p>`;
             }
         }
 
-        // 새로운 경기 선택 모달
+        // 5경기 모달 표시 함수
         function showGameSelectionModal(games) {
             // 기존 모달 제거
             const existingModal = document.getElementById('gameSelectionModal');
@@ -433,7 +426,17 @@
                     
                     <div class="grid gap-3">
                         ${displayGames.map(game => {
-                            const isSelectable = game.progressStatus === '경기중';
+                            // 실제 DB 필드 사용 (team-games 컬렉션 구조에 맞춤)
+                            const gameNumber = game.gameNumber || '?';
+                            const matchup = game.matchup || '경기 정보 없음';
+                            const startTime = game.startTime || '시간 미정';
+                            const progressStatus = game.progressStatus || '경기전';
+                            const gameStatus = game.gameStatus || '정상게임';
+                            const bettingStart = game.bettingStart || '대기';
+                            const bettingStop = game.bettingStop || '대기';
+                            
+                            // 경기 상태에 따른 선택 가능 여부
+                            const isSelectable = progressStatus === '경기중' && bettingStart === '시작' && bettingStop !== '중지';
                             const buttonClass = isSelectable 
                                 ? 'bg-blue-600 hover:bg-blue-700 text-white' 
                                 : 'bg-red-600 text-white cursor-not-allowed';
@@ -443,14 +446,14 @@
                                 <div class="bg-gray-700 rounded-lg p-4">
                                     <div class="flex justify-between items-center">
                                         <div class="flex-1">
-                                            <div class="text-lg font-bold text-white">${game.gameNumber}경기 ${game.matchup}</div>
+                                            <div class="text-lg font-bold text-white">${gameNumber}경기 ${matchup}</div>
                                             <div class="text-sm text-gray-300 mt-1">
-                                                경기시간: ${game.startTime} | 진행상태: ${game.progressStatus}
+                                                경기시간: ${startTime} | 진행상태: ${progressStatus} | 배팅: ${bettingStart}
                                             </div>
                                         </div>
                                         <div class="ml-4">
                                             <button 
-                                                onclick="${isSelectable ? `selectGameFromModal('${game.gameNumber}')` : 'return false'}"
+                                                onclick="${isSelectable ? `selectGameFromModal('${gameNumber}', '${matchup}')` : 'return false'}"
                                                 class="px-4 py-2 rounded font-medium ${buttonClass}"
                                                 ${!isSelectable ? 'disabled' : ''}
                                             >
@@ -472,7 +475,7 @@
             document.body.appendChild(modal);
         }
 
-        // 모달 닫기
+        // 모달 닫기 함수
         function closeGameSelectionModal() {
             const modal = document.getElementById('gameSelectionModal');
             if (modal) {
@@ -480,10 +483,10 @@
             }
         }
 
-        // 경기 선택 처리
-        function selectGameFromModal(gameNumber) {
-            console.log(`🎯 경기 선택: ${gameNumber}경기`);
-            alert(`선택된 경기: ${gameNumber}경기`);
+        // 모달에서 경기 선택 함수
+        function selectGameFromModal(gameNumber, matchup) {
+            console.log(`🎯 모달에서 경기 선택: ${gameNumber}경기 ${matchup}`);
+            alert(`선택된 경기: ${gameNumber}경기 ${matchup}`);
             closeGameSelectionModal();
         }
 
@@ -881,8 +884,8 @@
                 console.error('❌ 로그아웃 오류:', error);
             } finally {
                 // localStorage 삭제 및 페이지 이동
-                localStorage.removeItem('currentUser');
-                window.location.href = '/login.html';
+            localStorage.removeItem('currentUser');
+            window.location.href = '/login.html';
             }
         }
 
@@ -1425,14 +1428,14 @@
         window.selectGameFromModal = function(gameNumber, homeTeam, awayTeam) {
             console.log('🎯 selectGameFromModal 호출됨:', { gameNumber, homeTeam, awayTeam });
             // 간단한 경기 선택 처리
-            if (currentUser && currentUser.userId) {
+                if (currentUser && currentUser.userId) {
                 console.log('✅ 경기 선택 완료:', gameNumber);
                 alert('경기 선택이 완료되었습니다.');
-            } else {
+                    } else {
                 alert('로그인이 필요합니다.');
             }
         };
-
+            
         // 테스트 데이터 생성 함수
         async function createTestGames() {
             try {
