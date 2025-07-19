@@ -436,7 +436,7 @@
                             const bettingStop = game.bettingStop || '대기';
                             
                             // 경기 상태에 따른 선택 가능 여부
-                            const isSelectable = progressStatus === '경기중' && bettingStart === '시작' && bettingStop !== '중지';
+                            const isSelectable = progressStatus === '경기중' && bettingStart === '시작';
                             const buttonClass = isSelectable 
                                 ? 'bg-blue-600 hover:bg-blue-700 text-white' 
                                 : 'bg-red-600 text-white cursor-not-allowed';
