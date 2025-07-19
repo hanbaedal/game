@@ -364,54 +364,43 @@
             startBettingStatusCheck();
         });
 
-        // team-games 컬렉션 데이터 직접 사용
+        // 실제 DB의 team-games 컬렉션에서 데이터 로드
         async function loadSimpleGames() {
             try {
-                console.log('🔍 team-games 컬렉션 데이터 로드 시작');
+                console.log('🔍 실제 DB의 team-games 컬렉션에서 데이터 로드 시작');
                 
-                // 실제 team-games 컬렉션 데이터 (관리자에서 확인된 데이터)
-                const games = [
-                    {
-                        _id: 'game1',
-                        gameNumber: 1,
-                        matchup: '삼성 vs 두산',
-                        startTime: '18:00',
-                        progressStatus: '경기중',
-                        bettingStart: '시작',
-                        bettingStop: '중지',
-                        date: '2025-01-27'
-                    },
-                    {
-                        _id: 'game2',
-                        gameNumber: 2,
-                        matchup: 'LG vs 키움',
-                        startTime: '18:30',
-                        progressStatus: '경기전',
-                        bettingStart: '중지',
-                        bettingStop: '중지',
-                        date: '2025-01-27'
-                    },
-                    {
-                        _id: 'game3',
-                        gameNumber: 3,
-                        matchup: 'KT vs SSG',
-                        startTime: '19:00',
-                        progressStatus: '경기중',
-                        bettingStart: '시작',
-                        bettingStop: '중지',
-                        date: '2025-01-27'
+                // 실제 DB에서 team-games 데이터 가져오기
+                const response = await fetch('/api/team-games', {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Cache-Control': 'no-cache'
                     }
-                ];
+                });
                 
-                console.log('📊 team-games 컬렉션 데이터:', games);
+                console.log('📡 API 응답 상태:', response.status, response.statusText);
+                
+                if (!response.ok) {
+                    throw new Error(`API 호출 실패: ${response.status} ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                console.log('📊 서버에서 받은 원본 데이터:', data);
+                
+                if (!data.success) {
+                    throw new Error(`API 응답 실패: ${data.message || '알 수 없는 오류'}`);
+                }
+                
+                const games = data.games || [];
+                console.log('📊 실제 team-games 컬렉션 데이터:', games);
                 
                 // 전역 변수에 원본 DB 데이터 저장
                 window.allGamesData = games;
                 
                 if (!games || games.length === 0) {
-                    console.log('⚠️ team-games에 데이터가 없습니다.');
+                    console.log('⚠️ team-games 컬렉션에 데이터가 없습니다.');
                     document.getElementById('gameSelectionContainer').innerHTML = `
-                        <p class="text-gray-400">team-games에 데이터가 없습니다.</p>
+                        <p class="text-gray-400">team-games 컬렉션에 데이터가 없습니다.</p>
                     `;
                     return;
                 }
