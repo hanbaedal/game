@@ -2968,3 +2968,41 @@ app.put('/api/admin/game/:gameNumber/reset', async (req, res) => {
         });
     }
 });
+
+// 특정 게임 정보 조회 API
+app.get('/api/game/:date/:gameNumber', async (req, res) => {
+    try {
+        const { date, gameNumber } = req.params;
+        
+        console.log('🔍 게임 정보 조회:', { date, gameNumber });
+        
+        // team-games 컬렉션에서 해당 경기 찾기
+        const teamGamesCollection = mongoose.connection.db.collection('team-games');
+        const game = await teamGamesCollection.findOne({
+            date: date,
+            gameNumber: parseInt(gameNumber)
+        });
+        
+        if (!game) {
+            return res.status(404).json({
+                success: false,
+                message: '해당 경기를 찾을 수 없습니다.'
+            });
+        }
+        
+        res.json({
+            success: true,
+            game: game
+        });
+        
+    } catch (error) {
+        console.error('❌ 게임 정보 조회 오류:', error);
+        res.status(500).json({
+            success: false,
+            message: '게임 정보 조회 중 오류가 발생했습니다.',
+            error: error.message
+        });
+    }
+});
+
+// 수동 배팅 세션 생성 API (테스트용)
