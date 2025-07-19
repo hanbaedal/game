@@ -360,44 +360,32 @@
             startBettingStatusCheck();
         });
 
-        // team-games 컬렉션의 경기 로드 (간단하게)
+        // team-games 컬렉션의 경기 로드 (실제 DB 데이터)
         async function loadTeamGames() {
             try {
-                console.log('🔍 정적 데이터로 테스트');
+                console.log('🔍 /api/team-games API 호출 시작');
+                const response = await fetch('/api/team-games');
+                console.log('📡 응답 상태:', response.status, response.statusText);
                 
-                // 서버 연결 실패 시 정적 데이터 사용
-                const staticGames = [
-                    {
-                        gameNumber: 1,
-                        matchup: '두산 vs LG',
-                        startTime: '01:00',
-                        progressStatus: '경기중',
-                        bettingStart: '시작',
-                        bettingStop: '중지'
-                    },
-                    {
-                        gameNumber: 2,
-                        matchup: '삼성 vs 키움',
-                        startTime: '18:00',
-                        progressStatus: '경기전',
-                        bettingStart: '중지',
-                        bettingStop: '중지'
-                    }
-                ];
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
                 
-                const container = document.getElementById('gameSelectionContainer');
-                container.innerHTML = '';
+                const data = await response.json();
+                console.log('📋 서버 응답:', data);
                 
-                console.log(`✅ ${staticGames.length}개의 정적 경기 데이터 로드됨`);
-                staticGames.forEach(game => {
-                    console.log('🎮 경기 데이터:', game);
-                    const btn = document.createElement('button');
-                    btn.textContent = `${game.gameNumber}. ${game.matchup} (${game.startTime})`;
-                    btn.onclick = () => alert(`선택: ${game.matchup}`);
-                    btn.className = 'px-3 py-2 m-1 bg-blue-600 text-white rounded hover:bg-blue-700';
-                    container.appendChild(btn);
-                });
-                
+                if (data.success && data.games && data.games.length > 0) {
+                    console.log(`✅ ${data.games.length}개의 실제 DB 경기 데이터 로드됨`);
+                    showGameSelectionModal(data.games);
+                } else {
+                    console.log('❌ 경기 데이터 없음:', data);
+                    document.getElementById('gameSelectionContainer').innerHTML = `
+                        <p class="text-gray-400">경기 없음</p>
+                        <button onclick="createTestGames()" class="px-3 py-1 bg-green-600 text-white text-xs rounded hover:bg-green-700 mt-2">
+                            테스트 데이터 생성
+                        </button>
+                    `;
+                }
             } catch (error) {
                 console.error('❌ 경기 로드 오류:', error);
                 document.getElementById('gameSelectionContainer').innerHTML = 
@@ -408,6 +396,85 @@
 
 
 
+
+        // 5경기 모달 표시 함수
+        function showGameSelectionModal(games) {
+            // 기존 모달 제거
+            const existingModal = document.getElementById('gameSelectionModal');
+            if (existingModal) {
+                existingModal.remove();
+            }
+
+            // 모달 생성
+            const modal = document.createElement('div');
+            modal.id = 'gameSelectionModal';
+            modal.className = 'fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50';
+            
+            // 최대 5경기만 표시
+            const displayGames = games.slice(0, 5);
+            
+            modal.innerHTML = `
+                <div class="bg-gray-800 rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[80vh] overflow-y-auto">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-xl font-bold text-white">🏟️ 경기 선택</h3>
+                        <button onclick="closeGameSelectionModal()" class="text-gray-400 hover:text-white text-2xl">&times;</button>
+                    </div>
+                    
+                    <div class="grid gap-3">
+                        ${displayGames.map(game => {
+                            const isSelectable = game.progressStatus === '경기중';
+                            const buttonClass = isSelectable 
+                                ? 'bg-blue-600 hover:bg-blue-700 text-white' 
+                                : 'bg-red-600 text-white cursor-not-allowed';
+                            const statusText = isSelectable ? '선택가능' : '선택불가';
+                            
+                            return `
+                                <div class="bg-gray-700 rounded-lg p-4">
+                                    <div class="flex justify-between items-center">
+                                        <div class="flex-1">
+                                            <div class="text-lg font-bold text-white">${game.gameNumber}경기 ${game.matchup}</div>
+                                            <div class="text-sm text-gray-300 mt-1">
+                                                경기시간: ${game.startTime} | 진행상태: ${game.progressStatus}
+                                            </div>
+                                        </div>
+                                        <div class="ml-4">
+                                            <button 
+                                                onclick="${isSelectable ? `selectGameFromModal('${game.gameNumber}')` : 'return false'}"
+                                                class="px-4 py-2 rounded font-medium ${buttonClass}"
+                                                ${!isSelectable ? 'disabled' : ''}
+                                            >
+                                                ${statusText}
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
+                    
+                    <div class="mt-6 text-center">
+                        <p class="text-gray-400 text-sm">총 ${games.length}개 경기 중 ${displayGames.length}개 표시</p>
+                    </div>
+                </div>
+            `;
+            
+            document.body.appendChild(modal);
+        }
+
+        // 모달 닫기 함수
+        function closeGameSelectionModal() {
+            const modal = document.getElementById('gameSelectionModal');
+            if (modal) {
+                modal.remove();
+            }
+        }
+
+        // 모달에서 경기 선택 함수
+        function selectGameFromModal(gameNumber) {
+            console.log(`🎯 모달에서 경기 선택: ${gameNumber}경기`);
+            alert(`선택된 경기: ${gameNumber}경기`);
+            closeGameSelectionModal();
+        }
 
         // 배팅 선택 활성화
         function enableBettingSelection() {
