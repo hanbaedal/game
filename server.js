@@ -3459,3 +3459,190 @@ app.post('/api/update-games-to-today', async (req, res) => {
 });
 
 // 오늘의 경기 조회 API
+app.get('/api/today-games', async (req, res) => {
+    try {
+        console.log('📅 오늘의 경기 조회 요청');
+        
+        // MongoDB 연결 상태 확인
+        if (mongoose.connection.readyState !== 1) {
+            console.log('❌ MongoDB 연결 안됨, 기본 응답 반환');
+            return res.json({ 
+                success: false,
+                games: [],
+                message: 'DB 연결 오류'
+            });
+        }
+        
+        // 날짜 파라미터 사용 (클라이언트에서 전달) 또는 오늘 날짜
+        const dateParam = req.query.date;
+        let todayString;
+        
+        if (dateParam) {
+            todayString = dateParam;
+        } else {
+            // 한국 시간대로 현재 날짜 계산
+            todayString = getKoreaDateString();
+        }
+        
+        console.log('🔍 서버 - 조회 조건:', {
+            date: todayString,
+            requestDate: dateParam
+        });
+        
+        // team-games 컬렉션에서 직접 조회
+        let teamGames = [];
+        
+        try {
+            console.log('🔍 MongoDB 연결 상태:', mongoose.connection.readyState);
+            console.log('🔍 데이터베이스 이름:', mongoose.connection.db.databaseName);
+            
+            // team-games 컬렉션에서 해당 날짜의 경기 조회
+            const teamGamesCollection = mongoose.connection.db.collection('team-games');
+            console.log('🔍 team-games 컬렉션 객체:', !!teamGamesCollection);
+            
+            // 🔍 모든 컬렉션 이름 확인
+            const collections = await mongoose.connection.db.listCollections().toArray();
+            console.log('🔍 데이터베이스의 모든 컬렉션:', collections.map(c => c.name));
+            
+            // 🔍 team-games 컬렉션의 전체 데이터 수 확인
+            const totalCount = await teamGamesCollection.countDocuments();
+            console.log('🔍 team-games 컬렉션 총 문서 수:', totalCount);
+            
+            // 🔍 전체 데이터 확인 (처음 5개)
+            const allGames = await teamGamesCollection.find({}).limit(5).toArray();
+            console.log('🔍 team-games 컬렉션의 샘플 데이터:', JSON.stringify(allGames, null, 2));
+            
+            // 🔍 2025-07-19 날짜의 데이터 확인
+            const specificDateGames = await teamGamesCollection.find({ date: "2025-07-19" }).toArray();
+            console.log('🔍 2025-07-19 날짜의 경기 수:', specificDateGames.length);
+            console.log('🔍 2025-07-19 날짜의 경기:', JSON.stringify(specificDateGames, null, 2));
+             
+            // 현재 날짜로 경기 조회
+            teamGames = await teamGamesCollection.find({ date: todayString }).sort({ gameNumber: 1, number: 1 }).toArray();
+              
+              console.log('📋 오늘 날짜 경기 조회 결과:', teamGames.map(game => ({
+                  date: game.date,
+                  gameNumber: game.gameNumber,
+                  matchup: game.matchup,
+                  bettingStart: game.bettingStart
+              })));
+            
+            console.log(`📅 ${todayString} 날짜의 경기: ${teamGames.length}개`);
+            
+            if (teamGames.length === 0) {
+                console.log(`📅 ${todayString} 날짜에 경기가 없습니다.`);
+                
+                // 🔍 비슷한 날짜의 데이터가 있는지 확인
+                const recentGames = await teamGamesCollection.find({}).sort({ date: -1 }).limit(3).toArray();
+                console.log('🔍 최근 3개 경기 날짜:', recentGames.map(game => ({
+                    date: game.date,
+                    gameNumber: game.gameNumber,
+                    matchup: game.matchup
+                })));
+            }
+        } catch (error) {
+            console.log('❌ team-games 컬렉션 조회 실패:', error.message);
+        }
+        
+        if (teamGames && teamGames.length > 0) {
+            console.log(`✅ ${todayString}의 경기 조회 완료: ${teamGames.length}개 경기`);
+            console.log('📋 경기 목록:', teamGames.map(g => `${g.gameNumber}. ${g.matchup} (${g.gameStatus})`));
+            
+            // 클라이언트 호환성을 위해 데이터 변환
+            const convertedGames = teamGames.map(game => {
+                // 필드명 통일 처리
+                const gameNumber = game.gameNumber || game.number || 1;
+                const matchup = game.matchup || `${game.homeTeam || ''} vs ${game.awayTeam || ''}`;
+                const homeTeam = game.homeTeam || (game.matchup ? game.matchup.split(' vs ')[0] : '');
+                const awayTeam = game.awayTeam || (game.matchup ? game.matchup.split(' vs ')[1] : '');
+                const gameStatus = game.gameStatus || game.situationStatus || '정상게임';
+                const progressStatus = game.progressStatus || '경기전';
+                
+                return {
+                    number: gameNumber,
+                    gameNumber: gameNumber,
+                    homeTeam: homeTeam,
+                    awayTeam: awayTeam,
+                    matchup: matchup,
+                    startTime: game.startTime || '18:00',
+                    endTime: game.endTime || '21:00',
+                    noGame: gameStatus,
+                    progressStatus: progressStatus,
+                    gameType: game.gameType || 'batter',
+                    bettingStart: game.bettingStart || '중지',
+                    bettingStop: game.bettingStop || '중지',
+                    predictionResult: game.predictionResult || '',
+                    date: game.date || game.gameDate || todayString,
+                    isActive: progressStatus === '경기중' || progressStatus === '경기전'
+                };
+            });
+            
+            res.json({ 
+                success: true,
+                games: convertedGames 
+            });
+        } else {
+            console.log(`❌ ${todayString} 날짜의 경기 데이터가 없습니다.`);
+            
+            res.json({ 
+                success: true,
+                games: [] 
+            });
+        }
+    } catch (error) {
+        console.error('❌ 오늘의 경기 조회 오류:', error);
+        res.status(500).json({ 
+            success: false,
+            games: [],
+            message: '경기 조회 중 오류가 발생했습니다.',
+            error: error.message 
+        });
+    }
+});
+
+// 테스트 API - 서버 상태 확인
+app.get('/api/test', (req, res) => {
+    res.json({
+        success: true,
+        message: '서버가 정상 작동 중입니다',
+        timestamp: new Date().toISOString(),
+        koreaDate: getKoreaDateString()
+    });
+});
+
+// 간단한 경기 테스트 API
+app.get('/api/test-games', async (req, res) => {
+    try {
+        console.log('🧪 테스트 경기 API 호출');
+        
+        // MongoDB 연결 상태 확인
+        if (mongoose.connection.readyState !== 1) {
+            return res.json({
+                success: false,
+                message: 'MongoDB 연결 안됨',
+                readyState: mongoose.connection.readyState
+            });
+        }
+        
+        const teamGamesCollection = mongoose.connection.db.collection('team-games');
+        const totalCount = await teamGamesCollection.countDocuments();
+        const sampleGames = await teamGamesCollection.find({}).limit(3).toArray();
+        
+        res.json({
+            success: true,
+            message: '테스트 성공',
+            totalCount: totalCount,
+            sampleGames: sampleGames,
+            koreaDate: getKoreaDateString()
+        });
+        
+    } catch (error) {
+        res.json({
+            success: false,
+            message: '테스트 실패',
+            error: error.message
+        });
+    }
+});
+
+// 경기 날짜를 오늘로 업데이트하는 API
