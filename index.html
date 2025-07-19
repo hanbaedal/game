@@ -360,17 +360,17 @@
             startBettingStatusCheck();
         });
 
-        // 오늘의 경기 로드 함수
+        // team-games 컬렉션의 경기 데이터 로드 함수
         async function loadTodayGames() {
             try {
                 // 현재 날짜: 2025년 7월 19일
                 const today = getCurrentKoreaDate();
                 
-                console.log('🔍 현재 날짜로 경기 조회:', today);
-                console.log('🚀 API 호출 시작: /api/today-games');
+                console.log('🔍 team-games 컬렉션에서 경기 조회:', today);
+                console.log('🚀 API 호출 시작: /api/team-games-display');
                 
-                // 서버가 자동으로 현재 날짜(2025-07-19)로 조회
-                const response = await fetch('/api/today-games');
+                // team-games 컬렉션의 모든 경기 데이터 조회
+                const response = await fetch('/api/team-games-display');
                 
                 console.log('📡 응답 상태:', response.status, response.statusText);
                 console.log('📡 응답 헤더:', response.headers);
@@ -385,22 +385,34 @@
                 console.log('📋 응답 success:', data.success);
                 console.log('📋 응답 games 배열:', data.games);
                 console.log('📋 games 배열 길이:', data.games ? data.games.length : 'undefined');
+                console.log('📋 날짜별 경기 수:', data.gamesByDate);
+                console.log('📋 정렬된 날짜:', data.sortedDates);
                 
                 if (data.success && data.games && data.games.length > 0) {
-                    displayGameSelection(data.games);
+                    // 오늘 날짜의 경기만 필터링
+                    const todayGames = data.games.filter(game => game.date === today);
+                    console.log('📅 오늘 날짜 경기 필터링 결과:', todayGames.length, '개');
+                    
+                    if (todayGames.length > 0) {
+                        displayGameSelection(todayGames);
+                    } else {
+                        console.log('❌ 오늘의 경기가 없습니다.');
+                        document.getElementById('gameSelectionContainer').innerHTML = 
+                            '<p class="text-gray-400 text-sm">오늘 경기가 없습니다.</p>';
+                    }
                 } else {
-                    console.log('❌ 오늘의 경기가 없습니다.');
+                    console.log('❌ team-games 컬렉션에 경기 데이터가 없습니다.');
                     document.getElementById('gameSelectionContainer').innerHTML = 
-                        '<p class="text-gray-400 text-sm">오늘 경기가 없습니다.</p>';
+                        '<p class="text-gray-400 text-sm">경기 데이터가 없습니다.</p>';
                 }
             } catch (error) {
-                console.error('❌ 경기 로드 오류:', error);
+                console.error('❌ team-games 경기 로드 오류:', error);
                 document.getElementById('gameSelectionContainer').innerHTML = 
                     '<p class="text-red-400 text-sm">경기 정보 로드 실패</p>';
             }
         }
 
-        // 경기 선택 UI 표시
+        // team-games 컬렉션의 경기 선택 UI 표시
         function displayGameSelection(games) {
             console.log('🎮 displayGameSelection 호출됨');
             console.log('🎮 받은 games 데이터:', games);
@@ -422,18 +434,31 @@
                 const gameBtn = document.createElement('button');
                 gameBtn.className = `game-select-btn px-3 py-2 rounded text-xs font-medium border transition-colors ${getGameButtonClass(game)}`;
                 
-                // 서버에서 온 데이터 구조에 맞게 수정
-                const gameNumber = game.number || game.gameNumber;
+                // team-games 컬렉션 데이터 구조에 맞게 수정
+                const gameNumber = game.gameNumber || game.number;
                 const matchup = game.matchup || `${game.homeTeam} vs ${game.awayTeam}`;
+                const startTime = game.startTime || '18:00';
+                const progressStatus = game.progressStatus || '경기전';
+                const bettingStart = game.bettingStart || '중지';
                 
-                gameBtn.textContent = `${gameNumber}경기 ${matchup}`;
+                // 경기 표시 텍스트 (경기번호, 매치업, 시작시간, 상태)
+                const displayText = `${gameNumber}경기 ${matchup} (${startTime})`;
+                gameBtn.textContent = displayText;
                 gameBtn.onclick = () => selectGame(game);
                 gameBtn.dataset.gameNumber = gameNumber;
+                gameBtn.dataset.gameId = game.id;
                 
                 // 경기선택은 항상 가능 (bettingStart와 무관)
                 gameBtn.disabled = false;
                 
-                console.log(`🎮 경기 ${index + 1} 버튼 생성 완료:`, gameBtn.textContent);
+                // 경기 상태에 따른 추가 정보 표시
+                const statusInfo = document.createElement('div');
+                statusInfo.className = 'text-xs text-gray-400 mt-1';
+                statusInfo.textContent = `${progressStatus} | 베팅: ${bettingStart}`;
+                gameBtn.appendChild(statusInfo);
+                
+                console.log(`🎮 경기 ${index + 1} 버튼 생성 완료:`, displayText);
+                console.log(`🎮 경기 상태: ${progressStatus}, 베팅 상태: ${bettingStart}`);
                 
                 container.appendChild(gameBtn);
                 console.log(`🎮 경기 ${index + 1} 버튼 컨테이너에 추가 완료`);
@@ -448,12 +473,21 @@
             return 'bg-blue-600 hover:bg-blue-700 text-white border-blue-500';
         }
 
-        // 게임 선택 함수
+        // team-games 컬렉션의 게임 선택 함수
         async function selectGame(game) {
-            console.log('🎯 게임 선택:', game);
+            console.log('🎯 team-games 게임 선택:', game);
+            console.log('🎯 선택된 게임 정보:', {
+                id: game.id,
+                gameNumber: game.gameNumber,
+                matchup: game.matchup,
+                progressStatus: game.progressStatus,
+                bettingStart: game.bettingStart,
+                bettingStop: game.bettingStop,
+                isActive: game.isActive,
+                isBettingEnabled: game.isBettingEnabled
+            });
             
             // 경기는 항상 선택 가능 (bettingStart는 배팅 단계에서만 확인)
-            
             selectedGame = game;
             
             // 선택된 게임 버튼 스타일 업데이트
@@ -467,6 +501,17 @@
                 selectedBtn.classList.remove('bg-green-600', 'border-green-500');
                 selectedBtn.classList.add('bg-blue-600', 'border-blue-400');
             }
+            
+            // 선택된 경기 정보 표시
+            console.log('🎯 선택된 경기:', {
+                경기번호: game.gameNumber,
+                매치업: game.matchup,
+                경기상태: game.progressStatus,
+                베팅시작: game.bettingStart,
+                베팅중지: game.bettingStop,
+                활성화: game.isActive,
+                베팅가능: game.isBettingEnabled
+            });
             
             // 배팅 선택 버튼들 활성화
             enableBettingSelection();
@@ -503,23 +548,32 @@
             });
         }
 
-        // 예측하기 버튼 활성화 (bettingStart가 '시작'이고 bettingStop이 '중지'가 아닐 때)
+        // team-games 컬렉션의 예측하기 버튼 활성화
         function enablePredictionButton() {
             const betBtn = document.getElementById('betBtn');
-            if (selectedGame && selectedChoice && 
-                selectedGame.bettingStart === '시작' && 
-                selectedGame.bettingStop !== '중지') {
+            
+            console.log('🎯 예측하기 버튼 활성화 확인:', {
+                selectedGame: !!selectedGame,
+                selectedChoice: !!selectedChoice,
+                bettingStart: selectedGame?.bettingStart,
+                bettingStop: selectedGame?.bettingStop,
+                isBettingEnabled: selectedGame?.isBettingEnabled
+            });
+            
+            if (selectedGame && selectedChoice && selectedGame.isBettingEnabled) {
                 betBtn.disabled = false;
                 betBtn.classList.remove('opacity-50', 'cursor-not-allowed');
                 betBtn.classList.add('cursor-pointer');
+                console.log('✅ 예측하기 버튼 활성화됨');
             } else {
                 betBtn.disabled = true;
                 betBtn.classList.add('opacity-50', 'cursor-not-allowed');
                 betBtn.classList.remove('cursor-pointer');
+                console.log('❌ 예측하기 버튼 비활성화됨');
             }
         }
 
-        // 배팅 처리 함수
+        // team-games 컬렉션의 배팅 처리 함수
         async function handleBetting() {
             if (!currentUser || currentUser.isGuest) {
                 alert('로그인이 필요합니다.');
@@ -536,14 +590,27 @@
                 return;
             }
             
-            // bettingStart가 '시작'이 아니거나 bettingStop이 '중지'일 때는 배팅 불가
-            if (selectedGame.bettingStart !== '시작') {
-                alert('아직 배팅이 시작되지 않았습니다.');
-                return;
-            }
+            console.log('🎯 배팅 처리 시작:', {
+                selectedGame: selectedGame.gameNumber,
+                selectedChoice: selectedChoice,
+                bettingStart: selectedGame.bettingStart,
+                bettingStop: selectedGame.bettingStop,
+                isBettingEnabled: selectedGame.isBettingEnabled
+            });
             
-            if (selectedGame.bettingStop === '중지') {
-                showWaitingModal();
+            // team-games 컬렉션의 베팅 가능 상태 확인
+            if (!selectedGame.isBettingEnabled) {
+                if (selectedGame.bettingStart !== '시작') {
+                    alert('아직 배팅이 시작되지 않았습니다.');
+                    return;
+                }
+                
+                if (selectedGame.bettingStop === '중지') {
+                    showWaitingModal();
+                    return;
+                }
+                
+                alert('현재 배팅이 불가능한 상태입니다.');
                 return;
             }
             

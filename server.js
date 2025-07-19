@@ -3646,3 +3646,238 @@ app.get('/api/test-games', async (req, res) => {
 });
 
 // 경기 날짜를 오늘로 업데이트하는 API
+app.get('/api/team-games-display', async (req, res) => {
+    try {
+        console.log('🏟️ team-games 컬렉션 경기 선택 데이터 요청');
+        
+        // MongoDB 연결 상태 확인
+        if (mongoose.connection.readyState !== 1) {
+            console.log('❌ MongoDB 연결 안됨');
+            return res.json({ 
+                success: false,
+                games: [],
+                message: 'DB 연결 오류'
+            });
+        }
+        
+        const teamGamesCollection = mongoose.connection.db.collection('team-games');
+        
+        // 전체 경기 데이터 조회 (날짜별로 정렬)
+        const allGames = await teamGamesCollection.find({})
+            .sort({ date: -1, gameNumber: 1, number: 1 })
+            .toArray();
+        
+        console.log(`📊 총 ${allGames.length}개의 경기 데이터 조회됨`);
+        
+        // 경기 선택 형식으로 데이터 변환
+        const formattedGames = allGames.map((game, index) => {
+            // 기본 필드 추출
+            const gameNumber = game.gameNumber || game.number || (index + 1);
+            const matchup = game.matchup || `${game.homeTeam || '홈팀'} vs ${game.awayTeam || '원정팀'}`;
+            const homeTeam = game.homeTeam || (game.matchup ? game.matchup.split(' vs ')[0] : '홈팀');
+            const awayTeam = game.awayTeam || (game.matchup ? game.matchup.split(' vs ')[1] : '원정팀');
+            
+            // 경기 상태 및 진행 상황
+            const gameStatus = game.gameStatus || game.situationStatus || '정상게임';
+            const progressStatus = game.progressStatus || '경기전';
+            const bettingStart = game.bettingStart || '중지';
+            const bettingStop = game.bettingStop || '중지';
+            
+            // 시간 정보
+            const startTime = game.startTime || '18:00';
+            const endTime = game.endTime || '21:00';
+            const gameDate = game.date || game.gameDate || '2025-07-19';
+            
+            // 예측 결과
+            const predictionResult = game.predictionResult || '';
+            
+            // 경기 활성화 상태 (경기중이거나 경기전인 경우)
+            const isActive = progressStatus === '경기중' || progressStatus === '경기전';
+            
+            // 베팅 가능 상태 (bettingStart가 '시작'이고 bettingStop이 '중지'인 경우)
+            const isBettingEnabled = bettingStart === '시작' && bettingStop === '중지';
+            
+            return {
+                // 기본 정보
+                id: game._id || `game_${index}`,
+                number: gameNumber,
+                gameNumber: gameNumber,
+                matchup: matchup,
+                homeTeam: homeTeam,
+                awayTeam: awayTeam,
+                
+                // 경기 정보
+                startTime: startTime,
+                endTime: endTime,
+                date: gameDate,
+                gameDate: gameDate,
+                
+                // 상태 정보
+                gameStatus: gameStatus,
+                progressStatus: progressStatus,
+                bettingStart: bettingStart,
+                bettingStop: bettingStop,
+                
+                // 예측 관련
+                predictionResult: predictionResult,
+                
+                // 활성화 상태
+                isActive: isActive,
+                isBettingEnabled: isBettingEnabled,
+                
+                // 표시용 텍스트
+                displayText: `${gameNumber}. ${matchup} (${startTime})`,
+                statusText: progressStatus === '경기중' ? '경기중' : 
+                           progressStatus === '경기전' ? '경기전' : 
+                           progressStatus === '경기종료' ? '경기종료' : progressStatus,
+                
+                // 베팅 상태 텍스트
+                bettingStatusText: isBettingEnabled ? '베팅 가능' : '베팅 중지',
+                
+                // 원본 데이터 (디버깅용)
+                originalData: {
+                    gameNumber: game.gameNumber,
+                    number: game.number,
+                    matchup: game.matchup,
+                    homeTeam: game.homeTeam,
+                    awayTeam: game.awayTeam,
+                    gameStatus: game.gameStatus,
+                    progressStatus: game.progressStatus,
+                    bettingStart: game.bettingStart,
+                    bettingStop: game.bettingStop,
+                    date: game.date,
+                    gameDate: game.gameDate
+                }
+            };
+        });
+        
+        // 날짜별로 그룹화
+        const gamesByDate = {};
+        formattedGames.forEach(game => {
+            const date = game.date;
+            if (!gamesByDate[date]) {
+                gamesByDate[date] = [];
+            }
+            gamesByDate[date].push(game);
+        });
+        
+        // 날짜별로 정렬 (최신 날짜가 먼저)
+        const sortedDates = Object.keys(gamesByDate).sort((a, b) => b.localeCompare(a));
+        
+        console.log(`✅ 경기 선택 데이터 변환 완료: ${formattedGames.length}개 경기, ${sortedDates.length}개 날짜`);
+        console.log('📅 날짜별 경기 수:', sortedDates.map(date => `${date}: ${gamesByDate[date].length}개`));
+        
+        res.json({
+            success: true,
+            games: formattedGames,
+            gamesByDate: gamesByDate,
+            sortedDates: sortedDates,
+            totalGames: formattedGames.length,
+            totalDates: sortedDates.length,
+            message: 'team-games 컬렉션의 경기 데이터를 경기 선택 형식으로 변환했습니다.'
+        });
+        
+    } catch (error) {
+        console.error('❌ team-games 경기 선택 데이터 조회 오류:', error);
+        res.status(500).json({
+            success: false,
+            games: [],
+            message: '경기 선택 데이터 조회 중 오류가 발생했습니다.',
+            error: error.message
+        });
+    }
+});
+
+// 특정 날짜의 team-games 경기 데이터 조회 API
+app.get('/api/team-games-by-date', async (req, res) => {
+    try {
+        const { date } = req.query;
+        
+        if (!date) {
+            return res.status(400).json({
+                success: false,
+                message: '날짜 파라미터가 필요합니다.'
+            });
+        }
+        
+        console.log(`📅 ${date} 날짜의 team-games 경기 조회`);
+        
+        // MongoDB 연결 상태 확인
+        if (mongoose.connection.readyState !== 1) {
+            return res.json({ 
+                success: false,
+                games: [],
+                message: 'DB 연결 오류'
+            });
+        }
+        
+        const teamGamesCollection = mongoose.connection.db.collection('team-games');
+        
+        // 해당 날짜의 경기 조회
+        const games = await teamGamesCollection.find({ date: date })
+            .sort({ gameNumber: 1, number: 1 })
+            .toArray();
+        
+        console.log(`📊 ${date} 날짜의 경기: ${games.length}개`);
+        
+        // 경기 선택 형식으로 변환
+        const formattedGames = games.map((game, index) => {
+            const gameNumber = game.gameNumber || game.number || (index + 1);
+            const matchup = game.matchup || `${game.homeTeam || '홈팀'} vs ${game.awayTeam || '원정팀'}`;
+            const homeTeam = game.homeTeam || (game.matchup ? game.matchup.split(' vs ')[0] : '홈팀');
+            const awayTeam = game.awayTeam || (game.matchup ? game.matchup.split(' vs ')[1] : '원정팀');
+            
+            const gameStatus = game.gameStatus || game.situationStatus || '정상게임';
+            const progressStatus = game.progressStatus || '경기전';
+            const bettingStart = game.bettingStart || '중지';
+            const bettingStop = game.bettingStop || '중지';
+            
+            const startTime = game.startTime || '18:00';
+            const endTime = game.endTime || '21:00';
+            
+            const isActive = progressStatus === '경기중' || progressStatus === '경기전';
+            const isBettingEnabled = bettingStart === '시작' && bettingStop === '중지';
+            
+            return {
+                id: game._id || `game_${index}`,
+                number: gameNumber,
+                gameNumber: gameNumber,
+                matchup: matchup,
+                homeTeam: homeTeam,
+                awayTeam: awayTeam,
+                startTime: startTime,
+                endTime: endTime,
+                date: date,
+                gameStatus: gameStatus,
+                progressStatus: progressStatus,
+                bettingStart: bettingStart,
+                bettingStop: bettingStop,
+                predictionResult: game.predictionResult || '',
+                isActive: isActive,
+                isBettingEnabled: isBettingEnabled,
+                displayText: `${gameNumber}. ${matchup} (${startTime})`,
+                statusText: progressStatus === '경기중' ? '경기중' : 
+                           progressStatus === '경기전' ? '경기전' : 
+                           progressStatus === '경기종료' ? '경기종료' : progressStatus,
+                bettingStatusText: isBettingEnabled ? '베팅 가능' : '베팅 중지'
+            };
+        });
+        
+        res.json({
+            success: true,
+            date: date,
+            games: formattedGames,
+            totalGames: formattedGames.length,
+            message: `${date} 날짜의 경기 데이터를 조회했습니다.`
+        });
+        
+    } catch (error) {
+        console.error('❌ 특정 날짜 team-games 조회 오류:', error);
+        res.status(500).json({
+            success: false,
+            games: [],
+            message: '특정 날짜 경기 조회 중 오류가 발생했습니다.',
+            error: error.message
+        });
+    }
+});
