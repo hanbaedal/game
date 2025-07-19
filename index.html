@@ -363,8 +363,8 @@
         // team-games 컬렉션의 경기 로드 (실제 DB 데이터)
         async function loadTeamGames() {
             try {
-                console.log('🔍 /api/team-games API 호출 시작');
-                const response = await fetch('/api/team-games');
+                console.log('🔍 /api/test-games API 호출 시작 (임시)');
+                const response = await fetch('/api/test-games');
                 console.log('📡 응답 상태:', response.status, response.statusText);
                 
                 if (!response.ok) {
