@@ -378,8 +378,8 @@
                     return;
                 }
                 
-                // 테스트용 API 사용 (서버 재배포 전 임시 해결책)
-                const response = await fetch('/api/test-games');
+                // 오늘의 경기 조회 API 사용
+                const response = await fetch('/api/today-games');
                 
                 console.log('📡 응답 상태:', response.status, response.statusText);
                 console.log('📡 응답 헤더:', response.headers);
