@@ -133,17 +133,29 @@ const startServer = async () => {
         // MongoDB 연결 시도
         const isConnected = await connectToMongoDB();
         
-        // 서버 시작
-        app.listen(PORT, () => {
+        // 서버 시작 (포트 충돌 방지)
+        const server = app.listen(PORT, () => {
             console.log('✅ 서버가 성공적으로 시작되었습니다!');
             console.log(`📍 포트: ${PORT}`);
             console.log(`🗄️ MongoDB 상태: ${isConnected ? '연결됨' : '연결 안됨'}`);
             
-                    // MongoDB 연결 성공 (자동 경기 생성 제거)
-        if (isConnected) {
-            console.log('✅ MongoDB 연결됨 - 관리자 페이지에서 경기를 추가해주세요.');
-        }
+            // MongoDB 연결 성공 (자동 경기 생성 제거)
+            if (isConnected) {
+                console.log('✅ MongoDB 연결됨 - 관리자 페이지에서 경기를 추가해주세요.');
+            }
         });
+        
+        // 서버 오류 처리
+        server.on('error', (error) => {
+            if (error.code === 'EADDRINUSE') {
+                console.error('❌ 포트가 이미 사용 중입니다:', PORT);
+                process.exit(1);
+            } else {
+                console.error('❌ 서버 오류:', error);
+                process.exit(1);
+            }
+        });
+        
     } catch (error) {
         console.error('❌ 서버 시작 실패:', error);
         process.exit(1);
@@ -151,10 +163,7 @@ const startServer = async () => {
 };
 
 // 서버 시작 (한 번만)
-if (!global.serverStarted) {
-    global.serverStarted = true;
-    startServer();
-}
+startServer();
 
 // 기본 라우팅
 app.get('/', (req, res) => {
