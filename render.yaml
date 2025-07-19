@@ -3,7 +3,7 @@ services:
     name: member-management-system
     env: node
     buildCommand: npm install
-    startCommand: npm start
+    startCommand: node simple-server.js
     envVars:
       - key: NODE_ENV
         value: production
