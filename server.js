@@ -833,12 +833,52 @@ app.post('/api/attendance', async (req, res) => {
 // 로그아웃
 app.post('/api/logout', async (req, res) => {
     try {
-        const { userId } = req.body;
+        let userId;
+        
+        // Content-Type이 application/json인 경우
+        if (req.headers['content-type'] === 'application/json') {
+            userId = req.body.userId;
+        } else {
+            // navigator.sendBeacon으로 보낸 경우 (raw body)
+            try {
+                const rawBody = req.body.toString();
+                const bodyData = JSON.parse(rawBody);
+                userId = bodyData.userId;
+            } catch (parseError) {
+                console.log('❌ 요청 본문 파싱 실패:', parseError);
+                return res.json({
+                    success: true,
+                    message: '로그아웃되었습니다.'
+                });
+            }
+        }
+        
+        console.log('🔐 로그아웃 요청:', { userId });
         
         if (!userId) {
-            return res.status(400).json({
-                success: false,
-                message: '회원 ID가 필요합니다.'
+            console.log('❌ userId가 없음');
+            return res.json({
+                success: true,
+                message: '로그아웃되었습니다.'
+            });
+        }
+        
+        // MongoDB 연결 상태 확인
+        if (mongoose.connection.readyState !== 1) {
+            console.log('❌ MongoDB 연결 안됨, 로그아웃 처리 건너뜀');
+            return res.json({
+                success: true,
+                message: '로그아웃되었습니다.'
+            });
+        }
+        
+        // 사용자 존재 여부 확인
+        const user = await User.findOne({ userId });
+        if (!user) {
+            console.log(`❌ 사용자를 찾을 수 없음: ${userId}`);
+            return res.json({
+                success: true,
+                message: '로그아웃되었습니다.'
             });
         }
         
@@ -854,15 +894,16 @@ app.post('/api/logout', async (req, res) => {
             }
         );
         
+        console.log(`✅ 로그아웃 성공: ${userId} (${user.name})`);
         res.json({
             success: true,
             message: '로그아웃되었습니다.'
         });
     } catch (error) {
-        console.error('로그아웃 오류:', error);
-        res.status(500).json({
-            success: false,
-            message: '서버 오류가 발생했습니다.'
+        console.error('❌ 로그아웃 오류:', error);
+        res.json({
+            success: true,
+            message: '로그아웃되었습니다.'
         });
     }
 });
@@ -2293,55 +2334,7 @@ app.post('/api/betting/submit', async (req, res) => {
     }
 });
 
-// 브라우저 종료 시 로그아웃 API
-app.post('/api/logout', async (req, res) => {
-    try {
-        const { userId } = req.body;
-        
-        if (!userId) {
-            return res.status(400).json({ 
-                success: false, 
-                message: '사용자 ID가 필요합니다.' 
-            });
-        }
-        
-        // MongoDB 연결 상태 확인
-        if (mongoose.connection.readyState !== 1) {
-            console.log('MongoDB 연결 안됨, 로그아웃 처리 건너뜀');
-            return res.json({
-                success: true,
-                message: '로그아웃되었습니다.'
-            });
-        }
-        
-        const user = await User.findOne({ userId });
-        if (!user) {
-            console.log(`사용자를 찾을 수 없음: ${userId}`);
-            return res.json({
-                success: true,
-                message: '로그아웃되었습니다.'
-            });
-        }
-        
-        // 회원을 로그아웃 상태로 변경
-        user.isLoggedIn = false;
-        user.lastLogoutAt = new Date();
-        user.updatedAt = new Date();
-        await user.save();
-        
-        console.log(`브라우저 종료로 인한 자동 로그아웃: ${userId} (${user.name})`);
-        res.json({
-            success: true,
-            message: '로그아웃되었습니다.'
-        });
-    } catch (error) {
-        console.error('브라우저 종료 로그아웃 오류:', error);
-        res.json({
-            success: true,
-            message: '로그아웃되었습니다.'
-        });
-    }
-});
+
 
 // 에러 핸들링
 app.use((err, req, res, next) => {
