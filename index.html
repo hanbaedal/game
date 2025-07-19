@@ -360,41 +360,55 @@
             startBettingStatusCheck();
         });
 
-        // team-games 컬렉션의 경기 로드 (실제 DB 데이터)
+        // 새로운 경기 선택 기능
         async function loadTeamGames() {
             try {
-                console.log('🔍 /api/today-games API 호출 시작 (임시)');
-                const response = await fetch('/api/today-games');
-                console.log('📡 응답 상태:', response.status, response.statusText);
+                console.log('🔍 새로운 경기 선택 기능 시작');
                 
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
+                // 간단한 경기 데이터 (실제 DB 연결 전 임시)
+                const games = [
+                    {
+                        gameNumber: 1,
+                        matchup: '두산 vs LG',
+                        startTime: '18:30',
+                        progressStatus: '경기중'
+                    },
+                    {
+                        gameNumber: 2,
+                        matchup: '삼성 vs 키움',
+                        startTime: '19:00',
+                        progressStatus: '경기전'
+                    },
+                    {
+                        gameNumber: 3,
+                        matchup: '한화 vs 롯데',
+                        startTime: '18:30',
+                        progressStatus: '우천취소'
+                    },
+                    {
+                        gameNumber: 4,
+                        matchup: 'SSG vs KT',
+                        startTime: '19:00',
+                        progressStatus: '경기끝'
+                    },
+                    {
+                        gameNumber: 5,
+                        matchup: 'NC vs KIA',
+                        startTime: '18:30',
+                        progressStatus: '경기중'
+                    }
+                ];
                 
-                const games = await response.json();
-                console.log('📊 받은 경기 데이터:', games);
-                
-                if (!games || games.length === 0) {
-                    console.log('⚠️ 경기 데이터가 없습니다.');
-                    document.getElementById('gameSelectionContainer').innerHTML = `
-                        <p class="text-gray-400">경기 없음</p>
-                    `;
-                    return;
-                }
-                
+                console.log('📊 경기 데이터:', games);
                 showGameSelectionModal(games);
+                
             } catch (error) {
                 console.error('❌ 경기 로드 오류:', error);
-                document.getElementById('gameSelectionContainer').innerHTML = 
-                    `<p class="text-red-400">경기 로드 실패: ${error.message}</p>`;
+                alert('경기 데이터를 불러오는 중 오류가 발생했습니다.');
             }
         }
 
-
-
-
-
-        // 5경기 모달 표시 함수
+        // 새로운 경기 선택 모달
         function showGameSelectionModal(games) {
             // 기존 모달 제거
             const existingModal = document.getElementById('gameSelectionModal');
@@ -458,7 +472,7 @@
             document.body.appendChild(modal);
         }
 
-        // 모달 닫기 함수
+        // 모달 닫기
         function closeGameSelectionModal() {
             const modal = document.getElementById('gameSelectionModal');
             if (modal) {
@@ -466,9 +480,9 @@
             }
         }
 
-        // 모달에서 경기 선택 함수
+        // 경기 선택 처리
         function selectGameFromModal(gameNumber) {
-            console.log(`🎯 모달에서 경기 선택: ${gameNumber}경기`);
+            console.log(`🎯 경기 선택: ${gameNumber}경기`);
             alert(`선택된 경기: ${gameNumber}경기`);
             closeGameSelectionModal();
         }
