@@ -879,11 +879,19 @@ app.post('/api/logout', async (req, res) => {
         } else {
             // navigator.sendBeacon으로 보낸 경우 (raw body)
             try {
-                const rawBody = req.body.toString();
-                const bodyData = JSON.parse(rawBody);
+                let bodyData;
+                if (typeof req.body === 'string') {
+                    bodyData = JSON.parse(req.body);
+                } else if (Buffer.isBuffer(req.body)) {
+                    bodyData = JSON.parse(req.body.toString());
+                } else {
+                    bodyData = req.body;
+                }
                 userId = bodyData.userId;
             } catch (parseError) {
                 console.log('❌ 요청 본문 파싱 실패:', parseError);
+                console.log('🔍 req.body 타입:', typeof req.body);
+                console.log('🔍 req.body 내용:', req.body);
                 return res.json({
                     success: true,
                     message: '로그아웃되었습니다.'
