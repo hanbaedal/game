@@ -4,7 +4,7 @@
   "description": "Member Management System with Node.js and MongoDB",
   "main": "server.js",
   "scripts": {
-    "start": "node simple-server.js"
+    "start": "node server.js"
   },
   "dependencies": {
     "cors": "^2.8.5",

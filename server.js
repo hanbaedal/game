@@ -171,9 +171,7 @@ const startServer = async () => {
 };
 
 // 서버 시작 (한 번만)
-if (require.main === module) {
-    startServer();
-}
+startServer();
 
 // 기본 라우팅
 app.get('/', (req, res) => {
@@ -3776,5 +3774,3 @@ app.get('/api/simple-test', (req, res) => {
     });
 });
 
-// 서버 시작
-startServer();
