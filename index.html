@@ -358,16 +358,18 @@
         document.addEventListener('DOMContentLoaded', async function() {
             await checkLoginStatus();
             updateCurrentDate();
-            await loadTeamGames(); // 경기 로드 (간단하게)
+            await loadSimpleGames(); // 새로운 간단한 경기 로드
             setupButtonEventListeners();
             setupBrowserCloseLogout();
             startBettingStatusCheck();
         });
 
-        // team-games 컬렉션의 경기 로드 (실제 DB 데이터)
-        async function loadTeamGames() {
+        // DB에서 실제 경기 데이터 로드
+        async function loadSimpleGames() {
             try {
-                console.log('🔍 /api/team-games API 호출 시작');
+                console.log('🔍 DB에서 경기 데이터 로드 시작');
+                
+                // MongoDB 연결 상태 확인
                 const response = await fetch('/api/team-games');
                 console.log('📡 응답 상태:', response.status, response.statusText);
                 
@@ -387,20 +389,35 @@
                 }
                 
                 const games = data.games || [];
-                console.log('📊 받은 경기 데이터:', games);
+                console.log('📊 DB에서 받은 경기 데이터:', games);
                 
-                // 전역 변수에 경기 데이터 저장
+                // 전역 변수에 원본 DB 데이터 저장
                 window.allGamesData = games;
                 
                 if (!games || games.length === 0) {
-                    console.log('⚠️ 경기 데이터가 없습니다.');
+                    console.log('⚠️ DB에 경기 데이터가 없습니다.');
                     document.getElementById('gameSelectionContainer').innerHTML = `
-                        <p class="text-gray-400">경기 없음</p>
+                        <p class="text-gray-400">DB에 경기 데이터가 없습니다.</p>
                     `;
                     return;
                 }
                 
-                showGameSelectionModal(games);
+                // DB 데이터를 간단한 형태로 변환
+                const simpleGames = games.map((game, index) => ({
+                    id: game._id || game.id || index + 1,
+                    gameNumber: game.gameNumber || game.number || index + 1,
+                    matchup: game.matchup || '경기 정보 없음',
+                    startTime: game.startTime || '시간 미정',
+                    progressStatus: game.progressStatus || '경기전',
+                    bettingStart: game.bettingStart || '중지',
+                    bettingStop: game.bettingStop || '중지',
+                    date: game.date,
+                    originalData: game // 원본 데이터 보존
+                }));
+                
+                console.log('📊 변환된 경기 데이터:', simpleGames);
+                showSimpleGameSelection(simpleGames);
+                
             } catch (error) {
                 console.error('❌ 경기 로드 오류:', error);
                 document.getElementById('gameSelectionContainer').innerHTML = 
@@ -408,169 +425,95 @@
             }
         }
 
-        // 개선된 경기 선택 테이블 모달 표시 함수
-        function showGameSelectionModal(games) {
-            // 기존 모달 제거
-            const existingModal = document.getElementById('gameSelectionModal');
-            if (existingModal) {
-                existingModal.remove();
-            }
-
-            // 모달 생성
-            const modal = document.createElement('div');
-            modal.id = 'gameSelectionModal';
-            modal.className = 'fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50';
+        // 간단한 경기 선택 UI
+        function showSimpleGameSelection(games) {
+            const container = document.getElementById('gameSelectionContainer');
+            if (!container) return;
             
-            // 최대 5경기만 표시
-            const displayGames = games.slice(0, 5);
-            
-            modal.innerHTML = `
-                <div class="bg-gray-800 rounded-lg p-6 max-w-4xl w-full mx-4 max-h-[80vh] overflow-y-auto">
-                    <div class="flex justify-between items-center mb-6">
-                        <h3 class="text-2xl font-bold text-white">🏟️ 경기 선택</h3>
-                        <button onclick="closeGameSelectionModal()" class="text-gray-400 hover:text-white text-2xl">&times;</button>
-                    </div>
-                    
-                    <!-- 경기 테이블 -->
-                    <div class="overflow-x-auto">
-                        <table class="w-full text-white border-collapse">
-                            <thead>
-                                <tr class="bg-gray-700">
-                                    <th class="px-4 py-3 text-left border-b border-gray-600">경기번호</th>
-                                    <th class="px-4 py-3 text-left border-b border-gray-600">매치업</th>
-                                    <th class="px-4 py-3 text-left border-b border-gray-600">경기시간</th>
-                                    <th class="px-4 py-3 text-left border-b border-gray-600">진행상태</th>
-                                    <th class="px-4 py-3 text-left border-b border-gray-600">베팅상태</th>
-                                    <th class="px-4 py-3 text-center border-b border-gray-600">선택</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                ${displayGames.map(game => {
-                                    // 실제 DB 필드 사용 (team-games 컬렉션 구조에 맞춤)
-                                    const gameNumber = game.gameNumber || '?';
-                                    const matchup = game.matchup || '경기 정보 없음';
-                                    const startTime = game.startTime || '시간 미정';
-                                    const progressStatus = game.progressStatus || '경기전';
-                                    const bettingStart = game.bettingStart || '대기';
-                                    const bettingStop = game.bettingStop || '대기';
-                                    
-                                    // 경기 상태에 따른 선택 가능 여부
-                                    const isSelectable = progressStatus === '경기중' && bettingStart === '시작';
-                                    const statusClass = isSelectable ? 'text-green-400' : 'text-red-400';
-                                    const buttonClass = isSelectable 
-                                        ? 'bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded font-medium' 
-                                        : 'bg-gray-500 text-gray-300 px-4 py-2 rounded font-medium cursor-not-allowed';
-                                    const statusText = isSelectable ? '선택가능' : '선택불가';
-                                    
-                                    return `
-                                        <tr class="border-b border-gray-600 hover:bg-gray-700">
-                                            <td class="px-4 py-3 font-bold">${gameNumber}</td>
-                                            <td class="px-4 py-3">${matchup}</td>
-                                            <td class="px-4 py-3">${startTime}</td>
-                                            <td class="px-4 py-3 ${statusClass}">${progressStatus}</td>
-                                            <td class="px-4 py-3 ${statusClass}">${bettingStart}</td>
-                                            <td class="px-4 py-3 text-center">
-                                                <button 
-                                                    onclick="${isSelectable ? `selectGameFromModal('${gameNumber}', '${matchup}', '${game._id || ''}')` : 'return false'}"
-                                                    class="${buttonClass}"
-                                                    ${!isSelectable ? 'disabled' : ''}
-                                                    data-game-id="${game._id || ''}"
-                                                    data-game-index="${displayGames.indexOf(game)}"
-                                                >
-                                                    ${statusText}
-                                                </button>
-                                            </td>
-                                        </tr>
-                                    `;
-                                }).join('')}
-                            </tbody>
-                        </table>
-                    </div>
-                    
-                    <!-- 상태 설명 -->
-                    <div class="mt-6 p-4 bg-gray-700 rounded-lg">
-                        <h4 class="text-lg font-semibold text-white mb-2">📋 상태 설명</h4>
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                            <div>
-                                <span class="text-green-400">●</span> <span class="text-white">경기중 + 베팅시작</span> = 선택 가능
-                            </div>
-                            <div>
-                                <span class="text-red-400">●</span> <span class="text-white">경기전/종료 + 베팅중지</span> = 선택 불가
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="mt-4 text-center">
-                        <p class="text-gray-400 text-sm">총 ${games.length}개 경기 중 ${displayGames.length}개 표시</p>
+            container.innerHTML = `
+                <div class="w-full">
+                    <h4 class="text-white font-bold mb-3">🏟️ 경기 선택</h4>
+                    <div class="grid gap-2">
+                        ${games.map(game => {
+                            const isSelectable = game.progressStatus === '경기중' && game.bettingStart === '시작';
+                            const buttonClass = isSelectable 
+                                ? 'bg-blue-600 hover:bg-blue-700 text-white' 
+                                : 'bg-gray-500 text-gray-300 cursor-not-allowed';
+                            
+                            return `
+                                <button 
+                                    onclick="selectSimpleGame(${game.id}, '${game.gameNumber}', '${game.matchup}')"
+                                    class="w-full p-3 rounded text-left ${buttonClass}"
+                                    ${!isSelectable ? 'disabled' : ''}
+                                >
+                                    <div class="flex justify-between items-center">
+                                        <div>
+                                            <div class="font-bold">${game.gameNumber}경기 ${game.matchup}</div>
+                                            <div class="text-sm opacity-75">${game.startTime} | ${game.progressStatus} | 베팅: ${game.bettingStart}</div>
+                                        </div>
+                                        <div class="text-sm">
+                                            ${isSelectable ? '✅ 선택가능' : '❌ 선택불가'}
+                                        </div>
+                                    </div>
+                                </button>
+                            `;
+                        }).join('')}
                     </div>
                 </div>
             `;
-            
-            document.body.appendChild(modal);
         }
 
-        // 모달 닫기 함수
-        function closeGameSelectionModal() {
-            const modal = document.getElementById('gameSelectionModal');
-            if (modal) {
-                modal.remove();
-            }
-        }
-
-        // 모달에서 경기 선택 함수 (개선된 버전)
-        function selectGameFromModal(gameNumber, matchup, gameId) {
-            console.log(`🎯 모달에서 경기 선택: ${gameNumber}경기 ${matchup}`);
-            console.log('📊 선택된 경기 ID:', gameId);
+        // DB 데이터를 사용한 경기 선택 함수
+        function selectSimpleGame(gameId, gameNumber, matchup) {
+            console.log(`🎯 경기 선택: ${gameNumber}경기 ${matchup}`);
             
-            try {
-                // 전체 경기 데이터에서 해당 경기 찾기
-                let selectedGameData = null;
+            // 전체 경기 데이터에서 해당 경기 찾기
+            const allGames = window.allGamesData || [];
+            const selectedGameData = allGames.find(game => 
+                (game._id === gameId) || 
+                (game.id === gameId) || 
+                (game.gameNumber === gameNumber)
+            );
+            
+            if (selectedGameData) {
+                // 선택된 경기 정보 저장 (원본 DB 데이터 사용)
+                selectedGame = selectedGameData;
                 
-                if (window.allGamesData && window.allGamesData.length > 0) {
-                    selectedGameData = window.allGamesData.find(game => game._id === gameId);
-                }
+                // 선택된 경기 표시
+                updateSimpleGameDisplay(gameNumber, matchup, selectedGameData);
                 
-                if (selectedGameData) {
-                    // 선택된 경기 정보를 전역 변수에 저장
-                    selectedGame = selectedGameData;
-                    
-                    // 경기 선택 UI 업데이트
-                    updateSelectedGameDisplay(gameNumber, matchup, selectedGameData);
-                    
-                    // 베팅 선택 활성화
-                    enableBettingSelection();
-                    
-                    console.log('✅ 경기 선택 완료:', selectedGameData);
-                } else {
-                    console.error('❌ 선택된 경기 데이터를 찾을 수 없습니다.');
-                    console.log('🔍 사용 가능한 경기 데이터:', window.allGamesData);
-                    alert('경기 선택 중 오류가 발생했습니다. 다시 시도해주세요.');
-                }
-            } catch (error) {
-                console.error('❌ 경기 선택 중 오류:', error);
+                // 베팅 선택 활성화
+                enableBettingSelection();
+                
+                console.log('✅ 경기 선택 완료:', selectedGame);
+            } else {
+                console.error('❌ 선택된 경기 데이터를 찾을 수 없습니다.');
                 alert('경기 선택 중 오류가 발생했습니다.');
             }
-            
-            closeGameSelectionModal();
         }
 
-        // 선택된 경기 표시 업데이트
-        function updateSelectedGameDisplay(gameNumber, matchup, gameData) {
+        // DB 데이터를 사용한 경기 표시 업데이트
+        function updateSimpleGameDisplay(gameNumber, matchup, gameData) {
             const gameInfoElement = document.getElementById('selectedGameInfo');
             if (gameInfoElement && gameData) {
                 const progressStatus = gameData.progressStatus || '경기전';
                 const bettingStart = gameData.bettingStart || '중지';
                 const startTime = gameData.startTime || '시간 미정';
+                const date = gameData.date || '날짜 미정';
+                
+                const isActive = progressStatus === '경기중' && bettingStart === '시작';
+                const statusClass = isActive ? 'text-green-300' : 'text-red-300';
+                const statusText = isActive ? '경기중 + 베팅가능' : `${progressStatus} + ${bettingStart}`;
                 
                 gameInfoElement.innerHTML = `
-                    <div class="bg-blue-600 rounded-lg p-4 mb-4">
-                        <h3 class="text-lg font-bold text-white mb-2">🎯 선택된 경기</h3>
-                        <div class="text-white">
+                    <div class="bg-blue-600 rounded-lg p-3 mb-3">
+                        <h3 class="text-white font-bold mb-2">🎯 선택된 경기</h3>
+                        <div class="text-white text-sm">
                             <p><strong>경기번호:</strong> ${gameNumber}</p>
                             <p><strong>매치업:</strong> ${matchup}</p>
                             <p><strong>경기시간:</strong> ${startTime}</p>
-                            <p><strong>진행상태:</strong> <span class="${progressStatus === '경기중' ? 'text-green-400' : 'text-red-400'}">${progressStatus}</span></p>
-                            <p><strong>베팅상태:</strong> <span class="${bettingStart === '시작' ? 'text-green-400' : 'text-red-400'}">${bettingStart}</span></p>
+                            <p><strong>경기날짜:</strong> ${date}</p>
+                            <p><strong>상태:</strong> <span class="${statusClass}">${statusText}</span></p>
                         </div>
                     </div>
                 `;
@@ -879,7 +822,7 @@
             betBtn.classList.remove('cursor-pointer');
             
             // 경기 목록 다시 로드
-            loadTeamGames();
+            loadSimpleGames();
         }
 
         // 대기 모달 표시 (bettingStop이 '중지'일 때)
@@ -1513,17 +1456,7 @@
 
 
 
-        // selectGameFromModal 함수 정의 (모달 관련 함수 제거로 인한 오류 해결)
-        window.selectGameFromModal = function(gameNumber, homeTeam, awayTeam) {
-            console.log('🎯 selectGameFromModal 호출됨:', { gameNumber, homeTeam, awayTeam });
-            // 간단한 경기 선택 처리
-                if (currentUser && currentUser.userId) {
-                console.log('✅ 경기 선택 완료:', gameNumber);
-                alert('경기 선택이 완료되었습니다.');
-                    } else {
-                alert('로그인이 필요합니다.');
-            }
-        };
+
             
         // 테스트 데이터 생성 함수
         async function createTestGames() {
