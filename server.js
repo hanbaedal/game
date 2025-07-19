@@ -1827,7 +1827,10 @@ app.get('/api/daily-games', async (req, res) => {
                 });
             }
             
-            res.json({ games: convertedGames });
+            res.json({ 
+                success: true,
+                games: convertedGames 
+            });
         } else {
             console.log('❌ 오늘 날짜의 경기 데이터가 없습니다.');
             
@@ -1865,7 +1868,10 @@ app.get('/api/daily-games', async (req, res) => {
                 }
             }
             
-            res.json({ games: [] });
+            res.json({ 
+                success: true,
+                games: [] 
+            });
         }
     } catch (error) {
         console.error('❌ 오늘의 경기 조회 오류:', error);

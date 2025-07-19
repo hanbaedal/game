@@ -301,6 +301,50 @@
         let selectedChoice = null;
         let selectedAmount = 100; // 고정값
 
+        // 로그인 상태 확인 함수
+        async function checkLoginStatus() {
+            const storedUser = localStorage.getItem('currentUser');
+            
+            if (storedUser) {
+                try {
+                    currentUser = JSON.parse(storedUser);
+                    
+                    // 사용자 이름 표시
+                    const userNameDisplay = document.getElementById('userNameDisplay');
+                    if (userNameDisplay) {
+                        userNameDisplay.textContent = currentUser.isGuest ? '게스트' : currentUser.name;
+                    }
+                    
+                    // 포인트 표시
+                    const userPoints = document.getElementById('userPoints');
+                    if (userPoints) {
+                        userPoints.textContent = `${currentUser.points || 0}포인트`;
+                    }
+                    
+                    // 로그인/로그아웃 버튼 상태 변경
+                    const loginButton = document.getElementById('loginButton');
+                    const logoutButton = document.getElementById('logoutButton');
+                    
+                    if (loginButton) loginButton.style.display = 'none';
+                    if (logoutButton) logoutButton.style.display = 'block';
+                    
+                } catch (error) {
+                    console.error('사용자 정보 파싱 오류:', error);
+                    localStorage.removeItem('currentUser');
+                    currentUser = null;
+                }
+            } else {
+                currentUser = null;
+                
+                // 로그인/로그아웃 버튼 상태 변경
+                const loginButton = document.getElementById('loginButton');
+                const logoutButton = document.getElementById('logoutButton');
+                
+                if (loginButton) loginButton.style.display = 'block';
+                if (logoutButton) logoutButton.style.display = 'none';
+            }
+        }
+
         // 페이지 로드 시 실행
         document.addEventListener('DOMContentLoaded', async function() {
             await checkLoginStatus();
@@ -349,9 +393,14 @@
             games.forEach(game => {
                 const gameBtn = document.createElement('button');
                 gameBtn.className = `game-select-btn px-3 py-2 rounded text-xs font-medium border transition-colors ${getGameButtonClass(game)}`;
-                gameBtn.textContent = `${game.gameNumber}경기 ${game.matchup}`;
+                
+                // 서버에서 온 데이터 구조에 맞게 수정
+                const gameNumber = game.number || game.gameNumber;
+                const matchup = game.matchup || `${game.homeTeam} vs ${game.awayTeam}`;
+                
+                gameBtn.textContent = `${gameNumber}경기 ${matchup}`;
                 gameBtn.onclick = () => selectGame(game);
-                gameBtn.dataset.gameNumber = game.gameNumber;
+                gameBtn.dataset.gameNumber = gameNumber;
                 
                 // 경기시작이 '시작'인 경우에만 클릭 가능
                 if (game.bettingStart === '시작') {
@@ -1653,61 +1702,7 @@
             }
         }
         
-        // 배팅 상태 확인 및 표시 함수 (수정)
-        async function checkBettingStatus() {
-            if (!currentUser || currentUser.isGuest) {
-                document.getElementById('bettingStatusDisplay').style.display = 'none';
-                updateBettingUIState(false); // 게스트는 배팅 비활성화
-                return;
-            }
-            
-            try {
-                const selectedGame = await getSelectedGame();
-                if (!selectedGame) {
-                    document.getElementById('bettingStatusDisplay').style.display = 'none';
-                    updateBettingUIState(false); // 선택된 게임이 없으면 비활성화
-                return;
-            }
-            
-                const now = new Date();
-                const koreaTime = new Date(now.getTime() + (9 * 60 * 60 * 1000)); // UTC+9
-                const today = koreaTime.getFullYear().toString() + 
-                             '-' + String(koreaTime.getMonth() + 1).padStart(2, '0') + 
-                             '-' + String(koreaTime.getDate()).padStart(2, '0');
-                
-                const response = await fetch(`/api/betting/status?date=${today}&gameNumber=${selectedGame.gameNumber}`);
-                const data = await response.json();
 
-                if (data.success) {
-                    const isActive = data.isActive; // 배팅 세션이 활성화되어 있는지 확인
-                    
-                    // UI 상태 업데이트
-                    updateBettingUIState(isActive);
-                    
-                    const indicator = document.getElementById('bettingStatusIndicator');
-                    const text = document.getElementById('bettingStatusText');
-
-                    if (indicator && text) {
-                        if (isActive) {
-                            indicator.style.backgroundColor = '#10b981'; // 초록색
-                            text.textContent = '배팅 진행 중';
-                } else {
-                            indicator.style.backgroundColor = '#ef4444'; // 빨간색
-                            text.textContent = '배팅 대기 중';
-                        }
-                        document.getElementById('bettingStatusDisplay').style.display = 'block';
-                    }
-                } else {
-                    console.error('배팅 상태 확인 실패:', data.message);
-                    document.getElementById('bettingStatusDisplay').style.display = 'none';
-                    updateBettingUIState(false); // 오류 시 비활성화
-                }
-            } catch (error) {
-                console.error('배팅 상태 확인 중 오류:', error);
-                document.getElementById('bettingStatusDisplay').style.display = 'none';
-                updateBettingUIState(false); // 오류 시 비활성화
-            }
-        }
 
         function getStatusColor(status) {
             switch (status) {
