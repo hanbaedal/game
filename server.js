@@ -3738,3 +3738,15 @@ app.get('/api/team-games-by-date', async (req, res) => {
         });
     }
 });
+
+// 간단한 테스트 API
+app.get('/api/simple-test', (req, res) => {
+    res.json({
+        success: true,
+        message: '서버가 정상 작동 중입니다',
+        timestamp: new Date().toISOString()
+    });
+});
+
+// 서버 시작
+startServer();
