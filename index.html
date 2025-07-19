@@ -300,6 +300,11 @@
         let selectedGame = null;
         let selectedChoice = null;
         let selectedAmount = 100; // 고정값
+        
+        // 한국 현재 날짜 함수 (2025년 7월 19일)
+        function getCurrentKoreaDate() {
+            return "2025-07-19";
+        }
 
         // 로그인 상태 확인 함수
         async function checkLoginStatus() {
@@ -358,15 +363,13 @@
         // 오늘의 경기 로드 함수
         async function loadTodayGames() {
             try {
-                const now = new Date();
-                const koreaTime = new Date(now.getTime() + (9 * 60 * 60 * 1000));
-                const today = koreaTime.getFullYear().toString() + 
-                             '-' + String(koreaTime.getMonth() + 1).padStart(2, '0') + 
-                             '-' + String(koreaTime.getDate()).padStart(2, '0');
+                // 현재 날짜: 2025년 7월 19일
+                const today = getCurrentKoreaDate();
                 
-                console.log('🔍 오늘 날짜로 경기 조회:', today);
+                console.log('🔍 현재 날짜로 경기 조회:', today);
                 
-                const response = await fetch(`/api/today-games?date=${today}`);
+                // 서버가 자동으로 현재 날짜(2025-07-19)로 조회
+                const response = await fetch('/api/today-games');
                 const data = await response.json();
                 
                 console.log('📋 서버 응답:', data);
