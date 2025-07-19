@@ -3331,6 +3331,20 @@ app.post('/api/update-games-to-today', async (req, res) => {
     }
 });
 
+// 경기 전체 조회 API (가장 단순하게)
+app.get('/api/team-games', async (req, res) => {
+    try {
+        if (!checkMongoDBConnection()) {
+            return sendMongoDBErrorResponse(res, 'DB 연결 오류');
+        }
+        const teamGamesCollection = getTeamGamesCollection();
+        const games = await teamGamesCollection.find({}).sort({ gameNumber: 1 }).toArray();
+        res.json({ success: true, games });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
 // 테스트 API - 서버 상태 확인
 app.get('/api/test', (req, res) => {
     res.json({
