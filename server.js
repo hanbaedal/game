@@ -95,14 +95,20 @@ const connectToMongoDB = async () => {
         await mongoose.connect(MONGODB_URI, connectionOptions);
         
         console.log('✅ MongoDB 연결 성공!');
-        console.log('📊 실제 연결된 데이터베이스:', mongoose.connection.db.databaseName);
         
-        // 데이터베이스 이름 재확인
-        if (mongoose.connection.db.databaseName !== dbName) {
-            console.warn('⚠️ 경고: 연결된 데이터베이스가 예상과 다릅니다.');
-            console.warn(`   예상: ${dbName}, 실제: ${mongoose.connection.db.databaseName}`);
+        // 데이터베이스 이름 확인 (안전하게)
+        if (mongoose.connection.db && mongoose.connection.db.databaseName) {
+            console.log('📊 실제 연결된 데이터베이스:', mongoose.connection.db.databaseName);
+            
+            // 데이터베이스 이름 재확인
+            if (mongoose.connection.db.databaseName !== dbName) {
+                console.warn('⚠️ 경고: 연결된 데이터베이스가 예상과 다릅니다.');
+                console.warn(`   예상: ${dbName}, 실제: ${mongoose.connection.db.databaseName}`);
+            } else {
+                console.log('✅ 올바른 데이터베이스에 연결되었습니다.');
+            }
         } else {
-            console.log('✅ 올바른 데이터베이스에 연결되었습니다.');
+            console.log('📊 데이터베이스 연결됨 (이름 확인 불가)');
         }
         
         return true;
@@ -144,8 +150,11 @@ const startServer = async () => {
     }
 };
 
-// 서버 시작
-startServer();
+// 서버 시작 (한 번만)
+if (!global.serverStarted) {
+    global.serverStarted = true;
+    startServer();
+}
 
 // 기본 라우팅
 app.get('/', (req, res) => {
