@@ -3128,30 +3128,32 @@ app.get('/api/today-games', async (req, res) => {
         let teamGames = [];
         
         try {
+            console.log('🔍 MongoDB 연결 상태:', mongoose.connection.readyState);
+            console.log('🔍 데이터베이스 이름:', mongoose.connection.db.databaseName);
+            
             // team-games 컬렉션에서 해당 날짜의 경기 조회
             const teamGamesCollection = mongoose.connection.db.collection('team-games');
+            console.log('🔍 team-games 컬렉션 객체:', !!teamGamesCollection);
             
-                         // 🔍 디버깅: 전체 데이터 확인
-             const allGames = await teamGamesCollection.find({}).limit(5).toArray();
-             console.log('🔍 team-games 컬렉션의 샘플 데이터:', allGames.map(game => ({
-                 _id: game._id,
-                 date: game.date,
-                 gameDate: game.gameDate,
-                 gameNumber: game.gameNumber,
-                 number: game.number,
-                 matchup: game.matchup,
-                 homeTeam: game.homeTeam,
-                 awayTeam: game.awayTeam,
-                 gameStatus: game.gameStatus,
-                 progressStatus: game.progressStatus,
-                 situationStatus: game.situationStatus,
-                 bettingStart: game.bettingStart,
-                 bettingStop: game.bettingStop,
-                 allFields: Object.keys(game)
-             })));
+            // 🔍 모든 컬렉션 이름 확인
+            const collections = await mongoose.connection.db.listCollections().toArray();
+            console.log('🔍 데이터베이스의 모든 컬렉션:', collections.map(c => c.name));
+            
+            // 🔍 team-games 컬렉션의 전체 데이터 수 확인
+            const totalCount = await teamGamesCollection.countDocuments();
+            console.log('🔍 team-games 컬렉션 총 문서 수:', totalCount);
+            
+            // 🔍 전체 데이터 확인 (처음 5개)
+            const allGames = await teamGamesCollection.find({}).limit(5).toArray();
+            console.log('🔍 team-games 컬렉션의 샘플 데이터:', JSON.stringify(allGames, null, 2));
+            
+            // 🔍 2025-07-19 날짜의 데이터 확인
+            const specificDateGames = await teamGamesCollection.find({ date: "2025-07-19" }).toArray();
+            console.log('🔍 2025-07-19 날짜의 경기 수:', specificDateGames.length);
+            console.log('🔍 2025-07-19 날짜의 경기:', JSON.stringify(specificDateGames, null, 2));
              
-                           // 현재 날짜로 경기 조회
-              teamGames = await teamGamesCollection.find({ date: todayString }).sort({ gameNumber: 1, number: 1 }).toArray();
+            // 현재 날짜로 경기 조회
+            teamGames = await teamGamesCollection.find({ date: todayString }).sort({ gameNumber: 1, number: 1 }).toArray();
               
               console.log('📋 오늘 날짜 경기 조회 결과:', teamGames.map(game => ({
                   date: game.date,

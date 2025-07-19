@@ -300,7 +300,7 @@
         let selectedGame = null;
         let selectedChoice = null;
         let selectedAmount = 100; // 고정값
-        
+
         // 한국 현재 날짜 함수 (2025년 7월 19일)
         function getCurrentKoreaDate() {
             return "2025-07-19";
@@ -308,9 +308,9 @@
 
         // 로그인 상태 확인 함수
         async function checkLoginStatus() {
-            const storedUser = localStorage.getItem('currentUser');
+                const storedUser = localStorage.getItem('currentUser');
             
-            if (storedUser) {
+                if (storedUser) {
                 try {
                     currentUser = JSON.parse(storedUser);
                     
@@ -367,12 +367,24 @@
                 const today = getCurrentKoreaDate();
                 
                 console.log('🔍 현재 날짜로 경기 조회:', today);
+                console.log('🚀 API 호출 시작: /api/today-games');
                 
                 // 서버가 자동으로 현재 날짜(2025-07-19)로 조회
                 const response = await fetch('/api/today-games');
+                
+                console.log('📡 응답 상태:', response.status, response.statusText);
+                console.log('📡 응답 헤더:', response.headers);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
                 const data = await response.json();
                 
-                console.log('📋 서버 응답:', data);
+                console.log('📋 서버 응답 전체:', JSON.stringify(data, null, 2));
+                console.log('📋 응답 success:', data.success);
+                console.log('📋 응답 games 배열:', data.games);
+                console.log('📋 games 배열 길이:', data.games ? data.games.length : 'undefined');
                 
                 if (data.success && data.games && data.games.length > 0) {
                     displayGameSelection(data.games);
@@ -390,10 +402,23 @@
 
         // 경기 선택 UI 표시
         function displayGameSelection(games) {
-            const container = document.getElementById('gameSelectionContainer');
-            container.innerHTML = '';
+            console.log('🎮 displayGameSelection 호출됨');
+            console.log('🎮 받은 games 데이터:', games);
+            console.log('🎮 games 배열 길이:', games.length);
             
-            games.forEach(game => {
+            const container = document.getElementById('gameSelectionContainer');
+            console.log('🎮 gameSelectionContainer 요소:', container);
+            
+            if (!container) {
+                console.error('❌ gameSelectionContainer 요소를 찾을 수 없습니다!');
+                return;
+            }
+            
+            container.innerHTML = '';
+            console.log('🎮 컨테이너 초기화 완료');
+            
+            games.forEach((game, index) => {
+                console.log(`🎮 경기 ${index + 1} 처리 중:`, game);
                 const gameBtn = document.createElement('button');
                 gameBtn.className = `game-select-btn px-3 py-2 rounded text-xs font-medium border transition-colors ${getGameButtonClass(game)}`;
                 
@@ -408,8 +433,14 @@
                 // 경기선택은 항상 가능 (bettingStart와 무관)
                 gameBtn.disabled = false;
                 
+                console.log(`🎮 경기 ${index + 1} 버튼 생성 완료:`, gameBtn.textContent);
+                
                 container.appendChild(gameBtn);
+                console.log(`🎮 경기 ${index + 1} 버튼 컨테이너에 추가 완료`);
             });
+            
+            console.log('🎮 모든 경기 버튼 생성 완료');
+            console.log('🎮 최종 컨테이너 내용:', container.innerHTML);
         }
 
         // 게임 버튼 클래스 결정 (경기선택은 항상 활성화)
