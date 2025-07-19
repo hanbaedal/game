@@ -126,15 +126,23 @@ const createTodayGames = async () => {
 };
 
 // 서버 시작
+let serverInstance = null;
+
 const startServer = async () => {
     try {
         console.log('서버 시작 중...');
+        
+        // 이미 서버가 실행 중인지 확인
+        if (serverInstance) {
+            console.log('⚠️ 서버가 이미 실행 중입니다.');
+            return;
+        }
         
         // MongoDB 연결 시도
         const isConnected = await connectToMongoDB();
         
         // 서버 시작 (포트 충돌 방지)
-        const server = app.listen(PORT, () => {
+        serverInstance = app.listen(PORT, () => {
             console.log('✅ 서버가 성공적으로 시작되었습니다!');
             console.log(`📍 포트: ${PORT}`);
             console.log(`🗄️ MongoDB 상태: ${isConnected ? '연결됨' : '연결 안됨'}`);
@@ -146,7 +154,7 @@ const startServer = async () => {
         });
         
         // 서버 오류 처리
-        server.on('error', (error) => {
+        serverInstance.on('error', (error) => {
             if (error.code === 'EADDRINUSE') {
                 console.error('❌ 포트가 이미 사용 중입니다:', PORT);
                 process.exit(1);
@@ -163,7 +171,9 @@ const startServer = async () => {
 };
 
 // 서버 시작 (한 번만)
-startServer();
+if (require.main === module) {
+    startServer();
+}
 
 // 기본 라우팅
 app.get('/', (req, res) => {
