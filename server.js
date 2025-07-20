@@ -3292,18 +3292,12 @@ app.get('/api/team-games', async (req, res) => {
     }
 });
 
-// 404 처리
+// 404 처리 (모든 라우트 이후에 정의)
 app.get('*', (req, res) => {
     if (req.path.startsWith('/api/')) {
         res.status(404).json({ 
             error: 'API 엔드포인트를 찾을 수 없습니다.',
-            path: req.path,
-            availableEndpoints: [
-                '/api/team-games',
-                '/api/login',
-                '/api/betting',
-                '/health'
-            ]
+            path: req.path
         });
     } else {
         res.status(404).json({ 
