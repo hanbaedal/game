@@ -531,7 +531,7 @@
                 <div class="w-full">
                     <h4 class="text-white font-bold mb-3">🏟️ 선택된 경기</h4>
                     <div class="grid gap-2">
-                        <div class="bg-blue-600 rounded-lg p-3">
+                        <div onclick="resetGameSelection()" class="bg-blue-600 rounded-lg p-3 cursor-pointer hover:bg-blue-700 transition-colors">
                             <div class="flex justify-between items-center">
                                 <div>
                                     <div class="font-bold text-white">${gameNumber}경기 ${matchup}</div>
@@ -542,10 +542,10 @@
                                     ${isActive ? '✅ 선택됨' : '⏳ 대기중'}
                                 </div>
                             </div>
+                            <div class="text-center mt-2">
+                                <span class="text-xs text-blue-200">클릭하여 다른 경기 선택</span>
+                            </div>
                         </div>
-                        <button onclick="resetGameSelection()" class="w-full bg-gray-600 hover:bg-gray-700 text-white py-2 px-4 rounded">
-                            다른 경기 선택
-                        </button>
                     </div>
                 </div>
             `;
