@@ -1224,8 +1224,6 @@
                 
                 if (data.success) {
                     alert('배팅 세션이 생성되었습니다!');
-                    // 배팅 상태 즉시 확인
-                    checkBettingStatus();
                 } else {
                     alert('배팅 세션 생성 실패: ' + data.message);
                 }
@@ -1758,21 +1756,12 @@
             window.location.href = '/attendance.html';
         }
         
-        // 배팅 상태 주기적 확인 시작 함수
-        function startBettingStatusCheck() {
-            checkBettingStatus();
-            setInterval(checkBettingStatus, 1000); // 1초마다 확인
-        }
-        
         // 페이지 로드 시 날짜 표시
         document.addEventListener('DOMContentLoaded', function() {
             updateCurrentDate();
             
             // 브라우저 종료 시 로그아웃 처리
             setupBrowserCloseLogout();
-            
-            // 배팅 상태 확인 시작
-            startBettingStatusCheck();
         });
     </script>
 </body>
