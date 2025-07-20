@@ -3343,49 +3343,23 @@ app.get('/api/team-games', async (req, res) => {
         // MongoDB에서 team-games 컬렉션 조회
         const teamGamesCollection = mongoose.connection.db.collection('team-games');
         
-        // 모든 데이터 조회 (디버깅용)
-        const allData = await teamGamesCollection.find({}).toArray();
-        console.log(`📊 team-games 컬렉션 전체 데이터: ${allData.length}개 문서`);
+        // 최신 데이터 가져오기
+        const latestData = await teamGamesCollection.findOne({}, { sort: { date: -1 } });
         
-        if (allData.length > 0) {
-            // 첫 번째 문서의 구조 확인
-            const firstDoc = allData[0];
-            console.log('🔍 첫 번째 문서 구조:', Object.keys(firstDoc));
+        console.log(`📊 team-games 조회 결과:`, latestData ? '데이터 있음' : '데이터 없음');
+        
+        if (latestData && latestData.games && latestData.games.length > 0) {
+            console.log(`✅ ${latestData.games.length}개 경기 발견`);
             
-            // games 배열이 있는지 확인
-            if (firstDoc.games && Array.isArray(firstDoc.games)) {
-                console.log(`✅ games 배열 발견: ${firstDoc.games.length}개 경기`);
-                console.log('📋 경기 목록:', firstDoc.games.map(g => `${g.number}. ${g.homeTeam} vs ${g.awayTeam}`));
-                
-                res.json({ 
-                    success: true, 
-                    games: firstDoc.games,
-                    debug: {
-                        totalDocuments: allData.length,
-                        selectedDocument: firstDoc.date,
-                        gamesCount: firstDoc.games.length
-                    }
-                });
-            } else {
-                console.log('⚠️ games 배열이 없습니다. 문서 구조:', firstDoc);
-                res.json({ 
-                    success: true, 
-                    games: [],
-                    debug: {
-                        totalDocuments: allData.length,
-                        documentStructure: Object.keys(firstDoc),
-                        sampleDocument: firstDoc
-                    }
-                });
-            }
-        } else {
-            console.log('⚠️ team-games 컬렉션에 데이터가 없습니다.');
             res.json({ 
                 success: true, 
-                games: [],
-                debug: {
-                    totalDocuments: 0
-                }
+                games: latestData.games
+            });
+        } else {
+            console.log('⚠️ 데이터가 없습니다.');
+            res.json({ 
+                success: true, 
+                games: []
             });
         }
     } catch (error) {
@@ -3398,7 +3372,7 @@ app.get('/api/team-games', async (req, res) => {
 });
 
 // 404 처리 (모든 라우트 이후에 정의)
-app.get('*', (req, res) => {
+app.use('*', (req, res) => {
     if (req.path.startsWith('/api/')) {
         res.status(404).json({ 
             error: 'API 엔드포인트를 찾을 수 없습니다.',
