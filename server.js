@@ -4,15 +4,18 @@ const mongoose = require('mongoose');
 const path = require('path');
 
 const app = express();
-const PORT = process.env.PORT || 8080;
+const PORT = process.env.PORT;
 
-// 한국 시간 계산 유틸 함수 (현재: 2025년 7월 19일)
+// Render 배포 환경 날짜 계산 함수
 function getKoreaDateString() {
-    // 현재 실제 날짜: 2025년 7월 19일 오후 8시 20분
-    const currentDate = "2025-07-19";
+    // Render 배포 환경에서 실제 현재 날짜 사용
+    const now = new Date();
+    const koreaTime = new Date(now.getTime() + (9 * 60 * 60 * 1000)); // UTC+9
+    const currentDate = koreaTime.getFullYear().toString() + 
+                       '-' + String(koreaTime.getMonth() + 1).padStart(2, '0') + 
+                       '-' + String(koreaTime.getDate()).padStart(2, '0');
     
-    console.log('🇰🇷 한국 현재 날짜:', currentDate);
-    console.log('📅 한국 날짜 문자열:', currentDate);
+    console.log('🇰🇷 Render 배포 환경 현재 날짜:', currentDate);
     
     return currentDate;
 }
@@ -119,10 +122,9 @@ const connectToMongoDB = async () => {
     }
 };
 
-// 오늘의 경기 데이터 자동 생성 함수 (비활성화)
-// 관리자 페이지에서만 경기를 추가하도록 변경
-const createTodayGames = async () => {
-    console.log('📅 자동 경기 생성 비활성화 - 관리자 페이지에서 경기를 추가해주세요.');
+// Render 배포 환경 경기 데이터 로드 함수
+const loadDailyGames = async () => {
+    console.log('📅 Render 배포 환경 - daily-games 컬렉션에서 경기 데이터 로드');
 };
 
 // 서버 시작
@@ -141,7 +143,12 @@ const startServer = async () => {
         // MongoDB 연결 시도
         const isConnected = await connectToMongoDB();
         
-        // 서버 시작 (Render 배포 환경용)
+        // 서버 시작 (Render 배포 환경 전용)
+        if (!PORT) {
+            console.error('❌ PORT 환경 변수가 설정되지 않았습니다.');
+            process.exit(1);
+        }
+        
         serverInstance = app.listen(PORT, () => {
             console.log('✅ 서버가 성공적으로 시작되었습니다!');
             console.log(`📍 포트: ${PORT}`);

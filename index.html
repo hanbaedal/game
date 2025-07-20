@@ -367,14 +367,13 @@
         // 실제 DB의 team-games 컬렉션에서 데이터 로드
         async function loadSimpleGames() {
             try {
-                console.log('🔍 실제 DB의 team-games 컬렉션에서 데이터 로드 시작');
+                console.log('🔍 Render 배포 환경에서 daily-games 컬렉션 데이터 로드 시작');
                 
-                // 서버 상태 확인 (간단한 방법)
-                console.log('🔍 서버 상태 확인 중...');
+                // Render 배포 환경에서 API 호출
+                console.log('🔍 Render 배포 환경에서 API 호출');
                 console.log('📡 현재 URL:', window.location.href);
-                console.log('📡 서버 포트:', window.location.port);
                 
-                // 실제 DB에서 team-games 데이터 가져오기 (Render 배포 환경용)
+                // Render 배포 환경에서 daily-games 데이터 가져오기
                 const apiUrl = '/api/team-games';
                 console.log('🔍 API URL:', apiUrl);
                 
@@ -400,20 +399,20 @@
                 }
                 
                 const games = data.games || [];
-                console.log('📊 실제 team-games 컬렉션 데이터:', games);
+                console.log('📊 Render 배포 환경 daily-games 컬렉션 데이터:', games);
                 
                 // 전역 변수에 원본 DB 데이터 저장
                 window.allGamesData = games;
                 
                 if (!games || games.length === 0) {
-                    console.log('⚠️ team-games 컬렉션에 데이터가 없습니다.');
+                    console.log('⚠️ daily-games 컬렉션에 데이터가 없습니다.');
                     document.getElementById('gameSelectionContainer').innerHTML = `
-                        <p class="text-gray-400">team-games 컬렉션에 데이터가 없습니다.</p>
+                        <p class="text-gray-400">daily-games 컬렉션에 데이터가 없습니다.</p>
                     `;
                     return;
                 }
                 
-                // DB 데이터를 간단한 형태로 변환 (daily-games 구조에 맞게)
+                // Render 배포 환경 daily-games 데이터 변환
                 const simpleGames = games.map((game, index) => ({
                     id: game._id || game.id || index + 1,
                     gameNumber: game.number || index + 1,

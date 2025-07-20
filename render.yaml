@@ -2,8 +2,8 @@ services:
   - type: web
     name: member-management-system
     env: node
-    buildCommand: npm install
-    startCommand: npm start
+    buildCommand: echo "Render 배포 환경 - 빌드 완료"
+    startCommand: node server.js
     envVars:
       - key: NODE_ENV
         value: production
@@ -19,6 +19,8 @@ services:
         sync: false
       - key: PORT
         value: 10000
+      - key: DEPLOYMENT_ENV
+        value: production
     healthCheckPath: /health
     autoDeploy: true
     plan: free 

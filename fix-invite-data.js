@@ -5,8 +5,8 @@ const connectToMongoDB = async () => {
     try {
         console.log('MongoDB 연결 시도 중...');
         
-        // 환경변수에서 MONGODB_URI 가져오기 (없으면 기본값 사용)
-        const mongoURI = process.env.MONGODB_URI || 'mongodb://localhost:27017/member-management';
+        // Render 배포 환경 MongoDB 연결
+        const mongoURI = process.env.MONGODB_URI || 'mongodb+srv://ppadun_user:ppadun8267@member-management.bppicvz.mongodb.net/?retryWrites=true&w=majority&appName=member-management';
         
         console.log('🔗 연결 문자열 확인:', mongoURI.substring(0, 20) + '...');
         

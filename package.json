@@ -4,7 +4,8 @@
   "description": "Member Management System with Node.js and MongoDB",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "render-build": "echo 'Render 배포 환경 - 빌드 불필요'"
   },
   "dependencies": {
     "cors": "^2.8.5",
