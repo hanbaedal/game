@@ -464,7 +464,7 @@
                             
                             return `
                                 <button 
-                                    onclick="selectSimpleGame(${game.id}, '${game.gameNumber}', '${game.matchup}')"
+                                    onclick="selectSimpleGame('${game.id}', '${game.gameNumber}', '${game.matchup.replace(/'/g, "\\'")}')"
                                     class="w-full p-3 rounded text-left ${buttonClass}"
                                     ${!isSelectable ? 'disabled' : ''}
                                 >
