@@ -369,8 +369,16 @@
             try {
                 console.log('🔍 실제 DB의 team-games 컬렉션에서 데이터 로드 시작');
                 
-                // 실제 DB에서 team-games 데이터 가져오기
-                const response = await fetch('/api/team-games', {
+                // 서버 상태 확인 (간단한 방법)
+                console.log('🔍 서버 상태 확인 중...');
+                console.log('📡 현재 URL:', window.location.href);
+                console.log('📡 서버 포트:', window.location.port);
+                
+                // 실제 DB에서 team-games 데이터 가져오기 (포트 10000 사용)
+                const apiUrl = window.location.port === '10000' ? '/api/team-games' : 'http://localhost:10000/api/team-games';
+                console.log('🔍 API URL:', apiUrl);
+                
+                const response = await fetch(apiUrl, {
                     method: 'GET',
                     headers: {
                         'Content-Type': 'application/json',
@@ -901,8 +909,9 @@
                 if (currentUser && currentUser.userId) {
                     console.log('🔐 로그아웃 요청:', currentUser.userId);
                     
-                    // 서버에 로그아웃 요청
-                    const response = await fetch('/api/logout', {
+                    // 서버에 로그아웃 요청 (포트 10000 사용)
+                    const logoutUrl = window.location.port === '10000' ? '/api/logout' : 'http://localhost:10000/api/logout';
+                    const response = await fetch(logoutUrl, {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json'
@@ -914,6 +923,8 @@
                     
                     const data = await response.json();
                     console.log('🔐 로그아웃 응답:', data);
+                } else {
+                    console.log('🔐 로그아웃: userId가 없음, 바로 로그아웃 처리');
                 }
             } catch (error) {
                 console.error('❌ 로그아웃 오류:', error);
