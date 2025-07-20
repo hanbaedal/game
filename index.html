@@ -84,7 +84,7 @@
                 </div>
 
                 <div class="flex items-center space-x-3">
-                    <img src="/img/menu3.png" width="50" height="50" alt="배팅 이미지" class="rounded-full shadow-lg border-2 border-gray-300 transform hover:scale-105 transition-all duration-200" style="filter: drop-shadow(0 4px 8px rgba(0,0,0,0.3));">
+                    <img src="/img/menu3.png" width="50" height="50" alt="배팅 이미지" class="rounded-full shadow-lg border-2 border-gray-300 transform hover:scale-105 transition-all duration-200" style="filter: drop-shadow(0 4px 8px rgba(0,0,0,0.3)); margin-top: 8px;">
                     <div class="flex-1">
                         <p class="text-sm">배팅선택</p>
                         <div id="bettingSection" class="space-y-2 mt-2">
@@ -533,12 +533,12 @@
             container.innerHTML = `
                 <div class="w-full">
                     <div class="grid gap-2">
-                        <div onclick="resetGameSelection()" class="bg-blue-600 rounded-lg p-3 cursor-pointer hover:bg-blue-700 transition-colors">
+                        <div onclick="resetGameSelection()" class="bg-blue-600 rounded-lg p-2 cursor-pointer hover:bg-blue-700 transition-colors">
                             <div class="flex justify-between items-center">
                                 <div>
-                                    <div class="font-bold text-white">${matchup}</div>
+                                    <div class="font-bold text-white text-sm">${matchup}</div>
                                 </div>
-                                <div class="text-sm text-blue-200 opacity-75">
+                                <div class="text-xs text-blue-200 opacity-75">
                                     ${startTime} | ${progressStatus}
                                 </div>
                             </div>
