@@ -529,15 +529,21 @@
             
             container.innerHTML = `
                 <div class="w-full">
-                    <div class="bg-blue-600 rounded-lg p-3">
-                        <div class="text-white text-sm">
-                            <p><strong>경기번호:</strong> ${gameNumber}</p>
-                            <p><strong>매치업:</strong> ${matchup}</p>
-                            <p><strong>경기시간:</strong> ${startTime}</p>
-                            <p><strong>경기날짜:</strong> ${date}</p>
-                            <p><strong>상태:</strong> <span class="${statusClass}">${statusText}</span></p>
+                    <h4 class="text-white font-bold mb-3">🏟️ 선택된 경기</h4>
+                    <div class="grid gap-2">
+                        <div class="bg-blue-600 rounded-lg p-3">
+                            <div class="flex justify-between items-center">
+                                <div>
+                                    <div class="font-bold text-white">${gameNumber}경기 ${matchup}</div>
+                                    <div class="text-sm text-blue-200 opacity-75">${startTime} | ${progressStatus}</div>
+                                    <div class="text-xs text-blue-200">${date}</div>
+                                </div>
+                                <div class="text-sm text-white">
+                                    ${isActive ? '✅ 선택됨' : '⏳ 대기중'}
+                                </div>
+                            </div>
                         </div>
-                        <button onclick="resetGameSelection()" class="mt-2 bg-gray-600 hover:bg-gray-700 text-white text-xs py-1 px-2 rounded">
+                        <button onclick="resetGameSelection()" class="w-full bg-gray-600 hover:bg-gray-700 text-white py-2 px-4 rounded">
                             다른 경기 선택
                         </button>
                     </div>
