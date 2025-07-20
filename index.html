@@ -503,7 +503,10 @@
                 // 경기 선택 모달을 선택된 경기만 표시하도록 변경
                 showSelectedGameOnly(gameNumber, matchup, selectedGameData);
                 
-                // 베팅 선택 활성화
+                // 배팅 포인트 선택 활성화 (먼저)
+                enableBettingPoints();
+                
+                // 베팅 선택 활성화 (나중에)
                 enableBettingSelection();
                 
                 console.log('✅ 경기 선택 완료:', selectedGame);
@@ -592,6 +595,43 @@
             } else {
                 console.error('❌ 경기 정보 표시 요소를 찾을 수 없거나 데이터가 없습니다.');
             }
+        }
+
+        // 배팅 포인트 선택 활성화 (1→3→2 순서)
+        function enableBettingPoints() {
+            console.log('💰 배팅 포인트 선택 활성화');
+            
+            // 포인트 선택 UI 표시
+            const pointsContainer = document.getElementById('bettingPointsContainer');
+            if (pointsContainer) {
+                pointsContainer.style.display = 'block';
+            }
+            
+            // 포인트 선택 버튼들 활성화
+            const pointButtons = document.querySelectorAll('.point-btn');
+            pointButtons.forEach(btn => {
+                btn.disabled = false;
+                btn.classList.remove('opacity-50', 'cursor-not-allowed');
+                btn.classList.add('cursor-pointer');
+                
+                btn.onclick = function() {
+                    // 이전 선택 해제
+                    document.querySelectorAll('.point-btn').forEach(b => {
+                        b.classList.remove('bg-yellow-600', 'border-yellow-400');
+                        b.classList.add('bg-gray-600');
+                    });
+                    
+                    // 현재 선택 표시
+                    this.classList.remove('bg-gray-600');
+                    this.classList.add('bg-yellow-600', 'border-yellow-400');
+                    
+                    selectedAmount = parseInt(this.dataset.amount);
+                    console.log('💰 선택된 포인트:', selectedAmount);
+                    
+                    // 포인트 선택 후 배팅 선택 활성화
+                    enableBettingSelection();
+                };
+            });
         }
 
         // 배팅 선택 활성화
