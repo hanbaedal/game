@@ -471,7 +471,7 @@
                                     <div class="flex justify-between items-center">
                                         <div>
                                             <div class="font-bold">${game.gameNumber}경기 ${game.matchup}</div>
-                                            <div class="text-sm opacity-75">${game.startTime} | ${game.progressStatus} | 베팅: ${game.bettingStart}</div>
+                                            <div class="text-sm opacity-75">${game.startTime} | ${game.progressStatus}</div>
                                         </div>
                                         <div class="text-sm">
                                             ${isSelectable ? '✅ 선택가능' : '❌ 선택불가'}
@@ -501,8 +501,8 @@
                 // 선택된 경기 정보 저장 (원본 DB 데이터 사용)
                 selectedGame = selectedGameData;
                 
-                // 선택된 경기 표시
-                updateSimpleGameDisplay(gameNumber, matchup, selectedGameData);
+                // 경기 선택 모달을 선택된 경기만 표시하도록 변경
+                showSelectedGameOnly(gameNumber, matchup, selectedGameData);
                 
                 // 베팅 선택 활성화
                 enableBettingSelection();
@@ -512,6 +512,58 @@
                 console.error('❌ 선택된 경기 데이터를 찾을 수 없습니다.');
                 alert('경기 선택 중 오류가 발생했습니다.');
             }
+        }
+
+        // 선택된 경기만 표시하는 함수
+        function showSelectedGameOnly(gameNumber, matchup, gameData) {
+            const container = document.getElementById('gameSelectionContainer');
+            if (!container) return;
+            
+            const progressStatus = gameData.progressStatus || '경기전';
+            const bettingStart = gameData.bettingStart || '중지';
+            const startTime = gameData.startTime || '시간 미정';
+            const date = gameData.date || '날짜 미정';
+            
+            const isActive = progressStatus === '경기중' && bettingStart === '시작';
+            const statusClass = isActive ? 'text-green-300' : 'text-red-300';
+            const statusText = isActive ? '경기중 + 베팅가능' : `${progressStatus} + ${bettingStart}`;
+            
+            container.innerHTML = `
+                <div class="w-full">
+                    <h4 class="text-white font-bold mb-3">🎯 선택된 경기</h4>
+                    <div class="bg-blue-600 rounded-lg p-3 mb-3">
+                        <div class="text-white text-sm">
+                            <p><strong>경기번호:</strong> ${gameNumber}</p>
+                            <p><strong>매치업:</strong> ${matchup}</p>
+                            <p><strong>경기시간:</strong> ${startTime}</p>
+                            <p><strong>경기날짜:</strong> ${date}</p>
+                            <p><strong>상태:</strong> <span class="${statusClass}">${statusText}</span></p>
+                        </div>
+                        <button onclick="resetGameSelection()" class="mt-2 bg-gray-600 hover:bg-gray-700 text-white text-xs py-1 px-2 rounded">
+                            다른 경기 선택
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+
+        // 경기 선택 초기화 함수
+        function resetGameSelection() {
+            selectedGame = null;
+            selectedChoice = null;
+            
+            // 경기 선택 모달 다시 로드
+            loadSimpleGames();
+            
+            // 베팅 선택 비활성화
+            const bettingButtons = document.querySelectorAll('.bet-choice-btn');
+            bettingButtons.forEach(btn => {
+                btn.disabled = true;
+                btn.classList.add('opacity-50', 'cursor-not-allowed');
+                btn.classList.remove('cursor-pointer');
+            });
+            
+            console.log('🔄 경기 선택 초기화됨');
         }
 
         // DB 데이터를 사용한 경기 표시 업데이트
