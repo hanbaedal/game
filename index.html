@@ -1494,33 +1494,25 @@
             setupBrowserCloseLogout();
         });
         
-        // 브라우저 종료 시 로그아웃 처리 설정
+        // 브라우저 종료 시 로그아웃 처리 설정 (비활성화)
         function setupBrowserCloseLogout() {
-            // beforeunload 이벤트 (브라우저 탭/창 닫기)
-            window.addEventListener('beforeunload', function(e) {
-                if (currentUser && !currentUser.isGuest && currentUser.userId) {
-                    console.log('🔐 브라우저 종료 시 로그아웃:', currentUser.userId);
-                    // 로그아웃 API 호출 (Content-Type 없이)
-                    navigator.sendBeacon('/api/logout', JSON.stringify({
-                        userId: currentUser.userId
-                    }));
-                }
-            });
+            // 로그아웃 기능 비활성화 - 불필요한 API 호출 방지
+            console.log('🔐 브라우저 종료 시 로그아웃 기능 비활성화됨');
             
-            // pagehide 이벤트 (페이지 숨김, 모바일에서 더 안정적)
-            window.addEventListener('pagehide', function(e) {
-                if (currentUser && !currentUser.isGuest && currentUser.userId) {
-                    console.log('🔐 페이지 숨김 시 로그아웃:', currentUser.userId);
-                    // 로그아웃 API 호출 (Content-Type 없이)
-                    navigator.sendBeacon('/api/logout', JSON.stringify({
-                        userId: currentUser.userId
-                    }));
-                }
-            });
+            // beforeunload 이벤트 (브라우저 탭/창 닫기) - 비활성화
+            // window.addEventListener('beforeunload', function(e) {
+            //     if (currentUser && !currentUser.isGuest && currentUser.userId) {
+            //         console.log('🔐 브라우저 종료 시 로그아웃:', currentUser.userId);
+            //         navigator.sendBeacon('/api/logout', JSON.stringify({
+            //             userId: currentUser.userId
+            //         }));
+            //     }
+            // });
             
-            // visibilitychange 이벤트 (탭 전환 시) - 제거 (너무 자주 호출됨)
-            // document.addEventListener('visibilitychange', function() {
-            //     if (document.visibilityState === 'hidden' && currentUser && !currentUser.isGuest) {
+            // pagehide 이벤트 (페이지 숨김, 모바일에서 더 안정적) - 비활성화
+            // window.addEventListener('pagehide', function(e) {
+            //     if (currentUser && !currentUser.isGuest && currentUser.userId) {
+            //         console.log('🔐 페이지 숨김 시 로그아웃:', currentUser.userId);
             //         navigator.sendBeacon('/api/logout', JSON.stringify({
             //             userId: currentUser.userId
             //         }));
