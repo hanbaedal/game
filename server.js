@@ -174,13 +174,12 @@ const startServer = async () => {
 // 서버 시작 (한 번만)
 startServer();
 
+// 정적 파일 서빙 설정
+app.use(express.static(path.join(__dirname)));
+
 // 기본 라우팅
 app.get('/', (req, res) => {
-    res.json({
-        message: 'Member Management System API',
-        status: 'running',
-        timestamp: new Date(new Date().getTime() + (9 * 60 * 60 * 1000)).toISOString() // 한국 시간대
-    });
+    res.sendFile(path.join(__dirname, 'index.html'));
 });
 
 // 헬스체크 엔드포인트
