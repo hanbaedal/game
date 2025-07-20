@@ -413,16 +413,19 @@
                     return;
                 }
                 
-                // DB 데이터를 간단한 형태로 변환
+                // DB 데이터를 간단한 형태로 변환 (daily-games 구조에 맞게)
                 const simpleGames = games.map((game, index) => ({
                     id: game._id || game.id || index + 1,
-                    gameNumber: game.gameNumber || game.number || index + 1,
-                    matchup: game.matchup || '경기 정보 없음',
+                    gameNumber: game.number || index + 1,
+                    matchup: `${game.homeTeam} vs ${game.awayTeam}`,
                     startTime: game.startTime || '시간 미정',
-                    progressStatus: game.progressStatus || '경기전',
-                    bettingStart: game.bettingStart || '중지',
-                    bettingStop: game.bettingStop || '중지',
+                    progressStatus: game.noGame === '정상게임' ? '경기중' : '경기전',
+                    bettingStart: '시작', // 기본값으로 시작
+                    bettingStop: '중지',
                     date: game.date,
+                    homeTeam: game.homeTeam,
+                    awayTeam: game.awayTeam,
+                    noGame: game.noGame,
                     originalData: game // 원본 데이터 보존
                 }));
                 

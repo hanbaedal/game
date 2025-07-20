@@ -4,7 +4,7 @@ const mongoose = require('mongoose');
 const path = require('path');
 
 const app = express();
-const PORT = process.env.PORT || 10000;
+const PORT = process.env.PORT || 8080;
 
 // 한국 시간 계산 유틸 함수 (현재: 2025년 7월 19일)
 function getKoreaDateString() {
@@ -3248,17 +3248,23 @@ app.get('/api/team-games', async (req, res) => {
         const totalCount = await dailyGamesCollection.countDocuments();
         console.log('📊 daily-games 컬렉션 총 문서 수:', totalCount);
         
-        const games = await dailyGamesCollection.find({}).sort({ gameNumber: 1 }).toArray();
-        console.log(`📋 조회된 경기 수: ${games.length}개`);
+        // 오늘 날짜의 경기 데이터 조회
+        const today = getKoreaDateString().replace(/-/g, ''); // YYYYMMDD 형식으로 변환
+        console.log('📅 오늘 날짜 (YYYYMMDD):', today);
         
-        if (games.length > 0) {
-            console.log('📋 첫 번째 경기 샘플:', JSON.stringify(games[0], null, 2));
-            console.log('📋 모든 경기 데이터:', JSON.stringify(games, null, 2));
+        const todayGames = await dailyGamesCollection.findOne({ date: today });
+        console.log('📋 오늘 경기 데이터:', todayGames);
+        
+        if (todayGames && todayGames.games && todayGames.games.length > 0) {
+            console.log(`📋 조회된 경기 수: ${todayGames.games.length}개`);
+            console.log('📋 첫 번째 경기 샘플:', JSON.stringify(todayGames.games[0], null, 2));
+            console.log('📋 모든 경기 데이터:', JSON.stringify(todayGames.games, null, 2));
+            
+            res.json({ success: true, games: todayGames.games });
         } else {
-            console.log('❌ daily-games 컬렉션에 데이터가 없습니다.');
+            console.log('❌ 오늘 날짜의 경기 데이터가 없습니다.');
+            res.json({ success: true, games: [] });
         }
-        
-        res.json({ success: true, games });
     } catch (error) {
         console.error('❌ /api/team-games 오류:', error);
         res.status(500).json({ success: false, message: error.message });
