@@ -63,7 +63,7 @@
                     <div class="flex-1">
                         <p class="text-sm">게임선택</p>
                             <div class="grid grid-cols-1 gap-1 mt-1">
-                            <button id="batterBtn" class="game-type-btn bg-yellow-500 hover:bg-yellow-600 text-black text-xs py-1 px-3 rounded active" data-type="batter">
+                            <button id="batterBtn" class="game-type-btn bg-yellow-500 hover:bg-yellow-600 text-black text-xs py-1 px-3 rounded active" data-type="batter" onclick="selectGameType(this)">
                                 타자
                             </button>
                             </div>
@@ -75,7 +75,7 @@
                         <div class="flex-1">
                             <p class="text-sm">배팅포인트</p>
                             <div class="grid grid-cols-1 gap-1 mt-1">
-                                <button class="bet-amount-btn bg-yellow-500 hover:bg-yellow-400 text-black text-xs py-1 px-1 rounded" data-amount="100">
+                                <button class="bet-amount-btn bg-yellow-500 hover:bg-yellow-400 text-black text-xs py-1 px-1 rounded" data-amount="100" onclick="selectBetAmount(this)">
                                     100
                             </button>
                             </div>
@@ -597,6 +597,39 @@
             }
         }
 
+        // 게임선택 버튼 선택 함수
+        function selectGameType(button) {
+            // 이전 선택 해제
+            document.querySelectorAll('.game-type-btn').forEach(b => {
+                b.classList.remove('bg-yellow-600', 'border-yellow-400');
+                b.classList.add('bg-yellow-500');
+            });
+            
+            // 현재 선택 표시
+            button.classList.remove('bg-yellow-500');
+            button.classList.add('bg-yellow-600', 'border-yellow-400');
+        }
+
+        // 배팅포인트 버튼 선택 함수
+        function selectBetAmount(button) {
+            // 이전 선택 해제
+            document.querySelectorAll('.bet-amount-btn').forEach(b => {
+                b.classList.remove('bg-yellow-600', 'border-yellow-400');
+                b.classList.add('bg-yellow-500');
+            });
+            
+            // 현재 선택 표시
+            button.classList.remove('bg-yellow-500');
+            button.classList.add('bg-yellow-600', 'border-yellow-400');
+            
+            // 포인트 선택 처리
+            selectedAmount = parseInt(button.dataset.amount);
+            console.log('💰 선택된 포인트:', selectedAmount);
+            
+            // 예측하기 버튼 활성화
+            enablePredictionButton();
+        }
+
         // 배팅 포인트 선택 활성화 (1→3→2 순서)
         function enableBettingPoints() {
             console.log('💰 배팅 포인트 선택 활성화');
@@ -608,21 +641,21 @@
             }
             
             // 포인트 선택 버튼들 활성화
-            const pointButtons = document.querySelectorAll('.point-btn');
+            const pointButtons = document.querySelectorAll('.bet-amount-btn');
             pointButtons.forEach(btn => {
                 btn.disabled = false;
                 btn.classList.remove('opacity-50', 'cursor-not-allowed');
                 btn.classList.add('cursor-pointer');
                 
                 btn.onclick = function() {
-                    // 이전 선택 해제
-                    document.querySelectorAll('.point-btn').forEach(b => {
+                    // 이전 선택 해제 (배팅선택 버튼은 건드리지 않음)
+                    document.querySelectorAll('.bet-amount-btn').forEach(b => {
                         b.classList.remove('bg-yellow-600', 'border-yellow-400');
-                        b.classList.add('bg-gray-600');
+                        b.classList.add('bg-yellow-500');
                     });
                     
                     // 현재 선택 표시
-                    this.classList.remove('bg-gray-600');
+                    this.classList.remove('bg-yellow-500');
                     this.classList.add('bg-yellow-600', 'border-yellow-400');
                     
                     selectedAmount = parseInt(this.dataset.amount);
