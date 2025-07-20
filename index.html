@@ -1498,7 +1498,7 @@
         function setupBrowserCloseLogout() {
             // beforeunload 이벤트 (브라우저 탭/창 닫기)
             window.addEventListener('beforeunload', function(e) {
-                if (currentUser && !currentUser.isGuest) {
+                if (currentUser && !currentUser.isGuest && currentUser.userId) {
                     console.log('🔐 브라우저 종료 시 로그아웃:', currentUser.userId);
                     // 로그아웃 API 호출 (Content-Type 없이)
                     navigator.sendBeacon('/api/logout', JSON.stringify({
@@ -1509,7 +1509,7 @@
             
             // pagehide 이벤트 (페이지 숨김, 모바일에서 더 안정적)
             window.addEventListener('pagehide', function(e) {
-                if (currentUser && !currentUser.isGuest) {
+                if (currentUser && !currentUser.isGuest && currentUser.userId) {
                     console.log('🔐 페이지 숨김 시 로그아웃:', currentUser.userId);
                     // 로그아웃 API 호출 (Content-Type 없이)
                     navigator.sendBeacon('/api/logout', JSON.stringify({
