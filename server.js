@@ -2410,10 +2410,7 @@ app.use((err, req, res, next) => {
     res.status(500).json({ error: '서버 오류가 발생했습니다.' });
 });
 
-// 404 핸들링
-app.use((req, res) => {
-    res.status(404).json({ error: '요청한 리소스를 찾을 수 없습니다.' });
-});
+// 404 핸들링은 맨 마지막에 처리
 
 // 배팅 시작 API (관리자용)
 app.post('/api/betting/admin-start', async (req, res) => {
@@ -3373,15 +3370,8 @@ app.get('/api/team-games', async (req, res) => {
 
 // 404 처리 (모든 라우트 이후에 정의)
 app.use('*', (req, res) => {
-    if (req.path.startsWith('/api/')) {
-        res.status(404).json({ 
-            error: 'API 엔드포인트를 찾을 수 없습니다.',
-            path: req.path
-        });
-    } else {
-        res.status(404).json({ 
-            error: '요청한 리소스를 찾을 수 없습니다.',
-            path: req.path
-        });
-    }
+    res.status(404).json({ 
+        error: '요청한 리소스를 찾을 수 없습니다.',
+        path: req.path
+    });
 });
