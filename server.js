@@ -33,9 +33,9 @@ function sendMongoDBErrorResponse(res, message = 'DB 연결 오류') {
     });
 }
 
-// daily-games 컬렉션 가져오기 함수 (실제 DB 구조에 맞게 수정)
+// team-games 컬렉션 가져오기 함수
 function getTeamGamesCollection() {
-    return mongoose.connection.db.collection('daily-games');
+    return mongoose.connection.db.collection('team-games');
 }
 
 // betting-sessions 컬렉션 가져오기 함수
@@ -123,7 +123,7 @@ const connectToMongoDB = async () => {
 
 // Render 배포 환경 경기 데이터 로드 함수
 const loadDailyGames = async () => {
-    console.log('📅 Render 배포 환경 - daily-games 컬렉션에서 경기 데이터 로드');
+    console.log('📅 Render 배포 환경 - team-games 컬렉션에서 경기 데이터 로드');
 };
 
 // 서버 시작
@@ -155,7 +155,7 @@ const startServer = async () => {
             
             // MongoDB 연결 성공
             if (isConnected) {
-                console.log('✅ MongoDB 연결됨 - daily-games 컬렉션에서 경기 데이터를 로드합니다.');
+                console.log('✅ MongoDB 연결됨 - team-games 컬렉션에서 경기 데이터를 로드합니다.');
             }
         });
         
@@ -3230,64 +3230,29 @@ app.post('/api/update-games-to-today', async (req, res) => {
     }
 });
 
-// 경기 전체 조회 API (가장 단순하게)
+// 간단한 테스트 API
+app.get('/api/test-simple', (req, res) => {
+    res.json({ 
+        message: '테스트 API 성공',
+        timestamp: new Date().toISOString()
+    });
+});
+
+// 간단한 경기 데이터 조회 API
 app.get('/api/team-games', async (req, res) => {
     try {
-        console.log('🏟️ /api/team-games API 호출됨 (daily-games 컬렉션 사용)');
+        // MongoDB에서 team-games 컬렉션 조회
+        const teamGamesCollection = mongoose.connection.db.collection('team-games');
         
-        if (!checkMongoDBConnection()) {
-            console.log('❌ MongoDB 연결 안됨');
-            return sendMongoDBErrorResponse(res, 'DB 연결 오류');
-        }
+        // 최신 데이터 가져오기
+        const latestData = await teamGamesCollection.findOne({}, { sort: { date: -1 } });
         
-        console.log('✅ MongoDB 연결 확인됨');
-        console.log('📊 연결된 데이터베이스:', mongoose.connection.db.databaseName);
-        
-        const dailyGamesCollection = getTeamGamesCollection();
-        console.log('📊 daily-games 컬렉션 접근');
-        
-        // 전체 컬렉션 목록 확인
-        const collections = await mongoose.connection.db.listCollections().toArray();
-        console.log('📋 데이터베이스의 모든 컬렉션:', collections.map(c => c.name));
-        
-        // daily-games 컬렉션의 전체 문서 수 확인
-        const totalCount = await dailyGamesCollection.countDocuments();
-        console.log('📊 daily-games 컬렉션 총 문서 수:', totalCount);
-        
-        // 최신 날짜의 경기 데이터 조회 (오늘 데이터가 없으면 최신 데이터 사용)
-        const today = getKoreaDateString().replace(/-/g, ''); // YYYYMMDD 형식으로 변환
-        console.log('📅 오늘 날짜 (YYYYMMDD):', today);
-        
-        let todayGames = await dailyGamesCollection.findOne({ date: today });
-        console.log('📋 오늘 경기 데이터:', todayGames);
-        
-        // 오늘 데이터가 없으면 최신 데이터 사용
-        if (!todayGames || !todayGames.games || todayGames.games.length === 0) {
-            console.log('⚠️ 오늘 날짜의 경기 데이터가 없습니다. 최신 데이터를 조회합니다.');
-            
-            // 최신 날짜의 데이터 조회
-            const latestGames = await dailyGamesCollection.findOne({}, { sort: { date: -1 } });
-            console.log('📋 최신 경기 데이터:', latestGames);
-            
-            if (latestGames && latestGames.games && latestGames.games.length > 0) {
-                console.log(`📋 조회된 경기 수: ${latestGames.games.length}개`);
-                console.log('📋 첫 번째 경기 샘플:', JSON.stringify(latestGames.games[0], null, 2));
-                console.log('📋 모든 경기 데이터:', JSON.stringify(latestGames.games, null, 2));
-                
-                res.json({ success: true, games: latestGames.games });
-            } else {
-                console.log('❌ 경기 데이터가 없습니다.');
-                res.json({ success: true, games: [] });
-            }
+        if (latestData && latestData.games) {
+            res.json({ success: true, games: latestData.games });
         } else {
-            console.log(`📋 조회된 경기 수: ${todayGames.games.length}개`);
-            console.log('📋 첫 번째 경기 샘플:', JSON.stringify(todayGames.games[0], null, 2));
-            console.log('📋 모든 경기 데이터:', JSON.stringify(todayGames.games, null, 2));
-            
-            res.json({ success: true, games: todayGames.games });
+            res.json({ success: true, games: [] });
         }
     } catch (error) {
-        console.error('❌ /api/team-games 오류:', error);
         res.status(500).json({ success: false, message: error.message });
     }
 });

@@ -367,13 +367,13 @@
         // 실제 DB의 team-games 컬렉션에서 데이터 로드
         async function loadSimpleGames() {
             try {
-                console.log('🔍 Render 배포 환경에서 daily-games 컬렉션 데이터 로드 시작');
+                console.log('🔍 Render 배포 환경에서 team-games 컬렉션 데이터 로드 시작');
                 
                 // Render 배포 환경에서 API 호출
                 console.log('🔍 Render 배포 환경에서 API 호출');
                 console.log('📡 현재 URL:', window.location.href);
                 
-                // Render 배포 환경에서 daily-games 데이터 가져오기
+                // Render 배포 환경에서 team-games 데이터 가져오기
                 const apiUrl = '/api/team-games';
                 console.log('🔍 API URL:', apiUrl);
                 
@@ -399,20 +399,20 @@
                 }
                 
                 const games = data.games || [];
-                console.log('📊 Render 배포 환경 daily-games 컬렉션 데이터:', games);
+                console.log('📊 Render 배포 환경 team-games 컬렉션 데이터:', games);
                 
                 // 전역 변수에 원본 DB 데이터 저장
                 window.allGamesData = games;
                 
                 if (!games || games.length === 0) {
-                    console.log('⚠️ daily-games 컬렉션에 데이터가 없습니다.');
+                    console.log('⚠️ team-games 컬렉션에 데이터가 없습니다.');
                     document.getElementById('gameSelectionContainer').innerHTML = `
-                        <p class="text-gray-400">daily-games 컬렉션에 데이터가 없습니다.</p>
+                        <p class="text-gray-400">team-games 컬렉션에 데이터가 없습니다.</p>
                     `;
                     return;
                 }
                 
-                // Render 배포 환경 daily-games 데이터 변환
+                // Render 배포 환경 team-games 데이터 변환
                 const simpleGames = games.map((game, index) => ({
                     id: game._id || game.id || index + 1,
                     gameNumber: game.number || index + 1,
@@ -936,8 +936,8 @@
                 console.error('❌ 로그아웃 오류:', error);
             } finally {
                 // localStorage 삭제 및 페이지 이동
-                localStorage.removeItem('currentUser');
-                window.location.href = '/login.html';
+            localStorage.removeItem('currentUser');
+            window.location.href = '/login.html';
             }
         }
 
@@ -1496,7 +1496,7 @@
                 if (data.success) {
                     alert('테스트 데이터가 생성되었습니다. 페이지를 새로고침하세요.');
                     location.reload();
-                } else {
+                    } else {
                     alert('테스트 데이터 생성 실패: ' + data.message);
                 }
             } catch (error) {
@@ -1546,8 +1546,8 @@
                 if (game.noGame === '경기중') return '경기중';
                 if (game.noGame === '경기종료' || game.noGame === '경기끝') return '경기끝';
                 if (game.noGame === '우천취소' || game.noGame === '취소') return game.noGame;
-                return game.noGame;
-            }
+            return game.noGame;
+        }
 
             
             return '경기전';
