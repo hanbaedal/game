@@ -32,7 +32,8 @@ function sendMongoDBErrorResponse(res, message = 'DB 연결 오류') {
 
 // team-games 컬렉션 가져오기 함수 (member-management의 서브컬렉션)
 function getTeamGamesCollection() {
-    return mongoose.connection.db.collection('member-management.team-games');
+    // 서브컬렉션 접근 방식 수정
+    return mongoose.connection.db.collection('team-games');
 }
 
 // betting-sessions 컬렉션 가져오기 함수
