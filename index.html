@@ -373,6 +373,15 @@
                 console.log('🔍 Render 배포 환경에서 API 호출');
                 console.log('📡 현재 URL:', window.location.href);
                 
+                // 먼저 기본 테스트 API 호출
+                try {
+                    const testResponse = await fetch('/api/test-simple');
+                    const testData = await testResponse.json();
+                    console.log('✅ 기본 테스트 API 성공:', testData);
+                } catch (testError) {
+                    console.error('❌ 기본 테스트 API 실패:', testError);
+                }
+                
                 // Render 배포 환경에서 team-games 데이터 가져오기
                 const apiUrl = '/api/team-games';
                 console.log('🔍 API URL:', apiUrl);

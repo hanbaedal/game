@@ -3239,6 +3239,93 @@ app.get('/api/test-simple', (req, res) => {
     });
 });
 
+// 데이터베이스 구조 확인 API
+app.get('/api/debug/db-structure', async (req, res) => {
+    try {
+        console.log('🔍 데이터베이스 구조 확인 요청');
+        
+        // MongoDB 연결 상태 확인
+        if (mongoose.connection.readyState !== 1) {
+            return res.status(503).json({
+                success: false,
+                message: 'MongoDB 연결 안됨',
+                connectionState: mongoose.connection.readyState
+            });
+        }
+        
+        const db = mongoose.connection.db;
+        const collections = await db.listCollections().toArray();
+        
+        // team-games 컬렉션 확인
+        const teamGamesCollection = db.collection('team-games');
+        const teamGamesSample = await teamGamesCollection.find({}).limit(1).toArray();
+        
+        // daily-games 컬렉션 확인
+        const dailyGamesCollection = db.collection('daily-games');
+        const dailyGamesSample = await dailyGamesCollection.find({}).limit(1).toArray();
+        
+        res.json({
+            success: true,
+            database: db.databaseName,
+            collections: collections.map(col => col.name),
+            teamGames: {
+                exists: teamGamesSample.length > 0,
+                sample: teamGamesSample[0] || null,
+                count: await teamGamesCollection.countDocuments()
+            },
+            dailyGames: {
+                exists: dailyGamesSample.length > 0,
+                sample: dailyGamesSample[0] || null,
+                count: await dailyGamesCollection.countDocuments()
+            }
+        });
+        
+    } catch (error) {
+        console.error('❌ DB 구조 확인 오류:', error);
+        res.status(500).json({
+            success: false,
+            message: error.message
+        });
+    }
+});
+
+// 서버 상태 진단 API
+app.get('/api/debug/server-status', (req, res) => {
+    try {
+        const status = {
+            server: {
+                uptime: process.uptime(),
+                memory: process.memoryUsage(),
+                version: process.version,
+                platform: process.platform
+            },
+            mongodb: {
+                connectionState: mongoose.connection.readyState,
+                databaseName: mongoose.connection.db ? mongoose.connection.db.databaseName : 'unknown',
+                host: mongoose.connection.host || 'unknown'
+            },
+            environment: {
+                nodeEnv: process.env.NODE_ENV,
+                port: process.env.PORT,
+                hasMongoUri: !!process.env.MONGODB_URI
+            },
+            timestamp: new Date().toISOString()
+        };
+        
+        res.json({
+            success: true,
+            status: status
+        });
+        
+    } catch (error) {
+        console.error('❌ 서버 상태 진단 오류:', error);
+        res.status(500).json({
+            success: false,
+            message: error.message
+        });
+    }
+});
+
 // 간단한 경기 데이터 조회 API
 app.get('/api/team-games', async (req, res) => {
     try {
@@ -3256,24 +3343,49 @@ app.get('/api/team-games', async (req, res) => {
         // MongoDB에서 team-games 컬렉션 조회
         const teamGamesCollection = mongoose.connection.db.collection('team-games');
         
-        // 최신 데이터 가져오기 (daily-games와 동일한 구조)
-        const latestData = await teamGamesCollection.findOne({}, { sort: { date: -1 } });
+        // 모든 데이터 조회 (디버깅용)
+        const allData = await teamGamesCollection.find({}).toArray();
+        console.log(`📊 team-games 컬렉션 전체 데이터: ${allData.length}개 문서`);
         
-        console.log(`📊 team-games 컬렉션 조회 결과:`, latestData ? '데이터 있음' : '데이터 없음');
-        
-        if (latestData && latestData.games && latestData.games.length > 0) {
-            console.log(`✅ team-games에서 ${latestData.games.length}개 경기 조회됨`);
-            console.log('📋 경기 목록:', latestData.games.map(g => `${g.number}. ${g.homeTeam} vs ${g.awayTeam}`));
+        if (allData.length > 0) {
+            // 첫 번째 문서의 구조 확인
+            const firstDoc = allData[0];
+            console.log('🔍 첫 번째 문서 구조:', Object.keys(firstDoc));
             
-            res.json({ 
-                success: true, 
-                games: latestData.games 
-            });
+            // games 배열이 있는지 확인
+            if (firstDoc.games && Array.isArray(firstDoc.games)) {
+                console.log(`✅ games 배열 발견: ${firstDoc.games.length}개 경기`);
+                console.log('📋 경기 목록:', firstDoc.games.map(g => `${g.number}. ${g.homeTeam} vs ${g.awayTeam}`));
+                
+                res.json({ 
+                    success: true, 
+                    games: firstDoc.games,
+                    debug: {
+                        totalDocuments: allData.length,
+                        selectedDocument: firstDoc.date,
+                        gamesCount: firstDoc.games.length
+                    }
+                });
+            } else {
+                console.log('⚠️ games 배열이 없습니다. 문서 구조:', firstDoc);
+                res.json({ 
+                    success: true, 
+                    games: [],
+                    debug: {
+                        totalDocuments: allData.length,
+                        documentStructure: Object.keys(firstDoc),
+                        sampleDocument: firstDoc
+                    }
+                });
+            }
         } else {
             console.log('⚠️ team-games 컬렉션에 데이터가 없습니다.');
             res.json({ 
                 success: true, 
-                games: [] 
+                games: [],
+                debug: {
+                    totalDocuments: 0
+                }
             });
         }
     } catch (error) {
