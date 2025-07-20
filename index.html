@@ -42,7 +42,7 @@
             <!-- 배팅 폼 -->
             <div class="space-y-4">
                 <div class="flex items-center space-x-3">
-                    <img src="/img/menu1.png" width="50" height="50" alt="경기 이미지" class="rounded-full">
+                    <img src="/img/menu1.png" width="50" height="50" alt="경기 이미지" class="rounded-full shadow-lg border-2 border-gray-300 transform hover:scale-105 transition-all duration-200" style="filter: drop-shadow(0 4px 8px rgba(0,0,0,0.3));">
                     <div class="flex-1">
                         <p class="text-sm">경기선택</p>
                         <div id="gameSelectionContainer" class="flex overflow-x-auto space-x-2 bg-gray-800 rounded p-2 border border-gray-600">
@@ -84,27 +84,27 @@
                 </div>
 
                 <div class="flex items-center space-x-3">
-                    <img src="/img/menu3.png" width="50" height="50" alt="배팅 이미지" class="rounded-full">
+                    <img src="/img/menu3.png" width="50" height="50" alt="배팅 이미지" class="rounded-full shadow-lg border-2 border-gray-300 transform hover:scale-105 transition-all duration-200" style="filter: drop-shadow(0 4px 8px rgba(0,0,0,0.3));">
                     <div class="flex-1">
                         <p class="text-sm">배팅선택</p>
                         <div id="bettingSection" class="space-y-2 mt-2">
-                            <div class="grid grid-cols-3 gap-1">
-                                <button class="bet-choice-btn bg-pink-200 hover:bg-pink-300 text-pink-800 text-xs py-2 px-2 rounded-lg shadow-lg border-2 border-pink-300 cursor-pointer transform hover:scale-105 transition-all duration-200" data-choice="1base">
+                            <div class="grid grid-cols-3 gap-2">
+                                <button class="bet-choice-btn bg-pink-200 hover:bg-pink-300 text-pink-800 text-xs py-3 px-3 rounded-none shadow-lg border-2 border-pink-300 cursor-pointer transform hover:scale-105 transition-all duration-200" style="box-shadow: 0 4px 8px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.3);" data-choice="1base">
                                     1루
                                 </button>
-                                <button class="bet-choice-btn bg-orange-200 hover:bg-orange-300 text-orange-800 text-xs py-2 px-2 rounded-lg shadow-lg border-2 border-orange-300 cursor-pointer transform hover:scale-105 transition-all duration-200" data-choice="2base">
+                                <button class="bet-choice-btn bg-orange-200 hover:bg-orange-300 text-orange-800 text-xs py-3 px-3 rounded-none shadow-lg border-2 border-orange-300 cursor-pointer transform hover:scale-105 transition-all duration-200" style="box-shadow: 0 4px 8px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.3);" data-choice="2base">
                                     2루
                                 </button>
-                                <button class="bet-choice-btn bg-yellow-200 hover:bg-yellow-300 text-yellow-800 text-xs py-2 px-2 rounded-lg shadow-lg border-2 border-yellow-300 cursor-pointer transform hover:scale-105 transition-all duration-200" data-choice="3base">
+                                <button class="bet-choice-btn bg-yellow-200 hover:bg-yellow-300 text-yellow-800 text-xs py-3 px-3 rounded-none shadow-lg border-2 border-yellow-300 cursor-pointer transform hover:scale-105 transition-all duration-200" style="box-shadow: 0 4px 8px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.3);" data-choice="3base">
                                     3루
                                 </button>
-                                <button class="bet-choice-btn bg-green-200 hover:bg-green-300 text-green-800 text-xs py-2 px-2 rounded-lg shadow-lg border-2 border-green-300 cursor-pointer transform hover:scale-105 transition-all duration-200" data-choice="homerun">
+                                <button class="bet-choice-btn bg-green-200 hover:bg-green-300 text-green-800 text-xs py-3 px-3 rounded-none shadow-lg border-2 border-green-300 cursor-pointer transform hover:scale-105 transition-all duration-200" style="box-shadow: 0 4px 8px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.3);" data-choice="homerun">
                                     홈런
                                 </button>
-                                <button class="bet-choice-btn bg-blue-200 hover:bg-blue-300 text-blue-800 text-xs py-2 px-2 rounded-lg shadow-lg border-2 border-blue-300 cursor-pointer transform hover:scale-105 transition-all duration-200" data-choice="strikeout">
+                                <button class="bet-choice-btn bg-blue-200 hover:bg-blue-300 text-blue-800 text-xs py-3 px-3 rounded-none shadow-lg border-2 border-blue-300 cursor-pointer transform hover:scale-105 transition-all duration-200" style="box-shadow: 0 4px 8px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.3);" data-choice="strikeout">
                                     삼진
                                 </button>
-                                <button class="bet-choice-btn bg-purple-200 hover:bg-purple-300 text-purple-800 text-xs py-2 px-2 rounded-lg shadow-lg border-2 border-purple-300 cursor-pointer transform hover:scale-105 transition-all duration-200" data-choice="out">
+                                <button class="bet-choice-btn bg-purple-200 hover:bg-purple-300 text-purple-800 text-xs py-3 px-3 rounded-none shadow-lg border-2 border-purple-300 cursor-pointer transform hover:scale-105 transition-all duration-200" style="box-shadow: 0 4px 8px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.3);" data-choice="out">
                                     아웃
                                 </button>
                             </div>
@@ -656,9 +656,9 @@
                         else if (choice === 'out') b.className = 'bet-choice-btn bg-purple-200 hover:bg-purple-300 text-purple-800 text-xs py-2 px-2 rounded-lg shadow-lg border-2 border-purple-300 cursor-pointer transform hover:scale-105 transition-all duration-200';
                     });
                     
-                    // 현재 선택 표시 (진하게)
+                    // 현재 선택 표시 (더 진하게)
                     this.classList.remove('bg-pink-200', 'bg-orange-200', 'bg-yellow-200', 'bg-green-200', 'bg-blue-200', 'bg-purple-200');
-                    this.classList.add('bg-blue-600', 'border-blue-400', 'shadow-xl', 'scale-110');
+                    this.classList.add('bg-blue-800', 'border-blue-600', 'shadow-2xl', 'scale-110', 'ring-4', 'ring-blue-400');
                     
                     selectedChoice = this.dataset.choice;
                     console.log('🎯 선택된 배팅:', selectedChoice);
