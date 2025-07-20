@@ -3339,14 +3339,23 @@ app.get('/api/team-games', async (req, res) => {
         // MongoDB에서 team-games 컬렉션 조회 (개별 문서 구조)
         const teamGamesCollection = mongoose.connection.db.collection('team-games');
         
-        // 모든 경기 데이터 가져오기
-        const allGames = await teamGamesCollection.find({}).sort({ gameNumber: 1 }).toArray();
+        // 오늘 날짜 계산 (한국 시간)
+        const today = new Date();
+        const koreaTime = new Date(today.getTime() + (9 * 60 * 60 * 1000));
+        const todayString = koreaTime.getFullYear().toString() + 
+                           '-' + String(koreaTime.getMonth() + 1).padStart(2, '0') + 
+                           '-' + String(koreaTime.getDate()).padStart(2, '0');
         
-        console.log(`📊 team-games 조회 결과: ${allGames.length}개 경기`);
+        console.log(`📅 오늘 날짜: ${todayString}`);
         
-        if (allGames && allGames.length > 0) {
+        // 오늘 날짜의 경기만 가져오기
+        const todayGames = await teamGamesCollection.find({ date: todayString }).sort({ gameNumber: 1 }).toArray();
+        
+        console.log(`📊 오늘 경기 조회 결과: ${todayGames.length}개 경기`);
+        
+        if (todayGames && todayGames.length > 0) {
             // 개별 문서를 클라이언트 호환 형식으로 변환
-            const formattedGames = allGames.map(game => ({
+            const formattedGames = todayGames.map(game => ({
                 _id: game._id,
                 number: game.gameNumber,
                 homeTeam: game.matchup ? game.matchup.split(' vs ')[0] : '팀1',
