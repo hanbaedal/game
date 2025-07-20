@@ -601,26 +601,26 @@
         function selectGameType(button) {
             // 이전 선택 해제
             document.querySelectorAll('.game-type-btn').forEach(b => {
-                b.classList.remove('bg-yellow-600', 'border-yellow-400');
+                b.classList.remove('bg-yellow-800', 'border-yellow-600', 'ring-2', 'ring-yellow-400');
                 b.classList.add('bg-yellow-500');
             });
             
-            // 현재 선택 표시
+            // 현재 선택 표시 (확실하게 진하게)
             button.classList.remove('bg-yellow-500');
-            button.classList.add('bg-yellow-600', 'border-yellow-400');
+            button.classList.add('bg-yellow-800', 'border-yellow-600', 'ring-2', 'ring-yellow-400');
         }
 
         // 배팅포인트 버튼 선택 함수
         function selectBetAmount(button) {
             // 이전 선택 해제
             document.querySelectorAll('.bet-amount-btn').forEach(b => {
-                b.classList.remove('bg-yellow-600', 'border-yellow-400');
+                b.classList.remove('bg-yellow-800', 'border-yellow-600', 'ring-2', 'ring-yellow-400');
                 b.classList.add('bg-yellow-500');
             });
             
-            // 현재 선택 표시
+            // 현재 선택 표시 (확실하게 진하게)
             button.classList.remove('bg-yellow-500');
-            button.classList.add('bg-yellow-600', 'border-yellow-400');
+            button.classList.add('bg-yellow-800', 'border-yellow-600', 'ring-2', 'ring-yellow-400');
             
             // 포인트 선택 처리
             selectedAmount = parseInt(button.dataset.amount);
@@ -689,9 +689,9 @@
                         else if (choice === 'out') b.className = 'bet-choice-btn bg-purple-200 hover:bg-purple-300 text-purple-800 text-xs py-2 px-2 rounded-lg shadow-lg border-2 border-purple-300 cursor-pointer transform hover:scale-105 transition-all duration-200';
                     });
                     
-                    // 현재 선택 표시 (더 진하게, 크기 변화 없이)
+                    // 현재 선택 표시 (확실하게 진하게)
                     this.classList.remove('bg-pink-200', 'bg-orange-200', 'bg-yellow-200', 'bg-green-200', 'bg-blue-200', 'bg-purple-200');
-                    this.classList.add('bg-blue-800', 'border-blue-600');
+                    this.classList.add('bg-blue-900', 'border-blue-700', 'ring-2', 'ring-blue-500');
                     
                     selectedChoice = this.dataset.choice;
                     console.log('🎯 선택된 배팅:', selectedChoice);
