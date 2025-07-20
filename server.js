@@ -61,7 +61,6 @@ function getRealtimeCollection() {
 // 미들웨어 설정
 app.use(cors());
 app.use(express.json());
-app.use(express.static(path.join(__dirname)));
 
 // MongoDB 연결 설정
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb+srv://ppadun_user:ppadun8267@member-management.bppicvz.mongodb.net/?retryWrites=true&w=majority&appName=member-management';
@@ -3255,22 +3254,37 @@ app.get('/api/team-games', async (req, res) => {
         const totalCount = await dailyGamesCollection.countDocuments();
         console.log('📊 daily-games 컬렉션 총 문서 수:', totalCount);
         
-        // 오늘 날짜의 경기 데이터 조회
+        // 최신 날짜의 경기 데이터 조회 (오늘 데이터가 없으면 최신 데이터 사용)
         const today = getKoreaDateString().replace(/-/g, ''); // YYYYMMDD 형식으로 변환
         console.log('📅 오늘 날짜 (YYYYMMDD):', today);
         
-        const todayGames = await dailyGamesCollection.findOne({ date: today });
+        let todayGames = await dailyGamesCollection.findOne({ date: today });
         console.log('📋 오늘 경기 데이터:', todayGames);
         
-        if (todayGames && todayGames.games && todayGames.games.length > 0) {
+        // 오늘 데이터가 없으면 최신 데이터 사용
+        if (!todayGames || !todayGames.games || todayGames.games.length === 0) {
+            console.log('⚠️ 오늘 날짜의 경기 데이터가 없습니다. 최신 데이터를 조회합니다.');
+            
+            // 최신 날짜의 데이터 조회
+            const latestGames = await dailyGamesCollection.findOne({}, { sort: { date: -1 } });
+            console.log('📋 최신 경기 데이터:', latestGames);
+            
+            if (latestGames && latestGames.games && latestGames.games.length > 0) {
+                console.log(`📋 조회된 경기 수: ${latestGames.games.length}개`);
+                console.log('📋 첫 번째 경기 샘플:', JSON.stringify(latestGames.games[0], null, 2));
+                console.log('📋 모든 경기 데이터:', JSON.stringify(latestGames.games, null, 2));
+                
+                res.json({ success: true, games: latestGames.games });
+            } else {
+                console.log('❌ 경기 데이터가 없습니다.');
+                res.json({ success: true, games: [] });
+            }
+        } else {
             console.log(`📋 조회된 경기 수: ${todayGames.games.length}개`);
             console.log('📋 첫 번째 경기 샘플:', JSON.stringify(todayGames.games[0], null, 2));
             console.log('📋 모든 경기 데이터:', JSON.stringify(todayGames.games, null, 2));
             
             res.json({ success: true, games: todayGames.games });
-        } else {
-            console.log('❌ 오늘 날짜의 경기 데이터가 없습니다.');
-            res.json({ success: true, games: [] });
         }
     } catch (error) {
         console.error('❌ /api/team-games 오류:', error);
@@ -3278,16 +3292,23 @@ app.get('/api/team-games', async (req, res) => {
     }
 });
 
-
-
-
-
-
-
-
-
-
-
-
-
-
+// 404 처리
+app.get('*', (req, res) => {
+    if (req.path.startsWith('/api/')) {
+        res.status(404).json({ 
+            error: 'API 엔드포인트를 찾을 수 없습니다.',
+            path: req.path,
+            availableEndpoints: [
+                '/api/team-games',
+                '/api/login',
+                '/api/betting',
+                '/health'
+            ]
+        });
+    } else {
+        res.status(404).json({ 
+            error: '요청한 리소스를 찾을 수 없습니다.',
+            path: req.path
+        });
+    }
+});
