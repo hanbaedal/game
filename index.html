@@ -361,7 +361,6 @@
             await loadSimpleGames(); // 새로운 간단한 경기 로드
             setupButtonEventListeners();
             setupBrowserCloseLogout();
-            startBettingStatusCheck();
         });
 
         // 실제 DB의 team-games 컬렉션에서 데이터 로드
@@ -1492,9 +1491,6 @@
             
             // 브라우저 종료 시 로그아웃 처리
             setupBrowserCloseLogout();
-            
-            // 배팅 상태 확인 시작
-            startBettingStatusCheck();
         });
         
         // 브라우저 종료 시 로그아웃 처리 설정
