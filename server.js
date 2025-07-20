@@ -4,7 +4,7 @@ const mongoose = require('mongoose');
 const path = require('path');
 
 const app = express();
-const PORT = process.env.PORT || 3003;
+const PORT = process.env.PORT || 10000;
 
 // 한국 시간 계산 유틸 함수 (현재: 2025년 7월 19일)
 function getKoreaDateString() {
@@ -141,27 +141,22 @@ const startServer = async () => {
         // MongoDB 연결 시도
         const isConnected = await connectToMongoDB();
         
-        // 서버 시작 (포트 충돌 방지)
+        // 서버 시작 (Render 배포 환경용)
         serverInstance = app.listen(PORT, () => {
             console.log('✅ 서버가 성공적으로 시작되었습니다!');
             console.log(`📍 포트: ${PORT}`);
             console.log(`🗄️ MongoDB 상태: ${isConnected ? '연결됨' : '연결 안됨'}`);
             
-            // MongoDB 연결 성공 (자동 경기 생성 제거)
+            // MongoDB 연결 성공
             if (isConnected) {
-                console.log('✅ MongoDB 연결됨 - 관리자 페이지에서 경기를 추가해주세요.');
+                console.log('✅ MongoDB 연결됨 - daily-games 컬렉션에서 경기 데이터를 로드합니다.');
             }
         });
         
         // 서버 오류 처리
         serverInstance.on('error', (error) => {
-            if (error.code === 'EADDRINUSE') {
-                console.error('❌ 포트가 이미 사용 중입니다:', PORT);
-                process.exit(1);
-            } else {
-                console.error('❌ 서버 오류:', error);
-                process.exit(1);
-            }
+            console.error('❌ 서버 오류:', error);
+            process.exit(1);
         });
         
     } catch (error) {

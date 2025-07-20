@@ -374,8 +374,8 @@
                 console.log('📡 현재 URL:', window.location.href);
                 console.log('📡 서버 포트:', window.location.port);
                 
-                // 실제 DB에서 team-games 데이터 가져오기
-                const apiUrl = 'http://localhost:3003/api/team-games';
+                // 실제 DB에서 team-games 데이터 가져오기 (Render 배포 환경용)
+                const apiUrl = '/api/team-games';
                 console.log('🔍 API URL:', apiUrl);
                 
                 const response = await fetch(apiUrl, {
