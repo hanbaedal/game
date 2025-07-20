@@ -3337,20 +3337,37 @@ app.get('/api/team-games', async (req, res) => {
             });
         }
         
-        // MongoDB에서 team-games 컬렉션 조회
+        // MongoDB에서 team-games 컬렉션 조회 (개별 문서 구조)
         const teamGamesCollection = mongoose.connection.db.collection('team-games');
         
-        // 최신 데이터 가져오기
-        const latestData = await teamGamesCollection.findOne({}, { sort: { date: -1 } });
+        // 모든 경기 데이터 가져오기
+        const allGames = await teamGamesCollection.find({}).sort({ gameNumber: 1 }).toArray();
         
-        console.log(`📊 team-games 조회 결과:`, latestData ? '데이터 있음' : '데이터 없음');
+        console.log(`📊 team-games 조회 결과: ${allGames.length}개 경기`);
         
-        if (latestData && latestData.games && latestData.games.length > 0) {
-            console.log(`✅ ${latestData.games.length}개 경기 발견`);
+        if (allGames && allGames.length > 0) {
+            // 개별 문서를 클라이언트 호환 형식으로 변환
+            const formattedGames = allGames.map(game => ({
+                _id: game._id,
+                number: game.gameNumber,
+                homeTeam: game.matchup ? game.matchup.split(' vs ')[0] : '팀1',
+                awayTeam: game.matchup ? game.matchup.split(' vs ')[1] : '팀2',
+                startTime: game.startTime || '시간 미정',
+                endTime: game.endTime || '시간 미정',
+                noGame: game.gameStatus || '정상게임',
+                progressStatus: game.progressStatus || '경기전',
+                gameType: game.gameType || '타자',
+                bettingStart: game.bettingStart || '중지',
+                bettingStop: game.bettingStop || '중지',
+                predictionResult: game.predictionResult || '',
+                date: game.date || '2025-07-20'
+            }));
+            
+            console.log(`✅ ${formattedGames.length}개 경기 변환 완료`);
             
             res.json({ 
                 success: true, 
-                games: latestData.games
+                games: formattedGames
             });
         } else {
             console.log('⚠️ 데이터가 없습니다.');
