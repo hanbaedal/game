@@ -1905,17 +1905,16 @@ app.get('/api/daily-games', async (req, res) => {
             const teamGamesCollection = mongoose.connection.db.collection('team-games');
             
             // 🔍 디버깅: 전체 데이터 확인
-            const allGames = await teamGamesCollection.find({}).limit(5).toArray();
-            console.log('🔍 team-games 컬렉션의 샘플 데이터:', allGames.map(game => ({
-                date: game.date,
-                gameNumber: game.gameNumber,
-                matchup: game.matchup,
-                bettingStart: game.bettingStart,
-                bettingStop: game.bettingStop
+            const allData = await teamGamesCollection.find({}).limit(5).toArray();
+            console.log('🔍 team-games 컬렉션의 샘플 데이터:', allData.map(data => ({
+                date: data.date,
+                gamesCount: data.games ? data.games.length : 0,
+                firstGame: data.games && data.games[0] ? data.games[0].number : 'N/A'
             })));
             
             // 오늘 날짜로 조회
-            teamGames = await teamGamesCollection.find({ date: todayString }).sort({ gameNumber: 1 }).toArray();
+            const todayData = await teamGamesCollection.findOne({ date: todayString });
+            teamGames = todayData ? todayData.games || [] : [];
             
             console.log(`📅 오늘 날짜(${todayString})의 경기: ${teamGames.length}개`);
             
@@ -1923,11 +1922,10 @@ app.get('/api/daily-games', async (req, res) => {
                 console.log(`📅 오늘 날짜(${todayString})에 경기가 없습니다.`);
                 
                 // 🔍 비슷한 날짜의 데이터가 있는지 확인
-                const recentGames = await teamGamesCollection.find({}).sort({ date: -1 }).limit(3).toArray();
-                console.log('🔍 최근 3개 경기 날짜:', recentGames.map(game => ({
-                    date: game.date,
-                    gameNumber: game.gameNumber,
-                    matchup: game.matchup
+                const recentData = await teamGamesCollection.find({}).sort({ date: -1 }).limit(3).toArray();
+                console.log('🔍 최근 3개 데이터:', recentData.map(data => ({
+                    date: data.date,
+                    gamesCount: data.games ? data.games.length : 0
                 })));
             }
         } catch (error) {
@@ -1936,22 +1934,22 @@ app.get('/api/daily-games', async (req, res) => {
         
         if (teamGames && teamGames.length > 0) {
             console.log(`✅ 오늘의 경기 조회 완료: ${teamGames.length}개 경기`);
-            console.log('📋 경기 목록:', teamGames.map(g => `${g.gameNumber}. ${g.matchup} (${g.gameStatus})`));
+            console.log('📋 경기 목록:', teamGames.map(g => `${g.number}. ${g.homeTeam} vs ${g.awayTeam} (${g.noGame})`));
             
             // 클라이언트 호환성을 위해 데이터 변환
             const convertedGames = teamGames.map(game => ({
-                number: game.gameNumber,
-                homeTeam: game.matchup.split(' vs ')[0],
-                awayTeam: game.matchup.split(' vs ')[1],
+                number: game.number,
+                homeTeam: game.homeTeam,
+                awayTeam: game.awayTeam,
                 startTime: game.startTime,
                 endTime: game.endTime,
-                noGame: game.gameStatus,
-                progressStatus: game.progressStatus,
-                gameType: game.gameType,
-                bettingStart: game.bettingStart,
-                bettingStop: game.bettingStop,
-                predictionResult: game.predictionResult,
-                isActive: game.progressStatus === '경기중' || game.progressStatus === '경기전'
+                noGame: game.noGame,
+                progressStatus: game.progressStatus || '경기전',
+                gameType: game.gameType || '타자',
+                bettingStart: game.bettingStart || '중지',
+                bettingStop: game.bettingStop || '중지',
+                predictionResult: game.predictionResult || '',
+                isActive: (game.progressStatus === '경기중' || game.progressStatus === '경기전') && game.bettingStart === '시작'
             }));
             
             // 디버깅용: 모든 경기 반환 (테스트용)
@@ -1963,9 +1961,10 @@ app.get('/api/daily-games', async (req, res) => {
                     debug: {
                         totalGames: teamGames.length,
                         originalGames: teamGames.map(g => ({
-                            gameNumber: g.gameNumber,
-                            matchup: g.matchup,
-                            gameStatus: g.gameStatus,
+                            number: g.number,
+                            homeTeam: g.homeTeam,
+                            awayTeam: g.awayTeam,
+                            noGame: g.noGame,
                             progressStatus: g.progressStatus
                         }))
                     }
@@ -1983,7 +1982,8 @@ app.get('/api/daily-games', async (req, res) => {
             if (req.query.debug === 'true') {
                 try {
                     const teamGamesCollection = mongoose.connection.db.collection('team-games');
-                    const todayGames = await teamGamesCollection.find({ date: todayString }).toArray();
+                    const todayData = await teamGamesCollection.findOne({ date: todayString });
+                    const todayGames = todayData ? todayData.games || [] : [];
                     
                     console.log('🔧 디버그 모드: 오늘 날짜 경기만 반환');
                     return res.json({ 
@@ -1993,10 +1993,11 @@ app.get('/api/daily-games', async (req, res) => {
                             todayGames: todayGames.length,
                             todayGamesList: todayGames.map(game => ({
                                 _id: game._id,
-                                gameNumber: game.gameNumber,
-                                matchup: game.matchup,
-                                date: game.date,
-                                gameStatus: game.gameStatus,
+                                number: game.number,
+                                homeTeam: game.homeTeam,
+                                awayTeam: game.awayTeam,
+                                date: todayString,
+                                noGame: game.noGame,
                                 progressStatus: game.progressStatus
                             }))
                         }
@@ -3241,19 +3242,46 @@ app.get('/api/test-simple', (req, res) => {
 // 간단한 경기 데이터 조회 API
 app.get('/api/team-games', async (req, res) => {
     try {
+        console.log('🔍 team-games API 호출됨');
+        
+        // MongoDB 연결 상태 확인
+        if (mongoose.connection.readyState !== 1) {
+            console.log('❌ MongoDB 연결 안됨');
+            return res.status(503).json({ 
+                success: false, 
+                message: '데이터베이스 연결이 준비되지 않았습니다.' 
+            });
+        }
+        
         // MongoDB에서 team-games 컬렉션 조회
         const teamGamesCollection = mongoose.connection.db.collection('team-games');
         
-        // 최신 데이터 가져오기
+        // 최신 데이터 가져오기 (daily-games와 동일한 구조)
         const latestData = await teamGamesCollection.findOne({}, { sort: { date: -1 } });
         
-        if (latestData && latestData.games) {
-            res.json({ success: true, games: latestData.games });
+        console.log(`📊 team-games 컬렉션 조회 결과:`, latestData ? '데이터 있음' : '데이터 없음');
+        
+        if (latestData && latestData.games && latestData.games.length > 0) {
+            console.log(`✅ team-games에서 ${latestData.games.length}개 경기 조회됨`);
+            console.log('📋 경기 목록:', latestData.games.map(g => `${g.number}. ${g.homeTeam} vs ${g.awayTeam}`));
+            
+            res.json({ 
+                success: true, 
+                games: latestData.games 
+            });
         } else {
-            res.json({ success: true, games: [] });
+            console.log('⚠️ team-games 컬렉션에 데이터가 없습니다.');
+            res.json({ 
+                success: true, 
+                games: [] 
+            });
         }
     } catch (error) {
-        res.status(500).json({ success: false, message: error.message });
+        console.error('❌ team-games API 오류:', error);
+        res.status(500).json({ 
+            success: false, 
+            message: error.message 
+        });
     }
 });
 
