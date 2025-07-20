@@ -457,7 +457,7 @@
                     <h4 class="text-white font-bold mb-3">🏟️ 경기 선택</h4>
                     <div class="grid gap-2">
                         ${games.map(game => {
-                            const isSelectable = game.progressStatus === '경기중' && game.bettingStart === '시작';
+                            const isSelectable = game.progressStatus === '경기중' || game.progressStatus === '경기전';
                             const buttonClass = isSelectable 
                                 ? 'bg-blue-600 hover:bg-blue-700 text-white' 
                                 : 'bg-gray-500 text-gray-300 cursor-not-allowed';
