@@ -1983,29 +1983,25 @@
         }
 
         // 배팅 성공 후 대기 모달 띄우기
-        async function processBetting() {
+        async function processBetting(isRetry) {
             try {
                 // 필수 필드들이 올바르게 설정되었는지 확인
                 if (!currentUser || !currentUser.userId) {
                     alert('사용자 정보가 없습니다. 다시 로그인해주세요.');
                     return;
                 }
-                
                 if (!window.selectedChoice) {
                     alert('배팅 선택이 되지 않았습니다.');
                     return;
                 }
-                
                 if (!selectedAmount) {
                     alert('배팅 금액이 설정되지 않았습니다.');
                     return;
                 }
-                
                 if (!selectedGame || !selectedGame.date || !selectedGame.gameNumber) {
                     alert('게임 정보가 올바르지 않습니다. 게임을 다시 선택해주세요.');
                     return;
                 }
-                
                 const requestData = {
                     userId: currentUser.userId,
                     gameType: '타자',
@@ -2014,30 +2010,51 @@
                     date: selectedGame.date,
                     gameNumber: selectedGame.gameNumber
                 };
-                
                 console.log('배팅 요청 데이터:', requestData);
-                
                 const response = await fetch('/api/betting/submit', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(requestData)
                 });
-                
                 const data = await response.json();
                 console.log('배팅 응답:', data);
-                
                 if (data.success) {
                     currentUser.points -= selectedAmount;
                     document.getElementById('userPoints').textContent = `${currentUser.points}포인트`;
                     localStorage.setItem('currentUser', JSON.stringify(currentUser));
                     showWaitingForResultModal();
                     waitForResult();
+                } else if (!isRetry && data.message && data.message.includes('배팅이 활성화되지 않았습니다')) {
+                    // 배팅 세션이 없을 때 자동 생성 후 1회 재시도
+                    await createBettingSession(selectedGame.date, selectedGame.gameNumber);
+                    setTimeout(() => processBetting(true), 500); // 약간의 딜레이 후 재시도
                 } else {
                     alert('배팅 실패: ' + data.message);
                 }
             } catch (error) {
                 console.error('배팅 처리 오류:', error);
                 alert('배팅 처리 중 오류가 발생했습니다.');
+            }
+        }
+
+        // 배팅 세션 자동 생성 함수
+        async function createBettingSession(date, gameNumber) {
+            try {
+                const response = await fetch('/api/betting/create-session', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        date: date,
+                        gameNumber: gameNumber,
+                        inning: 1
+                    })
+                });
+                const data = await response.json();
+                console.log('배팅 세션 생성 응답:', data);
+                return data.success;
+            } catch (error) {
+                console.error('배팅 세션 생성 오류:', error);
+                return false;
             }
         }
 
