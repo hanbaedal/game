@@ -363,93 +363,40 @@
             setupBrowserCloseLogout();
         });
 
-        // 실제 DB의 team-games 컬렉션에서 데이터 로드
+        // 간단한 경기 목록 로드
         async function loadSimpleGames() {
             try {
-                console.log('🔍 Render 배포 환경에서 team-games 컬렉션 데이터 로드 시작');
-                
-                // Render 배포 환경에서 API 호출
-                console.log('🔍 Render 배포 환경에서 API 호출');
-                console.log('📡 현재 URL:', window.location.href);
-                
-                // 먼저 기본 테스트 API 호출
-                try {
-                    const testResponse = await fetch('/api/test-simple');
-                    const testData = await testResponse.json();
-                    console.log('✅ 기본 테스트 API 성공:', testData);
-                } catch (testError) {
-                    console.error('❌ 기본 테스트 API 실패:', testError);
+                const response = await fetch('/api/team-games');
+                if (response.ok) {
+                    const data = await response.json();
+                    const games = data.games || [];
+                    
+                    // 게임 데이터 변환
+                    const simpleGames = games.map(game => ({
+                        id: game._id || game.id,
+                        gameNumber: game.gameNumber || game.number,
+                        homeTeam: game.homeTeam || '',
+                        awayTeam: game.awayTeam || '',
+                        matchup: game.matchup || `${game.homeTeam || ''} vs ${game.awayTeam || ''}`,
+                        date: game.date || '',
+                        startTime: game.startTime || '',
+                        progressStatus: game.progressStatus || '경기전',
+                        bettingStart: game.bettingStart || '',
+                        bettingStop: game.bettingStop || '',
+                        predictionResult: game.predictionResult || ''
+                    }));
+                    
+                    window.allGamesData = simpleGames;
+                    
+                    // 게임 선택 모달 표시 (자동 선택 제거)
+                    showSimpleGameSelection(simpleGames);
+                    
+                    console.log('✅ 간단한 경기 목록 로드 완료:', simpleGames);
+                } else {
+                    console.error('❌ 경기 목록 로드 실패:', response.status);
                 }
-                
-                // Render 배포 환경에서 team-games 데이터 가져오기
-                const apiUrl = '/api/team-games';
-                console.log('🔍 API URL:', apiUrl);
-                
-                const response = await fetch(apiUrl, {
-                    method: 'GET',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Cache-Control': 'no-cache'
-                    }
-                });
-                
-                console.log('📡 API 응답 상태:', response.status, response.statusText);
-                
-                if (!response.ok) {
-                    throw new Error(`API 호출 실패: ${response.status} ${response.statusText}`);
-                }
-                
-                const data = await response.json();
-                console.log('📊 서버에서 받은 원본 데이터:', data);
-                
-                if (!data.success) {
-                    throw new Error(`API 응답 실패: ${data.message || '알 수 없는 오류'}`);
-                }
-                
-                const games = data.games || [];
-                console.log('📊 Render 배포 환경 team-games 컬렉션 데이터:', games);
-                
-                // 전역 변수에 원본 DB 데이터 저장
-                window.allGamesData = games;
-                
-                if (!games || games.length === 0) {
-                    console.log('⚠️ team-games 컬렉션에 데이터가 없습니다.');
-                    document.getElementById('gameSelectionContainer').innerHTML = `
-                        <p class="text-gray-400">team-games 컬렉션에 데이터가 없습니다.</p>
-                    `;
-                    return;
-                }
-                
-                // Render 배포 환경 team-games 데이터 변환 (시간 계산 삭제)
-                const simpleGames = games.map((game, index) => ({
-                    id: game._id || game.id || index + 1,
-                    gameNumber: game.number || index + 1,
-                    matchup: `${game.homeTeam} vs ${game.awayTeam}`,
-                    startTime: game.startTime || '시간 미정',
-                    progressStatus: game.progressStatus || '경기전', // DB에서 읽어온 값 그대로 사용
-                    bettingStart: game.bettingStart || '시작',
-                    bettingStop: game.bettingStop || '중지',
-                    date: game.date,
-                    homeTeam: game.homeTeam,
-                    awayTeam: game.awayTeam,
-                    noGame: game.noGame,
-                    originalData: game // 원본 데이터 보존
-                }));
-                
-                console.log('📊 변환된 경기 데이터:', simpleGames);
-                showSimpleGameSelection(simpleGames);
-                
-                // 경기 데이터가 1개 이상이면 첫 번째 경기 자동 선택
-                // if (simpleGames.length > 0) {
-                //     selectSimpleGame(simpleGames[0].id, simpleGames[0].gameNumber, simpleGames[0].matchup);
-                // }
-                // 타자/100포인트 자동 선택 보장
-                if (typeof enableGameTypeSelection === 'function') enableGameTypeSelection();
-                if (typeof enableBettingPoints === 'function') enableBettingPoints();
             } catch (error) {
-                console.error('❌ 경기 로드 오류:', error);
-                document.getElementById('gameSelectionContainer').innerHTML = 
-                    `<p class="text-red-400">경기 로드 실패: ${error.message}</p>`;
+                console.error('❌ 경기 목록 로드 오류:', error);
             }
         }
 
@@ -2011,7 +1958,10 @@
             document.getElementById('donateYesBtn').onclick = showDonationModal;
             document.getElementById('donateNoBtn').onclick = function() {
                 modal.remove();
-                resetGameSelection();
+                // 기부 안함 - 배팅 선택 화면으로 돌아가기 (게임 선택 유지)
+                showSelectedGameOnly();
+                enableBettingSelection();
+                enableBettingPoints();
             };
         }
 
@@ -2054,7 +2004,10 @@
             localStorage.setItem('currentUser', JSON.stringify(currentUser));
             
             closeDonationModal();
-            resetGameSelection();
+            // 기부 완료 후 배팅 선택 화면으로 돌아가기 (게임 선택 유지)
+            showSelectedGameOnly();
+            enableBettingSelection();
+            enableBettingPoints();
         }
         function closeDonationModal() {
             const modal = document.getElementById('donationModal');
@@ -2187,10 +2140,18 @@
                                     console.log('💰 획득 포인트:', winAmount);
                                     showSuccessAndDonationModal(winAmount);
                                 } else {
-                                    // 실패시 바로 다음 게임으로 진행
+                                    // 실패시 배팅 선택 화면으로 돌아가기 (이전 선택값 유지)
                                     console.log('❌ 예측 실패');
-                                    alert('예측 실패! 다음 게임으로 진행합니다.');
-                                    resetGameSelection();
+                                    alert('예측 실패! 다시 배팅해보세요.');
+                                    
+                                    // 대기 모달 닫기
+                                    const waitModal = document.getElementById('waitingForResultModal');
+                                    if (waitModal) waitModal.remove();
+                                    
+                                    // 배팅 선택 화면으로 돌아가기 (게임 선택은 유지)
+                                    showSelectedGameOnly();
+                                    enableBettingSelection();
+                                    enableBettingPoints();
                                 }
                             }
                         } else {
