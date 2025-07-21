@@ -722,42 +722,30 @@
                 alert('로그인이 필요합니다.');
                 return;
             }
-            
             if (!selectedGame) {
                 alert('경기를 선택해주세요.');
                 return;
             }
-            
-            if (!selectedChoice) {
-                alert('배팅할 항목을 선택해주세요.');
-                return;
-            }
-            
+            // selectedChoice 체크 제거
             console.log('🎯 배팅 처리 시작:', {
                 selectedGame: selectedGame.gameNumber || selectedGame.number,
-                selectedChoice: selectedChoice,
+                selectedChoice: window.selectedChoice,
                 bettingStart: selectedGame.bettingStart,
                 bettingStop: selectedGame.bettingStop
             });
-            
             // 베팅 가능 상태 확인
             if (selectedGame.bettingStart !== '시작') {
                 alert('아직 배팅이 시작되지 않았습니다.');
                 return;
             }
-            
             if (selectedGame.bettingStop === '중지') {
                 showWaitingModal();
                 return;
             }
-            
-            // 포인트 부족 확인
             if (currentUser.points < selectedAmount) {
                 alert('포인트가 부족합니다.');
                 return;
             }
-            
-            // 배팅 확인 모달 표시
             showBettingConfirmModal();
         }
 
@@ -766,7 +754,6 @@
             const modal = document.createElement('div');
             modal.id = 'bettingConfirmModal';
             modal.className = 'fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50';
-            
             modal.innerHTML = `
                 <div class="bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4">
                     <h3 class="text-lg font-bold mb-4">🎯 배팅 확인</h3>
@@ -785,14 +772,13 @@
                         </div>
                         <div class="flex justify-between">
                             <span class="text-gray-300">예측 선택:</span>
-                            <span class="font-bold">${getBettingChoiceText(selectedChoice)}</span>
+                            <span class="font-bold">${getBettingChoiceText(window.selectedChoice)}</span>
                         </div>
                         <div class="flex justify-between border-t border-gray-600 pt-3">
                             <span class="text-gray-300">배팅 후 포인트:</span>
                             <span class="font-bold text-yellow-400">${currentUser.points - selectedAmount}포인트</span>
                         </div>
                     </div>
-                    
                     <div class="flex space-x-3">
                         <button id="confirmBetBtn" class="flex-1 bg-yellow-300 text-black font-bold py-3 rounded">
                             확인
@@ -803,19 +789,9 @@
                     </div>
                 </div>
             `;
-            
             document.body.appendChild(modal);
-            
-            // 확인 버튼 클릭
-            document.getElementById('confirmBetBtn').onclick = async function() {
-                document.body.removeChild(modal);
-                await processBetting();
-            };
-            
-            // 취소 버튼 클릭
-            document.getElementById('cancelBetBtn').onclick = function() {
-                document.body.removeChild(modal);
-            };
+            document.getElementById('confirmBetBtn').onclick = confirmBet;
+            document.getElementById('cancelBetBtn').onclick = () => modal.remove();
         }
 
         // 배팅 처리
