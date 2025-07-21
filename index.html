@@ -698,14 +698,19 @@
         // 배팅 선택 활성화
         function enableBettingSelection() {
             const betButtons = document.querySelectorAll('.bet-choice-btn');
-            // 포인트가 선택되지 않았으면 배팅 항목 버튼 비활성화
-            if (!window.selectedAmount) {
+            // bettingStart가 '시작'일 때만 활성화
+            if (selectedGame && selectedGame.bettingStart === '시작') {
+                betButtons.forEach(b => {
+                    b.disabled = false;
+                    b.classList.remove('opacity-50', 'cursor-not-allowed');
+                    b.classList.add('cursor-pointer');
+                });
+            } else {
                 betButtons.forEach(b => {
                     b.disabled = true;
                     b.classList.add('opacity-50', 'cursor-not-allowed');
                     b.classList.remove('cursor-pointer');
                 });
-                return;
             }
             // 항상 첫 번째 버튼을 기본 선택(선택값이 없을 때)
             if (betButtons.length > 0 && !window.selectedChoice) {
@@ -1862,6 +1867,7 @@
                             selectedGame.bettingStart = updatedGame.bettingStart;
                             console.log('폴링: bettingStart =', updatedGame.bettingStart);
                             enablePredictionButton(); // 버튼 상태 즉시 반영
+                            enableBettingSelection(); // bettingStart 바뀔 때마다 배팅선택 버튼 활성/비활성
                         }
                     }
                 } catch (e) {
