@@ -439,6 +439,13 @@
                 console.log('📊 변환된 경기 데이터:', simpleGames);
                 showSimpleGameSelection(simpleGames);
                 
+                // 경기 데이터가 1개 이상이면 첫 번째 경기 자동 선택
+                if (simpleGames.length > 0) {
+                    selectSimpleGame(simpleGames[0].id, simpleGames[0].gameNumber, simpleGames[0].matchup);
+                }
+                // 타자/100포인트 자동 선택 보장
+                if (typeof enableGameTypeSelection === 'function') enableGameTypeSelection();
+                if (typeof enableBettingPoints === 'function') enableBettingPoints();
             } catch (error) {
                 console.error('❌ 경기 로드 오류:', error);
                 document.getElementById('gameSelectionContainer').innerHTML = 
@@ -517,6 +524,8 @@
                 console.error('❌ 선택된 경기 데이터를 찾을 수 없습니다.');
                 alert('경기 선택 중 오류가 발생했습니다.');
             }
+            if (typeof enableGameTypeSelection === 'function') enableGameTypeSelection();
+            if (typeof enableBettingPoints === 'function') enableBettingPoints();
         }
 
         // 선택된 경기만 표시하는 함수
@@ -648,63 +657,95 @@
         // 배팅 포인트 선택 활성화 (1→3→2 순서)
         function enableBettingPoints() {
             console.log('💰 배팅 포인트 선택 활성화');
-            
             // 포인트 선택 UI 표시
             const pointsContainer = document.getElementById('bettingPointsContainer');
             if (pointsContainer) {
                 pointsContainer.style.display = 'block';
             }
-            
             // 포인트 선택 버튼들 활성화
             const pointButtons = document.querySelectorAll('.bet-amount-btn');
             pointButtons.forEach(btn => {
-                btn.disabled = false;
-                btn.classList.remove('opacity-50', 'cursor-not-allowed');
-                btn.classList.add('cursor-pointer');
-                
-                btn.onclick = function() {
-                    // 이전 선택 해제 (배팅선택 버튼은 건드리지 않음)
-                    document.querySelectorAll('.bet-amount-btn').forEach(b => {
-                        b.classList.remove('bg-yellow-600', 'border-yellow-400');
-                        b.classList.add('bg-yellow-500');
-                    });
-                    
-                    // 현재 선택 표시
-                    this.classList.remove('bg-yellow-500');
-                    this.classList.add('bg-yellow-600', 'border-yellow-400');
-                    
-                    selectedAmount = parseInt(this.dataset.amount);
-                    console.log('💰 선택된 포인트:', selectedAmount);
-                    
-                    // 예측하기 버튼 활성화
-                    enablePredictionButton();
-                };
+                // 100 포인트 버튼만 자동 선택 및 비활성화
+                if (btn.dataset.amount === '100') {
+                    btn.classList.add('bg-yellow-800', 'border-yellow-600', 'ring-2', 'ring-yellow-400');
+                    btn.disabled = true;
+                    btn.classList.add('opacity-50', 'cursor-not-allowed');
+                    btn.classList.remove('cursor-pointer');
+                    window.selectedAmount = 100;
+                } else {
+                    btn.disabled = true;
+                    btn.classList.add('opacity-50', 'cursor-not-allowed');
+                    btn.classList.remove('cursor-pointer');
+                }
+                btn.onclick = null;
             });
+            // 포인트 선택 전에는 배팅 항목 버튼 비활성화
+            const betButtons = document.querySelectorAll('.bet-choice-btn');
+            betButtons.forEach(b => {
+                b.disabled = true;
+                b.classList.add('opacity-50', 'cursor-not-allowed');
+                b.classList.remove('cursor-pointer');
+            });
+            // 안내 문구 표시
+            let guide = document.getElementById('bettingTypeGuide');
+            if (!guide) {
+                guide = document.createElement('div');
+                guide.id = 'bettingTypeGuide';
+                guide.className = 'text-xs text-yellow-300 mt-2';
+                guide.innerText = '먼저 배팅할 포인트를 선택하세요. 그 다음 예측할 결과(1루/2루/3루/홈런/삼진/아웃 등)를 선택하세요.';
+                const bettingSection = document.getElementById('bettingSection');
+                if (bettingSection) bettingSection.parentNode.insertBefore(guide, bettingSection);
+            }
+            guide.style.display = 'block';
+            // 포인트 버튼이 1개 이상이면 첫 번째 포인트 자동 선택
+            if (pointButtons.length > 0) {
+                pointButtons[0].click();
+            }
         }
 
         // 배팅 선택 활성화
         function enableBettingSelection() {
             const betButtons = document.querySelectorAll('.bet-choice-btn');
-            // 이벤트 위임 방식으로도 보강
+            // 포인트가 선택되지 않았으면 배팅 항목 버튼 비활성화
+            if (!window.selectedAmount) {
+                betButtons.forEach(b => {
+                    b.disabled = true;
+                    b.classList.add('opacity-50', 'cursor-not-allowed');
+                    b.classList.remove('cursor-pointer');
+                });
+                return;
+            }
+            // 항상 첫 번째 버튼을 기본 선택(선택값이 없을 때)
+            if (betButtons.length > 0 && !window.selectedChoice) {
+                betButtons[0].click();
+            }
+            // 이벤트 위임
             const bettingSection = document.getElementById('bettingSection');
             if (bettingSection) {
                 bettingSection.onclick = function(e) {
                     const btn = e.target.closest('.bet-choice-btn');
-                    if (!btn) return;
+                    if (!btn || btn.disabled) return;
                     betButtons.forEach(b => b.classList.remove('bg-blue-800', 'border-blue-600', 'text-black', 'font-bold'));
                     btn.classList.add('bg-blue-800', 'border-blue-600', 'text-black', 'font-bold');
                     window.selectedChoice = btn.dataset.choice;
                     console.log('🎯 선택된 배팅(위임):', window.selectedChoice);
+                    // 안내 문구 숨김
+                    const guide = document.getElementById('bettingTypeGuide');
+                    if (guide) guide.style.display = 'none';
                     enablePredictionButton();
                 };
             }
-            // 기존 개별 이벤트도 유지
+            // 개별 이벤트도 유지
             betButtons.forEach(btn => {
                 btn.onclick = function() {
+                    if (btn.disabled) return;
                     betButtons.forEach(b => b.classList.remove('bg-blue-800', 'border-blue-600', 'text-black', 'font-bold'));
                     this.classList.add('bg-blue-800', 'border-blue-600', 'text-black', 'font-bold');
                     window.selectedChoice = this.dataset.choice;
                     console.log('🎯 선택된 배팅:', window.selectedChoice);
+                    // 안내 문구 숨김
+                    const guide = document.getElementById('bettingTypeGuide');
+                    if (guide) guide.style.display = 'none';
                     enablePredictionButton();
                 };
             });
@@ -727,11 +768,11 @@
 
         // team-games 컬렉션의 배팅 처리 함수
         async function handleBetting() {
-            // window.selectedChoice가 없으면, 마지막으로 선택된 .bet-choice-btn을 찾아 강제로 클릭
+            // window.selectedChoice가 없으면, 첫 번째 배팅 버튼을 강제로 클릭
             if (!window.selectedChoice) {
-                const lastActive = document.querySelector('.bet-choice-btn.bg-blue-800');
-                if (lastActive) {
-                    lastActive.click();
+                const firstBtn = document.querySelector('.bet-choice-btn');
+                if (firstBtn) {
+                    firstBtn.click();
                 }
             }
             console.log('예측하기 클릭 시 window.selectedChoice:', window.selectedChoice);
@@ -1853,6 +1894,20 @@
             bettingStatusInterval = null;
             originalResetGameSelection.apply(this, arguments);
         };
+
+        // 게임선택(타자) 버튼 비활성화 및 자동 선택
+        function enableGameTypeSelection() {
+            const batterBtn = document.getElementById('batterBtn');
+            if (batterBtn) {
+                batterBtn.classList.add('bg-yellow-800', 'border-yellow-600', 'ring-2', 'ring-yellow-400');
+                batterBtn.disabled = true;
+                batterBtn.classList.add('opacity-50', 'cursor-not-allowed');
+                batterBtn.classList.remove('cursor-pointer');
+            }
+        }
+
+        // 페이지 로드 및 경기 선택 시 자동 호출
+        if (typeof enableGameTypeSelection === 'function') enableGameTypeSelection();
     </script>
 </body>
 </html> 
