@@ -2034,14 +2034,25 @@
                             <button class="bg-red-500 text-white font-bold py-2 px-4 rounded" onclick="handleDonation(100)">100%</button>
                         </div>
                     </div>
-                    <button class="w-full bg-gray-600 hover:bg-gray-700 text-white py-2 px-4 rounded mt-4" onclick="closeDonationModal()">기부하지 않기</button>
+                    <button class="w-full bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded mt-4" onclick="handleDonation(50)">기부하기</button>
                 </div>
             `;
             document.body.appendChild(modal);
         }
         function handleDonation(percent) {
+            // 승리한 포인트에서 기부 비율만큼 삭감
+            const totalWinAmount = selectedAmount * 2; // 승리 포인트 (예시: 2배)
+            const donationAmount = Math.floor(totalWinAmount * (percent / 100)); // 기부할 포인트
+            const remainingAmount = totalWinAmount - donationAmount; // 남은 포인트
+            
             // 실제 기부 처리 로직 필요
-            alert(percent + '% 기부가 처리되었습니다!');
+            alert(`${percent}% 기부가 처리되었습니다!\n기부 금액: ${donationAmount}포인트\n받을 포인트: ${remainingAmount}포인트`);
+            
+            // 남은 포인트를 사용자에게 지급
+            currentUser.points += remainingAmount;
+            document.getElementById('userPoints').textContent = `${currentUser.points}포인트`;
+            localStorage.setItem('currentUser', JSON.stringify(currentUser));
+            
             closeDonationModal();
             resetGameSelection();
         }
