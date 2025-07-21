@@ -554,21 +554,32 @@
 
         // 경기 선택 초기화 함수
         function resetGameSelection() {
+            window.selectedChoice = null;
             selectedGame = null;
-            selectedChoice = null;
             
-            // 경기 선택 모달 다시 로드
-            loadSimpleGames();
+            // 게임 선택 버튼 초기화
+            document.querySelectorAll('.game-select-btn').forEach(btn => {
+                btn.classList.remove('bg-blue-600', 'border-blue-400');
+                btn.classList.add('bg-green-600', 'border-green-500');
+            });
             
-            // 베팅 선택 비활성화
-            const bettingButtons = document.querySelectorAll('.bet-choice-btn');
-            bettingButtons.forEach(btn => {
+            // 배팅 선택 버튼 초기화
+            document.querySelectorAll('.bet-choice-btn').forEach(btn => {
+                btn.classList.remove('bg-blue-600', 'border-blue-400');
+                btn.classList.add('bg-gray-600');
                 btn.disabled = true;
                 btn.classList.add('opacity-50', 'cursor-not-allowed');
                 btn.classList.remove('cursor-pointer');
             });
             
-            console.log('🔄 경기 선택 초기화됨');
+            // 예측하기 버튼 비활성화
+            const betBtn = document.getElementById('betBtn');
+            betBtn.disabled = true;
+            betBtn.classList.add('opacity-50', 'cursor-not-allowed');
+            betBtn.classList.remove('cursor-pointer');
+            
+            // 경기 목록 다시 로드
+            loadSimpleGames();
         }
 
         // DB 데이터를 사용한 경기 표시 업데이트
@@ -688,23 +699,15 @@
         // team-games 컬렉션의 예측하기 버튼 활성화
         function enablePredictionButton() {
             const betBtn = document.getElementById('betBtn');
-            console.log('🎯 예측하기 버튼 활성화 확인:', {
-                selectedGame: !!selectedGame,
-                selectedChoice: !!selectedChoice,
-                bettingStart: selectedGame?.bettingStart,
-                bettingStop: selectedGame?.bettingStop
-            });
-            // selectedChoice 없이도 bettingStart가 '시작'이면 활성화
-            if (selectedGame && selectedGame.bettingStart === '시작') {
+            const choice = window.selectedChoice; // 반드시 window에서 읽기
+            if (selectedGame && selectedGame.bettingStart === '시작' && choice) {
                 betBtn.disabled = false;
                 betBtn.classList.remove('opacity-50', 'cursor-not-allowed');
                 betBtn.classList.add('cursor-pointer');
-                console.log('✅ 예측하기 버튼 활성화됨');
             } else {
                 betBtn.disabled = true;
                 betBtn.classList.add('opacity-50', 'cursor-not-allowed');
                 betBtn.classList.remove('cursor-pointer');
-                console.log('❌ 예측하기 버튼 비활성화됨');
             }
         }
 
@@ -934,8 +937,8 @@
 
         // 게임 초기화 (실패 후 다시 시작)
         function resetGame() {
+            window.selectedChoice = null;
             selectedGame = null;
-            selectedChoice = null;
             
             // 게임 선택 버튼 초기화
             document.querySelectorAll('.game-select-btn').forEach(btn => {
