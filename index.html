@@ -673,35 +673,16 @@
 
         // 배팅 선택 활성화
         function enableBettingSelection() {
-            const bettingButtons = document.querySelectorAll('.bet-choice-btn');
-            bettingButtons.forEach(btn => {
-                btn.disabled = false;
-                btn.classList.remove('opacity-50', 'cursor-not-allowed');
-                btn.classList.add('cursor-pointer');
-                
+            const betButtons = document.querySelectorAll('.bet-choice-btn');
+            betButtons.forEach(btn => {
                 btn.onclick = function() {
-                    // 이전 선택 해제 (독립적으로 처리)
-                    document.querySelectorAll('.bet-choice-btn').forEach(b => {
-                        b.classList.remove('bg-blue-800', 'border-blue-600', 'text-white');
-                        // 원래 파스텔 색상으로 복원
-                        const choice = b.dataset.choice;
-                        if (choice === '1base') b.classList.add('bg-pink-200', 'text-pink-800');
-                        else if (choice === '2base') b.classList.add('bg-orange-200', 'text-orange-800');
-                        else if (choice === '3base') b.classList.add('bg-yellow-200', 'text-yellow-800');
-                        else if (choice === 'homerun') b.classList.add('bg-green-200', 'text-green-800');
-                        else if (choice === 'strikeout') b.classList.add('bg-blue-200', 'text-blue-800');
-                        else if (choice === 'out') b.classList.add('bg-purple-200', 'text-purple-800');
-                    });
-                    
-                    // 현재 선택 표시 (진한 색상, 검정 글자)
-                    this.classList.remove('bg-pink-200', 'bg-orange-200', 'bg-yellow-200', 'bg-green-200', 'bg-blue-200', 'bg-purple-200');
-                    this.classList.remove('text-pink-800', 'text-orange-800', 'text-yellow-800', 'text-green-800', 'text-blue-800', 'text-purple-800');
+                    // 모든 버튼 선택 해제
+                    betButtons.forEach(b => b.classList.remove('bg-blue-800', 'border-blue-600', 'text-black', 'font-bold'));
+                    // 현재 버튼만 선택 표시
                     this.classList.add('bg-blue-800', 'border-blue-600', 'text-black', 'font-bold');
-                    
+                    // 선택된 배팅 유형 저장
                     selectedChoice = this.dataset.choice;
                     console.log('🎯 선택된 배팅:', selectedChoice);
-                    
-                    // 예측하기 버튼 활성화
                     enablePredictionButton();
                 };
             });
