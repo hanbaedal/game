@@ -665,9 +665,9 @@
             // 포인트 선택 버튼들 활성화
             const pointButtons = document.querySelectorAll('.bet-amount-btn');
             pointButtons.forEach(btn => {
-                // 100 포인트 버튼만 자동 선택 및 비활성화
                 if (btn.dataset.amount === '100') {
-                    btn.classList.add('bg-yellow-800', 'border-yellow-600', 'ring-2', 'ring-yellow-400');
+                    btn.classList.add('bg-blue-700', 'text-white', 'font-bold', 'border-blue-900');
+                    btn.classList.remove('bg-yellow-800', 'bg-yellow-500', 'text-black');
                     btn.disabled = true;
                     btn.classList.add('opacity-50', 'cursor-not-allowed');
                     btn.classList.remove('cursor-pointer');
@@ -1899,7 +1899,8 @@
         function enableGameTypeSelection() {
             const batterBtn = document.getElementById('batterBtn');
             if (batterBtn) {
-                batterBtn.classList.add('bg-yellow-800', 'border-yellow-600', 'ring-2', 'ring-yellow-400');
+                batterBtn.classList.add('bg-blue-700', 'text-white', 'font-bold', 'border-blue-900');
+                batterBtn.classList.remove('bg-yellow-800', 'bg-yellow-500', 'text-black');
                 batterBtn.disabled = true;
                 batterBtn.classList.add('opacity-50', 'cursor-not-allowed');
                 batterBtn.classList.remove('cursor-pointer');
