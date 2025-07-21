@@ -685,11 +685,25 @@
         // 배팅 선택 활성화
         function enableBettingSelection() {
             const betButtons = document.querySelectorAll('.bet-choice-btn');
+            // 이벤트 위임 방식으로도 보강
+            const bettingSection = document.getElementById('bettingSection');
+            if (bettingSection) {
+                bettingSection.onclick = function(e) {
+                    const btn = e.target.closest('.bet-choice-btn');
+                    if (!btn) return;
+                    betButtons.forEach(b => b.classList.remove('bg-blue-800', 'border-blue-600', 'text-black', 'font-bold'));
+                    btn.classList.add('bg-blue-800', 'border-blue-600', 'text-black', 'font-bold');
+                    window.selectedChoice = btn.dataset.choice;
+                    console.log('🎯 선택된 배팅(위임):', window.selectedChoice);
+                    enablePredictionButton();
+                };
+            }
+            // 기존 개별 이벤트도 유지
             betButtons.forEach(btn => {
                 btn.onclick = function() {
                     betButtons.forEach(b => b.classList.remove('bg-blue-800', 'border-blue-600', 'text-black', 'font-bold'));
                     this.classList.add('bg-blue-800', 'border-blue-600', 'text-black', 'font-bold');
-                    window.selectedChoice = this.dataset.choice; // 반드시 window에 할당
+                    window.selectedChoice = this.dataset.choice;
                     console.log('🎯 선택된 배팅:', window.selectedChoice);
                     enablePredictionButton();
                 };
@@ -713,7 +727,14 @@
 
         // team-games 컬렉션의 배팅 처리 함수
         async function handleBetting() {
-            console.log('예측하기 클릭 시 selectedChoice:', window.selectedChoice);
+            // window.selectedChoice가 없으면, 마지막으로 선택된 .bet-choice-btn을 찾아 강제로 클릭
+            if (!window.selectedChoice) {
+                const lastActive = document.querySelector('.bet-choice-btn.bg-blue-800');
+                if (lastActive) {
+                    lastActive.click();
+                }
+            }
+            console.log('예측하기 클릭 시 window.selectedChoice:', window.selectedChoice);
             if (!window.selectedChoice) {
                 alert('배팅 유형을 선택해주세요.');
                 return;
@@ -726,14 +747,12 @@
                 alert('경기를 선택해주세요.');
                 return;
             }
-            // selectedChoice 체크 제거
             console.log('🎯 배팅 처리 시작:', {
                 selectedGame: selectedGame.gameNumber || selectedGame.number,
                 selectedChoice: window.selectedChoice,
                 bettingStart: selectedGame.bettingStart,
                 bettingStop: selectedGame.bettingStop
             });
-            // 베팅 가능 상태 확인
             if (selectedGame.bettingStart !== '시작') {
                 alert('아직 배팅이 시작되지 않았습니다.');
                 return;
