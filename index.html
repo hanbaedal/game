@@ -473,7 +473,7 @@
                             
                             return `
                                 <button 
-                                    onclick="selectSimpleGame('${game._id || game.id}', '${game.gameNumber || game.number}', '${game.matchup.replace(/'/g, "\\'")}')"
+                                    onclick="selectSimpleGame('${game._id || game.id}', '${game.homeTeam || ''}', '${game.awayTeam || ''}', '${game.gameNumber || game.number}', '${game.date || ''}', '${game.startTime || ''}', '${game.progressStatus || ''}', '${game.bettingStart || ''}', '${game.bettingStop || ''}', '${game.predictionResult || ''}')"
                                     class="w-full p-3 rounded text-left ${buttonClass} text-xs whitespace-nowrap"
                                     ${!isSelectable ? 'disabled' : ''}
                                 >
@@ -495,37 +495,38 @@
         }
 
         // DB 데이터를 사용한 경기 선택 함수
-        function selectSimpleGame(gameId, gameNumber, matchup) {
-            console.log(`🎯 경기 선택: ${gameNumber}경기 ${matchup}`);
+        function selectSimpleGame(gameId, homeTeam, awayTeam, gameNumber, date, startTime, progressStatus, bettingStart, bettingStop, predictionResult) {
+            console.log('🎯 게임 선택:', { gameId, homeTeam, awayTeam, gameNumber, date, startTime, progressStatus, bettingStart, bettingStop, predictionResult });
             
-            // 전체 경기 데이터에서 해당 경기 찾기
-            const allGames = window.allGamesData || [];
-            const selectedGameData = allGames.find(game => 
-                (game._id === gameId) || 
-                (game.id === gameId) || 
-                (game.gameNumber === gameNumber)
-            );
+            selectedGame = {
+                id: gameId,
+                homeTeam: homeTeam,
+                awayTeam: awayTeam,
+                gameNumber: gameNumber,
+                date: date,
+                startTime: startTime,
+                progressStatus: progressStatus,
+                bettingStart: bettingStart,
+                bettingStop: bettingStop,
+                predictionResult: predictionResult
+            };
             
-            if (selectedGameData) {
-                // 선택된 경기 정보 저장 (원본 DB 데이터 사용)
-                selectedGame = selectedGameData;
-                
-                // 경기 선택 모달을 선택된 경기만 표시하도록 변경
-                showSelectedGameOnly(gameNumber, matchup, selectedGameData);
-                
-                // 베팅 선택 활성화 (먼저)
-                enableBettingSelection();
-                
-                // 배팅 포인트 선택 활성화 (나중에)
-                enableBettingPoints();
-                
-                console.log('✅ 경기 선택 완료:', selectedGame);
-            } else {
-                console.error('❌ 선택된 경기 데이터를 찾을 수 없습니다.');
-                alert('경기 선택 중 오류가 발생했습니다.');
+            // window.selectedGame도 함께 설정
+            window.selectedGame = selectedGame;
+            
+            console.log('✅ 선택된 게임:', selectedGame);
+            
+            // 게임 선택 모달 닫기
+            const modal = document.getElementById('gameSelectionModal');
+            if (modal) {
+                modal.remove();
             }
-            if (typeof enableGameTypeSelection === 'function') enableGameTypeSelection();
-            if (typeof enableBettingPoints === 'function') enableBettingPoints();
+            
+            // 선택된 게임 정보 표시
+            showSelectedGameOnly();
+            
+            // 배팅 상태 폴링 시작
+            startBettingStatusPolling();
         }
 
         // 선택된 경기만 표시하는 함수
@@ -1865,7 +1866,7 @@
 
         // selectSimpleGame 함수 내 polling 시작 추가
         const originalSelectSimpleGame = selectSimpleGame;
-        selectSimpleGame = function(gameId, gameNumber, matchup) {
+        selectSimpleGame = function(gameId, homeTeam, awayTeam, gameNumber, date, startTime, progressStatus, bettingStart, bettingStop, predictionResult) {
             originalSelectSimpleGame.apply(this, arguments);
             if (selectedGame) {
                 startBettingStatusPolling(selectedGame._id || selectedGame.id);
@@ -1997,8 +1998,11 @@
                     return;
                 }
                 
-                if (!selectedGame || !selectedGame.date || !selectedGame.gameNumber) {
-                    alert('게임 정보가 올바르지 않습니다.');
+                // selectedGame이 올바른 객체인지 확인
+                const gameData = window.selectedGame || selectedGame;
+                if (!gameData || !gameData.date || !gameData.gameNumber) {
+                    console.log('게임 데이터 확인:', gameData);
+                    alert('게임 정보가 올바르지 않습니다. 게임을 다시 선택해주세요.');
                     return;
                 }
                 
@@ -2007,8 +2011,8 @@
                     gameType: '타자',
                     prediction: window.selectedChoice,
                     points: selectedAmount,
-                    date: selectedGame.date,
-                    gameNumber: selectedGame.gameNumber
+                    date: gameData.date,
+                    gameNumber: gameData.gameNumber
                 };
                 
                 console.log('배팅 요청 데이터:', requestData);
