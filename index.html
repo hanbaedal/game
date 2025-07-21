@@ -507,8 +507,12 @@
             );
             
             if (selectedGameData) {
-                // 선택된 경기 정보 저장 (원본 DB 데이터 사용)
-                selectedGame = selectedGameData;
+                // 선택된 경기 정보 저장 (원본 DB 데이터 사용, date/gameNumber 보장)
+                selectedGame = {
+                    ...selectedGameData,
+                    date: selectedGameData.date || selectedGameData.gameDate || '',
+                    gameNumber: selectedGameData.gameNumber || selectedGameData.number || '',
+                };
                 
                 // 경기 선택 모달을 선택된 경기만 표시하도록 변경
                 showSelectedGameOnly(gameNumber, matchup, selectedGameData);
