@@ -1981,17 +1981,16 @@
         // 배팅 성공 후 대기 모달 띄우기
         async function processBetting() {
             try {
-                const response = await fetch('/api/betting/place', {
+                const response = await fetch('/api/betting/submit', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         userId: currentUser.userId,
-                        userName: currentUser.name,
-                        gameDate: selectedGame.date,
-                        gameNumber: selectedGame.gameNumber,
                         gameType: selectedGameType,
-                        choice: selectedChoice,
-                        amount: selectedAmount
+                        prediction: window.selectedChoice,
+                        points: selectedAmount,
+                        date: selectedGame.date,
+                        gameNumber: selectedGame.gameNumber
                     })
                 });
                 const data = await response.json();
@@ -2017,11 +2016,12 @@
                     clearInterval(resultCheckInterval);
                     const waitModal = document.getElementById('waitingForResultModal');
                     if (waitModal) waitModal.remove();
-                    // 예시: 성공 결과와 포인트(실제 로직에 맞게 수정)
+                    // 성공 결과와 포인트(실제 로직에 맞게 수정)
                     if (selectedGame.predictionResult === 'success') {
                         showSuccessAndDonationModal(selectedGame.winAmount || 0);
                     } else {
-                        // 실패 모달 등 추가 가능
+                        // 실패시 바로 다음 게임으로 진행
+                        resetGameSelection();
                     }
                 }
             }, 1000);
