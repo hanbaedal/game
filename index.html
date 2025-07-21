@@ -810,16 +810,28 @@
 
         // 배팅 확인 모달 표시
         function showBettingConfirmModal() {
+            // 기존 모달 제거
+            const oldModal = document.getElementById('bettingConfirmModal');
+            if (oldModal) oldModal.remove();
             const modal = document.createElement('div');
             modal.id = 'bettingConfirmModal';
             modal.className = 'fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50';
+            // 안전하게 값 읽기
+            const gameNumber = selectedGame && (selectedGame.gameNumber || selectedGame.number || '-');
+            const matchup = selectedGame && (selectedGame.matchup || '-');
+            const date = selectedGame && (selectedGame.date || '-');
+            const startTime = selectedGame && (selectedGame.startTime || '-');
             modal.innerHTML = `
                 <div class="bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4">
                     <h3 class="text-lg font-bold mb-4">🎯 배팅 확인</h3>
                     <div class="space-y-3 mb-6">
                         <div class="flex justify-between">
                             <span class="text-gray-300">경기:</span>
-                            <span class="font-bold">${selectedGame.gameNumber}경기 ${selectedGame.matchup}</span>
+                            <span class="font-bold">${gameNumber}경기 ${matchup}</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-300">날짜/시간:</span>
+                            <span class="font-bold">${date} ${startTime}</span>
                         </div>
                         <div class="flex justify-between">
                             <span class="text-gray-300">게임 타입:</span>
@@ -849,8 +861,17 @@
                 </div>
             `;
             document.body.appendChild(modal);
-            document.getElementById('confirmBetBtn').onclick = confirmBet;
-            document.getElementById('cancelBetBtn').onclick = () => modal.remove();
+            document.getElementById('confirmBetBtn').onclick = function() {
+                if (typeof confirmBet === 'function') {
+                    confirmBet();
+                } else {
+                    processBetting();
+                }
+                modal.remove();
+            };
+            document.getElementById('cancelBetBtn').onclick = function() {
+                modal.remove();
+            };
         }
 
         // 배팅 처리
