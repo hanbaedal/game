@@ -440,9 +440,9 @@
                 showSimpleGameSelection(simpleGames);
                 
                 // 경기 데이터가 1개 이상이면 첫 번째 경기 자동 선택
-                if (simpleGames.length > 0) {
-                    selectSimpleGame(simpleGames[0].id, simpleGames[0].gameNumber, simpleGames[0].matchup);
-                }
+                // if (simpleGames.length > 0) {
+                //     selectSimpleGame(simpleGames[0].id, simpleGames[0].gameNumber, simpleGames[0].matchup);
+                // }
                 // 타자/100포인트 자동 선택 보장
                 if (typeof enableGameTypeSelection === 'function') enableGameTypeSelection();
                 if (typeof enableBettingPoints === 'function') enableBettingPoints();
@@ -686,17 +686,9 @@
                 b.classList.add('opacity-50', 'cursor-not-allowed');
                 b.classList.remove('cursor-pointer');
             });
-            // 안내 문구 표시
-            let guide = document.getElementById('bettingTypeGuide');
-            if (!guide) {
-                guide = document.createElement('div');
-                guide.id = 'bettingTypeGuide';
-                guide.className = 'text-xs text-yellow-300 mt-2';
-                guide.innerText = '먼저 배팅할 포인트를 선택하세요. 그 다음 예측할 결과(1루/2루/3루/홈런/삼진/아웃 등)를 선택하세요.';
-                const bettingSection = document.getElementById('bettingSection');
-                if (bettingSection) bettingSection.parentNode.insertBefore(guide, bettingSection);
-            }
-            guide.style.display = 'block';
+            // 안내 문구 숨김
+            const guide = document.getElementById('bettingTypeGuide');
+            if (guide) guide.style.display = 'none';
             // 포인트 버튼이 1개 이상이면 첫 번째 포인트 자동 선택
             if (pointButtons.length > 0) {
                 pointButtons[0].click();
