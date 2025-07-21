@@ -927,46 +927,80 @@
 
         // 결과 대기
         function waitForResult() {
+            console.log('🔄 결과 대기 시작...');
+            let checkCount = 0;
+            
             const resultCheckInterval = setInterval(async () => {
+                checkCount++;
+                console.log(`🔍 결과 확인 ${checkCount}회차...`);
+                
                 try {
                     // 실시간으로 서버에서 최신 게임 데이터 가져오기
                     const response = await fetch('/api/team-games');
                     if (response.ok) {
                         const data = await response.json();
+                        console.log('📊 서버 게임 데이터:', data.games);
+                        
                         const currentGame = data.games.find(game => 
                             game.gameNumber === selectedGame.gameNumber || 
                             game.number === selectedGame.gameNumber
                         );
                         
-                        if (currentGame && currentGame.predictionResult && currentGame.predictionResult !== '') {
-                            clearInterval(resultCheckInterval);
-                            const waitModal = document.getElementById('waitingForResultModal');
-                            if (waitModal) waitModal.remove();
+                        console.log('🎯 현재 게임:', currentGame);
+                        console.log('🎯 선택된 게임 번호:', selectedGame.gameNumber);
+                        
+                        if (currentGame) {
+                            console.log('📝 예측결과:', currentGame.predictionResult);
                             
-                            console.log('예측결과 감지:', currentGame.predictionResult);
-                            
-                            // 사용자의 배팅 선택과 관리자의 예측결과 비교
-                            const userChoice = window.selectedChoice;
-                            const adminResult = currentGame.predictionResult;
-                            
-                            // 성공/실패 판정 (실제 로직에 맞게 수정 필요)
-                            const isSuccess = userChoice === adminResult;
-                            
-                            if (isSuccess) {
-                                // 성공 시 획득 포인트 계산 (실제 로직에 맞게 수정)
-                                const winAmount = selectedAmount * 2; // 예시: 2배
-                                showSuccessAndDonationModal(winAmount);
-                            } else {
-                                // 실패시 바로 다음 게임으로 진행
-                                alert('예측 실패! 다음 게임으로 진행합니다.');
-                                resetGameSelection();
+                            if (currentGame.predictionResult && currentGame.predictionResult !== '') {
+                                clearInterval(resultCheckInterval);
+                                const waitModal = document.getElementById('waitingForResultModal');
+                                if (waitModal) waitModal.remove();
+                                
+                                console.log('✅ 예측결과 감지:', currentGame.predictionResult);
+                                console.log('👤 사용자 선택:', window.selectedChoice);
+                                
+                                // 사용자의 배팅 선택과 관리자의 예측결과 비교
+                                const userChoice = window.selectedChoice;
+                                const adminResult = currentGame.predictionResult;
+                                
+                                // 성공/실패 판정 (실제 로직에 맞게 수정 필요)
+                                const isSuccess = userChoice === adminResult;
+                                
+                                console.log('🏆 성공 여부:', isSuccess);
+                                
+                                if (isSuccess) {
+                                    // 성공 시 획득 포인트 계산 (실제 로직에 맞게 수정)
+                                    const winAmount = selectedAmount * 2; // 예시: 2배
+                                    console.log('💰 획득 포인트:', winAmount);
+                                    showSuccessAndDonationModal(winAmount);
+                                } else {
+                                    // 실패시 바로 다음 게임으로 진행
+                                    console.log('❌ 예측 실패');
+                                    alert('예측 실패! 다음 게임으로 진행합니다.');
+                                    resetGameSelection();
+                                }
                             }
+                        } else {
+                            console.log('❌ 현재 게임을 찾을 수 없음');
                         }
+                    } else {
+                        console.log('❌ 서버 응답 오류:', response.status);
                     }
                 } catch (error) {
                     console.error('결과 확인 중 오류:', error);
                 }
-            }, 1000);
+                
+                // 30초 후 타임아웃 (안전장치)
+                if (checkCount >= 30) {
+                    clearInterval(resultCheckInterval);
+                    console.log('⏰ 결과 대기 타임아웃');
+                    const waitModal = document.getElementById('waitingForResultModal');
+                    if (waitModal) waitModal.remove();
+                    alert('결과 대기 시간이 초과되었습니다. 다시 시도해주세요.');
+                    resetGameSelection();
+                }
+            }, 1000); // 1초마다 확인
         }
 
         // 배팅 결과 확인
@@ -2094,20 +2128,80 @@
 
         // 결과 대기 및 성공/기부 모달 연동
         function waitForResult() {
+            console.log('🔄 결과 대기 시작...');
+            let checkCount = 0;
+            
             const resultCheckInterval = setInterval(async () => {
-                if (selectedGame.predictionResult && selectedGame.predictionResult !== '') {
+                checkCount++;
+                console.log(`🔍 결과 확인 ${checkCount}회차...`);
+                
+                try {
+                    // 실시간으로 서버에서 최신 게임 데이터 가져오기
+                    const response = await fetch('/api/team-games');
+                    if (response.ok) {
+                        const data = await response.json();
+                        console.log('📊 서버 게임 데이터:', data.games);
+                        
+                        const currentGame = data.games.find(game => 
+                            game.gameNumber === selectedGame.gameNumber || 
+                            game.number === selectedGame.gameNumber
+                        );
+                        
+                        console.log('🎯 현재 게임:', currentGame);
+                        console.log('🎯 선택된 게임 번호:', selectedGame.gameNumber);
+                        
+                        if (currentGame) {
+                            console.log('📝 예측결과:', currentGame.predictionResult);
+                            
+                            if (currentGame.predictionResult && currentGame.predictionResult !== '') {
+                                clearInterval(resultCheckInterval);
+                                const waitModal = document.getElementById('waitingForResultModal');
+                                if (waitModal) waitModal.remove();
+                                
+                                console.log('✅ 예측결과 감지:', currentGame.predictionResult);
+                                console.log('👤 사용자 선택:', window.selectedChoice);
+                                
+                                // 사용자의 배팅 선택과 관리자의 예측결과 비교
+                                const userChoice = window.selectedChoice;
+                                const adminResult = currentGame.predictionResult;
+                                
+                                // 성공/실패 판정 (실제 로직에 맞게 수정 필요)
+                                const isSuccess = userChoice === adminResult;
+                                
+                                console.log('🏆 성공 여부:', isSuccess);
+                                
+                                if (isSuccess) {
+                                    // 성공 시 획득 포인트 계산 (실제 로직에 맞게 수정)
+                                    const winAmount = selectedAmount * 2; // 예시: 2배
+                                    console.log('💰 획득 포인트:', winAmount);
+                                    showSuccessAndDonationModal(winAmount);
+                                } else {
+                                    // 실패시 바로 다음 게임으로 진행
+                                    console.log('❌ 예측 실패');
+                                    alert('예측 실패! 다음 게임으로 진행합니다.');
+                                    resetGameSelection();
+                                }
+                            }
+                        } else {
+                            console.log('❌ 현재 게임을 찾을 수 없음');
+                        }
+                    } else {
+                        console.log('❌ 서버 응답 오류:', response.status);
+                    }
+                } catch (error) {
+                    console.error('결과 확인 중 오류:', error);
+                }
+                
+                // 30초 후 타임아웃 (안전장치)
+                if (checkCount >= 30) {
                     clearInterval(resultCheckInterval);
+                    console.log('⏰ 결과 대기 타임아웃');
                     const waitModal = document.getElementById('waitingForResultModal');
                     if (waitModal) waitModal.remove();
-                    // 성공 결과와 포인트(실제 로직에 맞게 수정)
-                    if (selectedGame.predictionResult === 'success') {
-                        showSuccessAndDonationModal(selectedGame.winAmount || 0);
-                    } else {
-                        // 실패시 바로 다음 게임으로 진행
-                        resetGameSelection();
-                    }
+                    alert('결과 대기 시간이 초과되었습니다. 다시 시도해주세요.');
+                    resetGameSelection();
                 }
-            }, 1000);
+            }, 1000); // 1초마다 확인
         }
     </script>
 </body>
