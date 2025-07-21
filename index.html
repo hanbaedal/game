@@ -751,8 +751,11 @@
         // team-games 컬렉션의 예측하기 버튼 활성화
         function enablePredictionButton() {
             const betBtn = document.getElementById('betBtn');
-            const choice = window.selectedChoice; // 반드시 window에서 읽기
-            if (selectedGame && selectedGame.bettingStart === '시작' && choice) {
+            if (
+                selectedGame &&
+                selectedGame.bettingStart === '시작' &&
+                window.selectedChoice
+            ) {
                 betBtn.disabled = false;
                 betBtn.classList.remove('opacity-50', 'cursor-not-allowed');
                 betBtn.classList.add('cursor-pointer');
@@ -765,14 +768,9 @@
 
         // team-games 컬렉션의 배팅 처리 함수
         async function handleBetting() {
-            // window.selectedChoice가 없으면, 첫 번째 배팅 버튼을 강제로 클릭
-            if (!window.selectedChoice) {
-                const firstBtn = document.querySelector('.bet-choice-btn');
-                if (firstBtn) {
-                    firstBtn.click();
-                }
-            }
-            console.log('예측하기 클릭 시 window.selectedChoice:', window.selectedChoice);
+            // 예측하기 버튼이 비활성화면 아무 동작도 하지 않음
+            const betBtn = document.getElementById('betBtn');
+            if (betBtn.disabled) return;
             if (!window.selectedChoice) {
                 alert('배팅 유형을 선택해주세요.');
                 return;
@@ -1179,89 +1177,40 @@
 
         // 배팅 처리 함수
         async function handleBetting() {
-            // 로그인 상태 확인
-            if (!currentUser || !currentUser.userId) {
-                alert('로그인이 필요한 서비스입니다.');
-                window.location.href = '/login.html';
-                return;
-            }
-
-            if (isBetting) return; // 이미 배팅 중이면 리턴
-
-            // 배팅 버튼이 비활성화된 경우
-            if (document.getElementById('betBtn').disabled) {
-                showWaitingModal();
-                return;
-            }
-
-            // 선택된 배팅 유형 확인 (수정된 부분)
-            if (!selectedBetChoice) {
+            // 예측하기 버튼이 비활성화면 아무 동작도 하지 않음
+            const betBtn = document.getElementById('betBtn');
+            if (betBtn.disabled) return;
+            if (!window.selectedChoice) {
                 alert('배팅 유형을 선택해주세요.');
                 return;
             }
-
-            const betAmount = selectedBetAmount; // 고정된 100포인트 사용
-            
-            // 보유 포인트 확인
-            if (currentUser.points < betAmount) {
-                alert('보유 포인트가 부족합니다.');
+            if (!currentUser || currentUser.isGuest) {
+                alert('로그인이 필요합니다.');
                 return;
             }
-
-            // 현재 날짜와 선택된 경기 정보 가져오기
-            // 한국 시간대로 오늘 날짜 계산 (YYYY-MM-DD 형식)
-            const now = new Date();
-            const koreaTime = new Date(now.getTime() + (9 * 60 * 60 * 1000)); // UTC+9
-            const today = koreaTime.getFullYear().toString() + 
-                         '-' + String(koreaTime.getMonth() + 1).padStart(2, '0') + 
-                         '-' + String(koreaTime.getDate()).padStart(2, '0');
-            
-            const selectedGame = await getSelectedGame();
-            
             if (!selectedGame) {
                 alert('경기를 선택해주세요.');
                 return;
             }
-
-            // 서버로 배팅 데이터 전송
-            fetch('/api/betting', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    date: today,
-                    gameNumber: selectedGame.gameNumber,
-                    memberId: currentUser.userId,
-                    memberName: currentUser.name,
-                    betChoice: selectedBetChoice, // 수정된 부분
-                    betAmount: betAmount
-                })
-            })
-            .then(res => res.json())
-            .then(data => {
-                if (data.success) {
-            // 배팅 포인트 차감
-                    currentUser.points -= betAmount;
-            document.getElementById('userPoints').textContent = `${currentUser.points}`;
-            
-            // localStorage 업데이트
-            localStorage.setItem('currentUser', JSON.stringify(currentUser));
-
-            // 배팅 버튼 숨기고 결과 버튼 표시
-                    document.getElementById('betBtn').style.display = 'none';
-                    document.getElementById('resultBtn').style.display = 'block';
-            
-            // 배팅 중 상태로 변경
-            isBetting = true;
-                    
-                    alert('예측이 완료되었습니다!');
-                } else {
-                    alert('예측 실패: ' + data.message);
-                }
-            })
-            .catch(error => {
-                console.error('예측 오류:', error);
-                alert('예측 중 오류가 발생했습니다.');
+            console.log('🎯 배팅 처리 시작:', {
+                selectedGame: selectedGame.gameNumber || selectedGame.number,
+                selectedChoice: window.selectedChoice,
+                bettingStart: selectedGame.bettingStart,
+                bettingStop: selectedGame.bettingStop
             });
+            if (selectedGame.bettingStart !== '시작') {
+                alert('아직 배팅이 시작되지 않았습니다.');
+                return;
+            }
+            if (selectedGame.bettingStop === '중지') {
+                showWaitingModal();
+                return;
+            }
+            if (currentUser.points < selectedAmount) {
+                alert('포인트가 부족합니다.');
+                return;
+            }
+            showBettingConfirmModal();
         }
 
         // 선택된 경기 정보 가져오기
