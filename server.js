@@ -100,14 +100,14 @@ const connectToMongoDB = async () => {
         
         // 데이터베이스 이름 확인 (안전하게)
         if (mongoose.connection.db && mongoose.connection.db.databaseName) {
-            console.log('📊 실제 연결된 데이터베이스:', mongoose.connection.db.databaseName);
-            
-            // 데이터베이스 이름 재확인
-            if (mongoose.connection.db.databaseName !== dbName) {
-                console.warn('⚠️ 경고: 연결된 데이터베이스가 예상과 다릅니다.');
-                console.warn(`   예상: ${dbName}, 실제: ${mongoose.connection.db.databaseName}`);
-            } else {
-                console.log('✅ 올바른 데이터베이스에 연결되었습니다.');
+        console.log('📊 실제 연결된 데이터베이스:', mongoose.connection.db.databaseName);
+        
+        // 데이터베이스 이름 재확인
+        if (mongoose.connection.db.databaseName !== dbName) {
+            console.warn('⚠️ 경고: 연결된 데이터베이스가 예상과 다릅니다.');
+            console.warn(`   예상: ${dbName}, 실제: ${mongoose.connection.db.databaseName}`);
+        } else {
+            console.log('✅ 올바른 데이터베이스에 연결되었습니다.');
             }
         } else {
             console.log('📊 데이터베이스 연결됨 (이름 확인 불가)');
@@ -154,9 +154,9 @@ const startServer = async () => {
             console.log(`🗄️ MongoDB 상태: ${isConnected ? '연결됨' : '연결 안됨'}`);
             
             // MongoDB 연결 성공
-            if (isConnected) {
+        if (isConnected) {
                 console.log('✅ MongoDB 연결됨 - team-games 컬렉션에서 경기 데이터를 로드합니다.');
-            }
+        }
         });
         
         // 서버 오류 처리
@@ -1960,8 +1960,8 @@ app.get('/api/daily-games', async (req, res) => {
                     debug: {
                         totalGames: teamGames.length,
                         originalGames: teamGames.map(g => ({
-                            number: g.number,
-                            homeTeam: g.homeTeam,
+            number: g.number,
+            homeTeam: g.homeTeam,
                             awayTeam: g.awayTeam,
                             noGame: g.noGame,
                             progressStatus: g.progressStatus
@@ -1983,7 +1983,7 @@ app.get('/api/daily-games', async (req, res) => {
                     const teamGamesCollection = mongoose.connection.db.collection('team-games');
                     const todayData = await teamGamesCollection.findOne({ date: todayString });
                     const todayGames = todayData ? todayData.games || [] : [];
-                    
+        
                     console.log('🔧 디버그 모드: 오늘 날짜 경기만 반환');
                     return res.json({ 
                         games: [],

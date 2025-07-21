@@ -710,17 +710,14 @@
         // team-games 컬렉션의 예측하기 버튼 활성화
         function enablePredictionButton() {
             const betBtn = document.getElementById('betBtn');
-            
             console.log('🎯 예측하기 버튼 활성화 확인:', {
                 selectedGame: !!selectedGame,
                 selectedChoice: !!selectedChoice,
                 bettingStart: selectedGame?.bettingStart,
                 bettingStop: selectedGame?.bettingStop
             });
-            
-            if (selectedGame && selectedChoice && 
-                selectedGame.bettingStart === '시작' && 
-                selectedGame.bettingStop !== '중지') {
+            // selectedChoice 없이도 bettingStart가 '시작'이면 활성화
+            if (selectedGame && selectedGame.bettingStart === '시작') {
                 betBtn.disabled = false;
                 betBtn.classList.remove('opacity-50', 'cursor-not-allowed');
                 betBtn.classList.add('cursor-pointer');
@@ -1627,7 +1624,7 @@
                 if (data.success) {
                     alert('테스트 데이터가 생성되었습니다. 페이지를 새로고침하세요.');
                     location.reload();
-                    } else {
+                } else {
                     alert('테스트 데이터 생성 실패: ' + data.message);
                 }
             } catch (error) {
@@ -1796,7 +1793,7 @@
         
         // 버튼 이벤트 리스너 설정
         function setupButtonEventListeners() {
-            const betBtn = document.getElementById('betBtn');
+                    const betBtn = document.getElementById('betBtn');
             const resultBtn = document.getElementById('resultBtn');
 
             if (betBtn) {
@@ -1836,6 +1833,45 @@
             // 브라우저 종료 시 로그아웃 처리
             setupBrowserCloseLogout();
         });
+
+        let bettingStatusInterval = null;
+
+        function startBettingStatusPolling(gameId) {
+            if (bettingStatusInterval) clearInterval(bettingStatusInterval);
+            bettingStatusInterval = setInterval(async () => {
+                try {
+                    const res = await fetch('/api/team-games');
+                    const data = await res.json();
+                    if (data && data.games) {
+                        const updatedGame = data.games.find(g => g._id === gameId || g.id === gameId);
+                        if (updatedGame) {
+                            selectedGame.bettingStart = updatedGame.bettingStart;
+                            console.log('폴링: bettingStart =', updatedGame.bettingStart);
+                            enablePredictionButton(); // 버튼 상태 즉시 반영
+                        }
+                    }
+                } catch (e) {
+                    console.error('배팅 상태 폴링 오류:', e);
+                }
+            }, 1000); // 1초마다 체크
+        }
+
+        // selectSimpleGame 함수 내 polling 시작 추가
+        const originalSelectSimpleGame = selectSimpleGame;
+        selectSimpleGame = function(gameId, gameNumber, matchup) {
+            originalSelectSimpleGame.apply(this, arguments);
+            if (selectedGame) {
+                startBettingStatusPolling(selectedGame._id || selectedGame.id);
+            }
+        };
+
+        // resetGameSelection 함수 내 polling 중단 추가
+        const originalResetGameSelection = resetGameSelection;
+        resetGameSelection = function() {
+            if (bettingStatusInterval) clearInterval(bettingStatusInterval);
+            bettingStatusInterval = null;
+            originalResetGameSelection.apply(this, arguments);
+        };
     </script>
 </body>
 </html> 
