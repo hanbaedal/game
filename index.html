@@ -928,11 +928,45 @@
         // 결과 대기
         function waitForResult() {
             const resultCheckInterval = setInterval(async () => {
-                if (selectedGame.predictionResult && selectedGame.predictionResult !== '') {
-                    clearInterval(resultCheckInterval);
-                    await checkBettingResult();
+                try {
+                    // 실시간으로 서버에서 최신 게임 데이터 가져오기
+                    const response = await fetch('/api/team-games');
+                    if (response.ok) {
+                        const data = await response.json();
+                        const currentGame = data.games.find(game => 
+                            game.gameNumber === selectedGame.gameNumber || 
+                            game.number === selectedGame.gameNumber
+                        );
+                        
+                        if (currentGame && currentGame.predictionResult && currentGame.predictionResult !== '') {
+                            clearInterval(resultCheckInterval);
+                            const waitModal = document.getElementById('waitingForResultModal');
+                            if (waitModal) waitModal.remove();
+                            
+                            console.log('예측결과 감지:', currentGame.predictionResult);
+                            
+                            // 사용자의 배팅 선택과 관리자의 예측결과 비교
+                            const userChoice = window.selectedChoice;
+                            const adminResult = currentGame.predictionResult;
+                            
+                            // 성공/실패 판정 (실제 로직에 맞게 수정 필요)
+                            const isSuccess = userChoice === adminResult;
+                            
+                            if (isSuccess) {
+                                // 성공 시 획득 포인트 계산 (실제 로직에 맞게 수정)
+                                const winAmount = selectedAmount * 2; // 예시: 2배
+                                showSuccessAndDonationModal(winAmount);
+                            } else {
+                                // 실패시 바로 다음 게임으로 진행
+                                alert('예측 실패! 다음 게임으로 진행합니다.');
+                                resetGameSelection();
+                            }
+                        }
+                    }
+                } catch (error) {
+                    console.error('결과 확인 중 오류:', error);
                 }
-            }, 2000); // 2초마다 확인
+            }, 1000);
         }
 
         // 배팅 결과 확인
