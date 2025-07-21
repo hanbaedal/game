@@ -294,7 +294,7 @@
     <script>
         // 전역 변수들
         let currentUser = null;
-        let selectedGameType = 'batter';
+        let selectedGameType = '타자';
         let selectedBetAmount = 100;
         let selectedBetChoice = null; // 배팅 선택 저장 변수 추가
         let isBetting = false;
@@ -1981,19 +1981,47 @@
         // 배팅 성공 후 대기 모달 띄우기
         async function processBetting() {
             try {
+                // 필수 필드들이 올바르게 설정되었는지 확인
+                if (!currentUser || !currentUser.userId) {
+                    alert('사용자 정보가 없습니다. 다시 로그인해주세요.');
+                    return;
+                }
+                
+                if (!window.selectedChoice) {
+                    alert('배팅 선택이 되지 않았습니다.');
+                    return;
+                }
+                
+                if (!selectedAmount) {
+                    alert('배팅 금액이 설정되지 않았습니다.');
+                    return;
+                }
+                
+                if (!selectedGame || !selectedGame.date || !selectedGame.gameNumber) {
+                    alert('게임 정보가 올바르지 않습니다.');
+                    return;
+                }
+                
+                const requestData = {
+                    userId: currentUser.userId,
+                    gameType: '타자',
+                    prediction: window.selectedChoice,
+                    points: selectedAmount,
+                    date: selectedGame.date,
+                    gameNumber: selectedGame.gameNumber
+                };
+                
+                console.log('배팅 요청 데이터:', requestData);
+                
                 const response = await fetch('/api/betting/submit', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        userId: currentUser.userId,
-                        gameType: selectedGameType,
-                        prediction: window.selectedChoice,
-                        points: selectedAmount,
-                        date: selectedGame.date,
-                        gameNumber: selectedGame.gameNumber
-                    })
+                    body: JSON.stringify(requestData)
                 });
+                
                 const data = await response.json();
+                console.log('배팅 응답:', data);
+                
                 if (data.success) {
                     currentUser.points -= selectedAmount;
                     document.getElementById('userPoints').textContent = `${currentUser.points}포인트`;
