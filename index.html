@@ -698,8 +698,11 @@
         // 배팅 선택 활성화
         function enableBettingSelection() {
             const betButtons = document.querySelectorAll('.bet-choice-btn');
-            // bettingStart가 '시작'일 때만 활성화
-            if (selectedGame && selectedGame.bettingStart === '시작') {
+            if (
+                selectedGame &&
+                selectedGame.bettingStart === '시작' &&
+                selectedGame.bettingStop === '진행'
+            ) {
                 betButtons.forEach(b => {
                     b.disabled = false;
                     b.classList.remove('opacity-50', 'cursor-not-allowed');
@@ -754,6 +757,7 @@
             if (
                 selectedGame &&
                 selectedGame.bettingStart === '시작' &&
+                selectedGame.bettingStop === '진행' &&
                 window.selectedChoice
             ) {
                 betBtn.disabled = false;
@@ -853,15 +857,15 @@
         async function processBetting() {
             try {
                 const response = await fetch('/api/betting/place', {
-                    method: 'POST',
+                method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify({
+                body: JSON.stringify({
                         userId: currentUser.userId,
                         userName: currentUser.name,
                         gameDate: selectedGame.date,
-                        gameNumber: selectedGame.gameNumber,
+                    gameNumber: selectedGame.gameNumber,
                         gameType: selectedGameType,
                         choice: selectedChoice,
                         amount: selectedAmount
@@ -874,7 +878,7 @@
                     // 포인트 차감
                     currentUser.points -= selectedAmount;
                     document.getElementById('userPoints').textContent = `${currentUser.points}포인트`;
-                    localStorage.setItem('currentUser', JSON.stringify(currentUser));
+            localStorage.setItem('currentUser', JSON.stringify(currentUser));
                     
                     alert('배팅이 완료되었습니다!');
                     
@@ -1592,7 +1596,7 @@
                 if (data.success) {
                     alert('테스트 데이터가 생성되었습니다. 페이지를 새로고침하세요.');
                     location.reload();
-                } else {
+                    } else {
                     alert('테스트 데이터 생성 실패: ' + data.message);
                 }
             } catch (error) {
@@ -1722,7 +1726,7 @@
             // team-games 컬렉션에서 변환된 데이터 사용
             if (game.noGame) {
                 return game.noGame;
-            } else {
+                } else {
                 return '경기전';
             }
         }
@@ -1814,15 +1818,21 @@
                         const updatedGame = data.games.find(g => g._id === gameId || g.id === gameId);
                         if (updatedGame) {
                             selectedGame.bettingStart = updatedGame.bettingStart;
-                            console.log('폴링: bettingStart =', updatedGame.bettingStart);
-                            enablePredictionButton(); // 버튼 상태 즉시 반영
-                            enableBettingSelection(); // bettingStart 바뀔 때마다 배팅선택 버튼 활성/비활성
+                            selectedGame.bettingStop = updatedGame.bettingStop;
+                            console.log('폴링: bettingStart =', updatedGame.bettingStart, ', bettingStop =', updatedGame.bettingStop);
+                            enablePredictionButton();
+                            enableBettingSelection();
+                            if (updatedGame.predictionResult) {
+                                if (typeof showPredictionResult === 'function') {
+                                    showPredictionResult(updatedGame.predictionResult);
+                                }
+                            }
                         }
                     }
                 } catch (e) {
                     console.error('배팅 상태 폴링 오류:', e);
                 }
-            }, 1000); // 1초마다 체크
+            }, 1000);
         }
 
         // selectSimpleGame 함수 내 polling 시작 추가
