@@ -676,13 +676,10 @@
             const betButtons = document.querySelectorAll('.bet-choice-btn');
             betButtons.forEach(btn => {
                 btn.onclick = function() {
-                    // 모든 버튼 선택 해제
                     betButtons.forEach(b => b.classList.remove('bg-blue-800', 'border-blue-600', 'text-black', 'font-bold'));
-                    // 현재 버튼만 선택 표시
                     this.classList.add('bg-blue-800', 'border-blue-600', 'text-black', 'font-bold');
-                    // 선택된 배팅 유형 저장
-                    selectedChoice = this.dataset.choice;
-                    console.log('🎯 선택된 배팅:', selectedChoice);
+                    window.selectedChoice = this.dataset.choice; // 반드시 window에 할당
+                    console.log('🎯 선택된 배팅:', window.selectedChoice);
                     enablePredictionButton();
                 };
             });
@@ -713,6 +710,11 @@
 
         // team-games 컬렉션의 배팅 처리 함수
         async function handleBetting() {
+            console.log('예측하기 클릭 시 selectedChoice:', window.selectedChoice);
+            if (!window.selectedChoice) {
+                alert('배팅 유형을 선택해주세요.');
+                return;
+            }
             if (!currentUser || currentUser.isGuest) {
                 alert('로그인이 필요합니다.');
                 return;
