@@ -420,15 +420,15 @@
                     return;
                 }
                 
-                // Render 배포 환경 team-games 데이터 변환
+                // Render 배포 환경 team-games 데이터 변환 (시간 계산 삭제)
                 const simpleGames = games.map((game, index) => ({
                     id: game._id || game.id || index + 1,
                     gameNumber: game.number || index + 1,
                     matchup: `${game.homeTeam} vs ${game.awayTeam}`,
                     startTime: game.startTime || '시간 미정',
-                    progressStatus: game.noGame === '정상게임' ? '경기중' : '경기전',
-                    bettingStart: '시작', // 기본값으로 시작
-                    bettingStop: '중지',
+                    progressStatus: game.progressStatus || '경기전', // DB에서 읽어온 값 그대로 사용
+                    bettingStart: game.bettingStart || '시작',
+                    bettingStop: game.bettingStop || '중지',
                     date: game.date,
                     homeTeam: game.homeTeam,
                     awayTeam: game.awayTeam,
@@ -456,24 +456,27 @@
                     <h4 class="text-white font-bold mb-3">🏟️ 경기 선택</h4>
                     <div class="grid gap-2">
                         ${games.map(game => {
-                            const isSelectable = game.progressStatus === '경기중' || game.progressStatus === '경기전';
+                            // DB에서 읽어온 데이터를 그대로 사용 (시간 계산 삭제)
+                            const progressStatus = game.progressStatus || '경기전';
+                            const startTime = game.startTime || '시간 미정';
+                            const isSelectable = progressStatus === '경기중'; // 경기중만 선택 가능
                             const buttonClass = isSelectable 
                                 ? 'bg-blue-600 hover:bg-blue-700 text-white' 
                                 : 'bg-gray-500 text-gray-300 cursor-not-allowed';
                             
                             return `
                                 <button 
-                                    onclick="selectSimpleGame('${game.id}', '${game.gameNumber}', '${game.matchup.replace(/'/g, "\\'")}')"
-                                    class="w-full p-3 rounded text-left ${buttonClass}"
+                                    onclick="selectSimpleGame('${game._id || game.id}', '${game.gameNumber || game.number}', '${game.matchup.replace(/'/g, "\\'")}')"
+                                    class="w-full p-3 rounded text-left ${buttonClass} text-xs whitespace-nowrap"
                                     ${!isSelectable ? 'disabled' : ''}
                                 >
                                     <div class="flex justify-between items-center">
-                                        <div>
-                                            <div class="font-bold">${game.gameNumber}경기 ${game.matchup}</div>
-                                            <div class="text-sm opacity-75">${game.startTime} | ${game.progressStatus}</div>
+                                        <div class="flex-1 min-w-0">
+                                            <div class="font-bold truncate">${game.gameNumber || game.number}경기 ${game.matchup}</div>
+                                            <div class="text-xs opacity-75 truncate">${startTime} | ${progressStatus}</div>
                                         </div>
-                                        <div class="text-sm">
-                                            ${isSelectable ? '✅ 선택가능' : '❌ 선택불가'}
+                                        <div class="text-xs ml-2 flex-shrink-0">
+                                            ${isSelectable ? '✅' : '❌'}
                                         </div>
                                     </div>
                                 </button>
@@ -521,6 +524,7 @@
             const container = document.getElementById('gameSelectionContainer');
             if (!container) return;
             
+            // DB에서 읽어온 데이터를 그대로 사용 (시간 계산 삭제)
             const progressStatus = gameData.progressStatus || '경기전';
             const bettingStart = gameData.bettingStart || '중지';
             const startTime = gameData.startTime || '시간 미정';
@@ -535,10 +539,10 @@
                     <div class="grid gap-2">
                         <div onclick="resetGameSelection()" class="bg-blue-600 rounded-lg p-2 cursor-pointer hover:bg-blue-700 transition-colors">
                             <div class="flex justify-between items-center">
-                                <div>
-                                    <div class="font-bold text-white text-sm">${matchup}</div>
+                                <div class="flex-1 min-w-0">
+                                    <div class="font-bold text-white text-xs truncate">${matchup}</div>
                                 </div>
-                                <div class="text-xs text-blue-200 opacity-75">
+                                <div class="text-xs text-blue-200 opacity-75 flex-shrink-0 ml-2">
                                     ${startTime} | ${progressStatus}
                                 </div>
                             </div>
