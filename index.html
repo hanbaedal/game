@@ -818,7 +818,14 @@
             modal.className = 'fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50';
             // 안전하게 값 읽기
             const gameNumber = selectedGame && (selectedGame.gameNumber || selectedGame.number || '-');
-            const matchup = selectedGame && (selectedGame.matchup || '-');
+            let matchup = '-';
+            if (selectedGame) {
+                if (selectedGame.matchup && selectedGame.matchup !== '-') {
+                    matchup = selectedGame.matchup;
+                } else if (selectedGame.homeTeam && selectedGame.awayTeam) {
+                    matchup = selectedGame.homeTeam + ' vs ' + selectedGame.awayTeam;
+                }
+            }
             const date = selectedGame && (selectedGame.date || '-');
             const startTime = selectedGame && (selectedGame.startTime || '-');
             modal.innerHTML = `
