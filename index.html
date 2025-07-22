@@ -2080,19 +2080,20 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(requestData)
                 });
+                
                 const data = await response.json();
                 console.log('배팅 응답:', data);
+                
                 if (data.success) {
+                    console.log('✅ 배팅 성공 - game-member 컬렉션에 저장됨');
+                    console.log('📊 저장된 배팅 데이터:', requestData);
                     currentUser.points -= selectedAmount;
                     document.getElementById('userPoints').textContent = `${currentUser.points}포인트`;
                     localStorage.setItem('currentUser', JSON.stringify(currentUser));
                     showWaitingForResultModal();
                     waitForResult();
-                } else if (!isRetry && data.message && data.message.includes('배팅이 활성화되지 않았습니다')) {
-                    // 배팅 세션이 없을 때 자동 생성 후 1회 재시도
-                    await createBettingSession(selectedGame.date, selectedGame.gameNumber);
-                    setTimeout(() => processBetting(true), 500); // 약간의 딜레이 후 재시도
                 } else {
+                    console.log('❌ 배팅 실패:', data.message);
                     alert('배팅 실패: ' + data.message);
                 }
             } catch (error) {
