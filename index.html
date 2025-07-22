@@ -1979,20 +1979,51 @@
                     <div class="mb-4">
                         <p>기부 비율을 선택하세요.</p>
                         <div class="flex justify-center space-x-4 mt-2">
-                            <button class="bg-green-500 text-white font-bold py-2 px-4 rounded" onclick="handleDonation(10)">10%</button>
-                            <button class="bg-blue-500 text-white font-bold py-2 px-4 rounded" onclick="handleDonation(30)">30%</button>
-                            <button class="bg-purple-500 text-white font-bold py-2 px-4 rounded" onclick="handleDonation(50)">50%</button>
-                            <button class="bg-red-500 text-white font-bold py-2 px-4 rounded" onclick="handleDonation(100)">100%</button>
+                            <button class="donation-percent-btn bg-green-500 text-white font-bold py-2 px-4 rounded" data-percent="10" onclick="selectDonationPercent(10)">10%</button>
+                            <button class="donation-percent-btn bg-blue-500 text-white font-bold py-2 px-4 rounded" data-percent="30" onclick="selectDonationPercent(30)">30%</button>
+                            <button class="donation-percent-btn bg-purple-500 text-white font-bold py-2 px-4 rounded" data-percent="50" onclick="selectDonationPercent(50)">50%</button>
+                            <button class="donation-percent-btn bg-red-500 text-white font-bold py-2 px-4 rounded" data-percent="100" onclick="selectDonationPercent(100)">100%</button>
                         </div>
+                        <p class="mt-2 text-sm text-gray-300">선택된 기부 비율: <span id="selectedDonationPercent" class="text-yellow-300 font-bold">10%</span></p>
                     </div>
-                    <button class="w-full bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded mt-4" onclick="handleDonation(50)">기부하기</button>
+                    <button id="donateBtn" class="w-full bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded mt-4" onclick="handleDonation(10)">기부하기</button>
                 </div>
             `;
             document.body.appendChild(modal);
+            
+            // 기본적으로 10% 선택
+            selectDonationPercent(10);
         }
+        
+        // 기부 비율 선택 함수
+        function selectDonationPercent(percent) {
+            // 모든 버튼에서 선택 상태 제거
+            document.querySelectorAll('.donation-percent-btn').forEach(btn => {
+                btn.classList.remove('ring-2', 'ring-yellow-400');
+            });
+            
+            // 선택된 버튼에 선택 상태 추가
+            const selectedBtn = document.querySelector(`[data-percent="${percent}"]`);
+            if (selectedBtn) {
+                selectedBtn.classList.add('ring-2', 'ring-yellow-400');
+            }
+            
+            // 선택된 비율 표시
+            document.getElementById('selectedDonationPercent').textContent = percent + '%';
+            
+            // 기부하기 버튼의 onclick 이벤트 업데이트
+            const donateBtn = document.getElementById('donateBtn');
+            if (donateBtn) {
+                donateBtn.onclick = function() {
+                    handleDonation(percent);
+                };
+            }
+        }
+
         function handleDonation(percent) {
-            // 승리한 포인트에서 기부 비율만큼 삭감
-            const totalWinAmount = selectedAmount * 2; // 승리 포인트 (예시: 2배)
+            // 승리한 포인트에서 기부 비율만큼 삭감 (실제 계산식 사용)
+            const pointsPerWinner = 4000; // 기본값, 실제로는 서버에서 가져와야 함
+            const totalWinAmount = selectedAmount + pointsPerWinner; // 배팅 포인트 + 성공자당 분배 포인트
             const donationAmount = Math.floor(totalWinAmount * (percent / 100)); // 기부할 포인트
             const remainingAmount = totalWinAmount - donationAmount; // 남은 포인트
             
@@ -2136,10 +2167,20 @@
                                 console.log('🏆 성공 여부:', isSuccess);
                                 
                                 if (isSuccess) {
-                                    // 성공 시 획득 포인트 계산 (실제 로직에 맞게 수정)
-                                    const winAmount = selectedAmount * 2; // 예시: 2배
-                                    console.log('💰 획득 포인트:', winAmount);
-                                    showSuccessAndDonationModal(winAmount);
+                                    // 성공 시 획득 포인트 계산 (실제 계산식 사용)
+                                    try {
+                                        const pointsResponse = await fetch('/api/realtime-monitoring/points-per-winner');
+                                        const pointsData = await pointsResponse.json();
+                                        const pointsPerWinner = pointsData.pointsPerWinner || 4000;
+                                        const winAmount = selectedAmount + pointsPerWinner; // 배팅 포인트 + 성공자당 분배 포인트
+                                        console.log('💰 획득 포인트:', winAmount);
+                                        showSuccessAndDonationModal(winAmount);
+                                    } catch (error) {
+                                        console.error('포인트 계산 오류:', error);
+                                        // 오류 시 기본값 사용
+                                        const winAmount = selectedAmount + 4000;
+                                        showSuccessAndDonationModal(winAmount);
+                                    }
                                 } else {
                                     // 실패시 배팅 선택 화면으로 돌아가기 (이전 선택값 유지)
                                     console.log('❌ 예측 실패');
