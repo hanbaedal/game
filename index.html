@@ -2092,6 +2092,11 @@
                     localStorage.setItem('currentUser', JSON.stringify(currentUser));
                     showWaitingForResultModal();
                     waitForResult();
+                } else if (!isRetry && data.message && data.message.includes('배팅이 활성화되지 않았습니다')) {
+                    // 배팅 세션이 없을 때 자동 생성 후 1회 재시도
+                    console.log('🔄 배팅 세션 자동 생성 중...');
+                    await createBettingSession(selectedGame.date, selectedGame.gameNumber);
+                    setTimeout(() => processBetting(true), 1000); // 1초 딜레이 후 재시도
                 } else {
                     console.log('❌ 배팅 실패:', data.message);
                     alert('배팅 실패: ' + data.message);
