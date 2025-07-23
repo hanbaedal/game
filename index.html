@@ -2095,15 +2095,15 @@
                 const fixedPoints = 100;
                 
                 const requestData = {
-                    gameNumber: selectedGame.gameNumber,
                     userId: currentUser.userId,
-                    userName: currentUser.name || currentUser.username,
+                    gameType: '타자',
                     prediction: window.selectedChoice,
-                    points: fixedPoints,
-                    date: selectedGame.date
+                    points: 100,
+                    date: selectedGame.date,
+                    gameNumber: selectedGame.gameNumber
                 };
                 console.log('배팅 요청 데이터:', requestData);
-                const response = await fetch('/api/betting/submit-game-prediction', {
+                const response = await fetch('/api/betting/submit', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(requestData)
