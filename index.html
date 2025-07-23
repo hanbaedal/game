@@ -75,8 +75,8 @@
                         <div class="flex-1">
                             <p class="text-sm">배팅포인트</p>
                             <div class="grid grid-cols-1 gap-1 mt-1">
-                                <button class="bet-amount-btn bg-yellow-500 hover:bg-yellow-400 text-black text-xs py-1 px-1 rounded" data-amount="100" onclick="selectBetAmount(this)">
-                                    100
+                                <button class="bet-amount-btn bg-yellow-500 text-black text-xs py-1 px-1 rounded" data-amount="100" disabled>
+                                    100 (고정)
                             </button>
                             </div>
                         </div>
@@ -797,7 +797,7 @@
                         </div>
                         <div class="flex justify-between">
                             <span class="text-gray-300">배팅 포인트:</span>
-                            <span class="font-bold">${selectedAmount}포인트</span>
+                            <span class="font-bold">100포인트 (고정)</span>
                         </div>
                         <div class="flex justify-between">
                             <span class="text-gray-300">예측 선택:</span>
@@ -805,7 +805,7 @@
                         </div>
                         <div class="flex justify-between border-t border-gray-600 pt-3">
                             <span class="text-gray-300">배팅 후 포인트:</span>
-                            <span class="font-bold text-yellow-400">${currentUser.points - selectedAmount}포인트</span>
+                            <span class="font-bold text-yellow-400">${currentUser.points - 100}포인트</span>
                         </div>
                     </div>
                     <div class="flex space-x-3">
@@ -1487,11 +1487,20 @@
                          String(koreaTime.getDate()).padStart(2, '0');
             
             try {
-                // pointsPerWinner 값을 가져와서 승리 포인트 계산
-                const pointsResponse = await fetch('/api/realtime-monitoring/points-per-winner');
+                // 서버에서 실제 승리 포인트 계산
+                const pointsResponse = await fetch('/api/betting/calculate-game-winners', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        gameNumber: selectedGame.gameNumber,
+                        actualResult: currentGame.predictionResult,
+                        date: selectedGame.date
+                    })
+                });
+                
                 const pointsData = await pointsResponse.json();
-                const pointsPerWinner = pointsData.pointsPerWinner || 4000;
-                const winAmount = 100 + pointsPerWinner; // 배팅 포인트(100) + 성공자당 분배 포인트
+                const pointsPerWinner = pointsData.success ? pointsData.data.pointsPerWinner : 0;
+                const winAmount = 100 + pointsPerWinner; // 고정 배팅 포인트(100) + 성공자당 분배 포인트
                 
                 const response = await fetch('/api/donation', {
                     method: 'POST',
@@ -2020,26 +2029,42 @@
             }
         }
 
-        function handleDonation(percent) {
-            // 승리한 포인트에서 기부 비율만큼 삭감 (실제 계산식 사용)
-            const pointsPerWinner = 4000; // 기본값, 실제로는 서버에서 가져와야 함
-            const totalWinAmount = selectedAmount + pointsPerWinner; // 배팅 포인트 + 성공자당 분배 포인트
-            const donationAmount = Math.floor(totalWinAmount * (percent / 100)); // 기부할 포인트
-            const remainingAmount = totalWinAmount - donationAmount; // 남은 포인트
+        async function handleDonation(percent) {
+            try {
+                // 서버에서 실제 승리 포인트 계산 요청
+                const response = await fetch('/api/betting/calculate-game-winners', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        gameNumber: selectedGame.gameNumber,
+                        actualResult: currentGame.predictionResult,
+                        date: selectedGame.date
+                    })
+                });
+                
+                const data = await response.json();
+                const pointsPerWinner = data.success ? data.data.pointsPerWinner : 0;
+                const totalWinAmount = 100 + pointsPerWinner; // 고정 배팅 포인트(100) + 성공자당 분배 포인트
+                const donationAmount = Math.floor(totalWinAmount * (percent / 100)); // 기부할 포인트
+                const remainingAmount = totalWinAmount - donationAmount; // 남은 포인트
             
-            // 실제 기부 처리 로직 필요
-            alert(`${percent}% 기부가 처리되었습니다!\n기부 금액: ${donationAmount}포인트\n받을 포인트: ${remainingAmount}포인트`);
-            
-            // 남은 포인트를 사용자에게 지급
-            currentUser.points += remainingAmount;
-            document.getElementById('userPoints').textContent = `${currentUser.points}포인트`;
-            localStorage.setItem('currentUser', JSON.stringify(currentUser));
-            
-            closeDonationModal();
-            // 기부 완료 후 배팅 선택 화면으로 돌아가기 (게임 선택 유지)
-            showSelectedGameOnly();
-            enableBettingSelection();
-            enableBettingPoints();
+                            // 실제 기부 처리 로직 필요
+                alert(`${percent}% 기부가 처리되었습니다!\n기부 금액: ${donationAmount}포인트\n받을 포인트: ${remainingAmount}포인트`);
+                
+                // 남은 포인트를 사용자에게 지급
+                currentUser.points += remainingAmount;
+                document.getElementById('userPoints').textContent = `${currentUser.points}포인트`;
+                localStorage.setItem('currentUser', JSON.stringify(currentUser));
+                
+                closeDonationModal();
+                // 기부 완료 후 배팅 선택 화면으로 돌아가기 (게임 선택 유지)
+                showSelectedGameOnly();
+                enableBettingSelection();
+                enableBettingPoints();
+            } catch (error) {
+                console.error('기부 처리 중 오류:', error);
+                alert('기부 처리 중 오류가 발생했습니다.');
+            }
         }
         function closeDonationModal() {
             const modal = document.getElementById('donationModal');
@@ -2066,16 +2091,19 @@
                     alert('게임 정보가 올바르지 않습니다. 게임을 다시 선택해주세요.');
                     return;
                 }
+                // 고정 배팅 포인트 100
+                const fixedPoints = 100;
+                
                 const requestData = {
+                    gameNumber: selectedGame.gameNumber,
                     userId: currentUser.userId,
-                    gameType: '타자',
+                    userName: currentUser.name || currentUser.username,
                     prediction: window.selectedChoice,
-                    points: selectedAmount,
-                    date: selectedGame.date,
-                    gameNumber: selectedGame.gameNumber
+                    points: fixedPoints,
+                    date: selectedGame.date
                 };
                 console.log('배팅 요청 데이터:', requestData);
-                const response = await fetch('/api/betting/submit', {
+                const response = await fetch('/api/betting/submit-game-prediction', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(requestData)
@@ -2087,15 +2115,16 @@
                 if (data.success) {
                     console.log('✅ 배팅 성공 - game-member 컬렉션에 저장됨');
                     console.log('📊 저장된 배팅 데이터:', requestData);
-                    currentUser.points -= selectedAmount;
+                    // 고정 배팅 포인트 100 차감
+                    currentUser.points -= 100;
                     document.getElementById('userPoints').textContent = `${currentUser.points}포인트`;
                     localStorage.setItem('currentUser', JSON.stringify(currentUser));
                     showWaitingForResultModal();
                     waitForResult();
                 } else if (!isRetry && data.message && data.message.includes('배팅이 활성화되지 않았습니다')) {
-                    // 배팅 세션이 없을 때 자동 생성 후 1회 재시도
-                    console.log('🔄 배팅 세션 자동 생성 중...');
-                    await createBettingSession(selectedGame.date, selectedGame.gameNumber);
+                    // 경기별 컬렉션이 없을 때 자동 초기화 후 1회 재시도
+                    console.log('🔄 경기별 컬렉션 자동 초기화 중...');
+                    await initializeGameCollection(selectedGame.gameNumber);
                     setTimeout(() => processBetting(true), 1000); // 1초 딜레이 후 재시도
                 } else {
                     console.log('❌ 배팅 실패:', data.message);
@@ -2107,23 +2136,18 @@
             }
         }
 
-        // 배팅 세션 자동 생성 함수
-        async function createBettingSession(date, gameNumber) {
+        // 경기별 컬렉션 초기화 함수
+        async function initializeGameCollection(gameNumber) {
             try {
-                const response = await fetch('/api/betting/create-session', {
+                const response = await fetch('/api/betting/initialize-game-collections', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        date: date,
-                        gameNumber: gameNumber,
-                        inning: 1
-                    })
+                    headers: { 'Content-Type': 'application/json' }
                 });
                 const data = await response.json();
-                console.log('배팅 세션 생성 응답:', data);
+                console.log('경기별 컬렉션 초기화 응답:', data);
                 return data.success;
             } catch (error) {
-                console.error('배팅 세션 생성 오류:', error);
+                console.error('경기별 컬렉션 초기화 오류:', error);
                 return false;
             }
         }
@@ -2175,16 +2199,32 @@
                                 if (isSuccess) {
                                     // 성공 시 획득 포인트 계산 (실제 계산식 사용)
                                     try {
-                                        const pointsResponse = await fetch('/api/realtime-monitoring/points-per-winner');
+                                        // 경기별 승리자 계산 및 통계 저장 API 호출
+                                        const pointsResponse = await fetch('/api/betting/calculate-and-save-game-stats', {
+                                            method: 'POST',
+                                            headers: { 'Content-Type': 'application/json' },
+                                            body: JSON.stringify({
+                                                gameNumber: selectedGame.gameNumber,
+                                                actualResult: currentGame.predictionResult,
+                                                date: selectedGame.date
+                                            })
+                                        });
                                         const pointsData = await pointsResponse.json();
-                                        const pointsPerWinner = pointsData.pointsPerWinner || 4000;
-                                        const winAmount = selectedAmount + pointsPerWinner; // 배팅 포인트 + 성공자당 분배 포인트
-                                        console.log('💰 획득 포인트:', winAmount);
-                                        showSuccessAndDonationModal(winAmount);
+                                        
+                                        if (pointsData.success) {
+                                            const pointsPerWinner = pointsData.data.pointsPerWinner || 4000;
+                                            const winAmount = 100 + pointsPerWinner; // 고정 배팅 포인트(100) + 성공자당 분배 포인트
+                                            console.log('💰 획득 포인트:', winAmount);
+                                            showSuccessAndDonationModal(winAmount);
+                                        } else {
+                                            // 오류 시 기본값 사용 (배팅 포인트만)
+                                            const winAmount = 100;
+                                            showSuccessAndDonationModal(winAmount);
+                                        }
                                     } catch (error) {
                                         console.error('포인트 계산 오류:', error);
-                                        // 오류 시 기본값 사용
-                                        const winAmount = selectedAmount + 4000;
+                                        // 오류 시 기본값 사용 (배팅 포인트만)
+                                        const winAmount = 100;
                                         showSuccessAndDonationModal(winAmount);
                                     }
                                 } else {
