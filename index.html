@@ -499,10 +499,7 @@
                 if (window.bettingStatusInterval) {
                     clearInterval(window.bettingStatusInterval);
                 }
-                window.bettingStatusInterval = setInterval(checkBettingStatus, 2000); // 2초마다 확인
-                
-                // 배팅 선택 버튼 활성화
-                enableBettingChoices();
+                window.bettingStatusInterval = setInterval(checkBettingStatus, 500); // 0.5초마다 확인
                 
                 // 배팅 포인트 선택 활성화 (나중에)
                 enableBettingPoints();
@@ -743,23 +740,52 @@
         function enableBettingChoices() {
             const betChoiceButtons = document.querySelectorAll('.bet-choice-btn');
             
-            if (
-                selectedGame &&
-                selectedGame.bettingStart === '시작' &&
-                selectedGame.bettingStop === '진행'
-            ) {
-                betChoiceButtons.forEach(btn => {
-                    btn.disabled = false;
-                    btn.classList.remove('opacity-50', 'cursor-not-allowed');
-                    btn.classList.add('cursor-pointer');
+            // 서버에서 최신 배팅 상태 확인
+            fetch('/api/team-games')
+                .then(response => response.json())
+                .then(data => {
+                    if (data && data.games && selectedGame) {
+                        const currentGame = data.games.find(game => 
+                            game.number === selectedGame.number || 
+                            game.gameNumber === selectedGame.gameNumber
+                        );
+                        
+                        if (currentGame) {
+                            // 선택된 게임 정보 업데이트
+                            selectedGame.bettingStart = currentGame.bettingStart;
+                            selectedGame.bettingStop = currentGame.bettingStop;
+                        }
+                    }
+                    
+                    console.log('🔍 배팅 선택 활성화 조건 확인:', {
+                        selectedGame: selectedGame,
+                        bettingStart: selectedGame?.bettingStart,
+                        bettingStop: selectedGame?.bettingStop
+                    });
+                    
+                    if (
+                        selectedGame &&
+                        selectedGame.bettingStart === '시작' &&
+                        selectedGame.bettingStop === '진행'
+                    ) {
+                        console.log('✅ 배팅 선택 버튼 활성화');
+                        betChoiceButtons.forEach(btn => {
+                            btn.disabled = false;
+                            btn.classList.remove('opacity-50', 'cursor-not-allowed');
+                            btn.classList.add('cursor-pointer');
+                        });
+                    } else {
+                        console.log('❌ 배팅 선택 버튼 비활성화');
+                        betChoiceButtons.forEach(btn => {
+                            btn.disabled = true;
+                            btn.classList.add('opacity-50', 'cursor-not-allowed');
+                            btn.classList.remove('cursor-pointer');
+                        });
+                    }
+                })
+                .catch(error => {
+                    console.error('배팅 상태 확인 오류:', error);
                 });
-            } else {
-                betChoiceButtons.forEach(btn => {
-                    btn.disabled = true;
-                    btn.classList.add('opacity-50', 'cursor-not-allowed');
-                    btn.classList.remove('cursor-pointer');
-                });
-            }
         }
 
         // team-games 컬렉션의 예측하기 버튼 활성화
@@ -2452,23 +2478,52 @@
         function enableBettingChoices() {
             const betChoiceButtons = document.querySelectorAll('.bet-choice-btn');
             
-            if (
-                selectedGame &&
-                selectedGame.bettingStart === '시작' &&
-                selectedGame.bettingStop === '진행'
-            ) {
-                betChoiceButtons.forEach(btn => {
-                    btn.disabled = false;
-                    btn.classList.remove('opacity-50', 'cursor-not-allowed');
-                    btn.classList.add('cursor-pointer');
+            // 서버에서 최신 배팅 상태 확인
+            fetch('/api/team-games')
+                .then(response => response.json())
+                .then(data => {
+                    if (data && data.games && selectedGame) {
+                        const currentGame = data.games.find(game => 
+                            game.number === selectedGame.number || 
+                            game.gameNumber === selectedGame.gameNumber
+                        );
+                        
+                        if (currentGame) {
+                            // 선택된 게임 정보 업데이트
+                            selectedGame.bettingStart = currentGame.bettingStart;
+                            selectedGame.bettingStop = currentGame.bettingStop;
+                        }
+                    }
+                    
+                    console.log('🔍 배팅 선택 활성화 조건 확인:', {
+                        selectedGame: selectedGame,
+                        bettingStart: selectedGame?.bettingStart,
+                        bettingStop: selectedGame?.bettingStop
+                    });
+                    
+                    if (
+                        selectedGame &&
+                        selectedGame.bettingStart === '시작' &&
+                        selectedGame.bettingStop === '진행'
+                    ) {
+                        console.log('✅ 배팅 선택 버튼 활성화');
+                        betChoiceButtons.forEach(btn => {
+                            btn.disabled = false;
+                            btn.classList.remove('opacity-50', 'cursor-not-allowed');
+                            btn.classList.add('cursor-pointer');
+                        });
+                    } else {
+                        console.log('❌ 배팅 선택 버튼 비활성화');
+                        betChoiceButtons.forEach(btn => {
+                            btn.disabled = true;
+                            btn.classList.add('opacity-50', 'cursor-not-allowed');
+                            btn.classList.remove('cursor-pointer');
+                        });
+                    }
+                })
+                .catch(error => {
+                    console.error('배팅 상태 확인 오류:', error);
                 });
-            } else {
-                betChoiceButtons.forEach(btn => {
-                    btn.disabled = true;
-                    btn.classList.add('opacity-50', 'cursor-not-allowed');
-                    btn.classList.remove('cursor-pointer');
-                });
-            }
         }
     </script>
 </body>
