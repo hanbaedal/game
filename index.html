@@ -740,7 +740,7 @@
             if (
                 selectedGame &&
                 selectedGame.bettingStart === '시작' &&
-                selectedGame.bettingStop === '진행'
+                selectedGame.bettingStop !== '중지'
             ) {
                 betChoiceButtons.forEach(btn => {
                     btn.disabled = false;
@@ -762,7 +762,7 @@
             if (
                 selectedGame &&
                 selectedGame.bettingStart === '시작' &&
-                selectedGame.bettingStop === '진행' &&
+                selectedGame.bettingStop !== '중지' &&
                 window.selectedChoice
             ) {
                 betBtn.disabled = false;
@@ -2448,7 +2448,7 @@
             if (
                 selectedGame &&
                 selectedGame.bettingStart === '시작' &&
-                selectedGame.bettingStop === '진행'
+                selectedGame.bettingStop !== '중지'
             ) {
                 betChoiceButtons.forEach(btn => {
                     btn.disabled = false;
