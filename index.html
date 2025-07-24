@@ -495,7 +495,7 @@
                 enableBettingSelection();
                 
                 // 배팅 상태 실시간 확인 및 업데이트
-                checkBettingStatus();
+            checkBettingStatus();
                 
                 // 배팅 상태 확인을 주기적으로 실행
                 if (window.bettingStatusInterval) {
@@ -1028,8 +1028,8 @@
                         const winAmount = calculateWinAmount();
                         currentUser.points += winAmount;
                         document.getElementById('userPoints').textContent = `${currentUser.points}포인트`;
-                        localStorage.setItem('currentUser', JSON.stringify(currentUser));
-                        
+            localStorage.setItem('currentUser', JSON.stringify(currentUser));
+
                         showWinModal(winAmount);
                     } else {
                         // 실패
@@ -1139,6 +1139,8 @@
 
         // 배팅 상태 확인 및 표시 함수 (수정)
         async function checkBettingStatus() {
+            if (!selectedGame) return;
+            
             console.log('🔄 배팅 상태 확인 시작...');
             
             // 서버에서 최신 배팅 상태 가져오기
@@ -1147,43 +1149,19 @@
                 .then(data => {
                     console.log('📊 서버 데이터:', data);
                     if (data && data.games) {
-                        // 현재 선택된 게임 찾기
-                        let currentGame = null;
-                        
-                        if (selectedGame) {
-                            currentGame = data.games.find(game => 
-                                game.number === selectedGame.number || 
-                                game.gameNumber === selectedGame.gameNumber ||
-                                game._id === selectedGame._id ||
-                                game.id === selectedGame.id
-                            );
-                        }
-                        
-                        // 선택된 게임이 없으면 첫 번째 활성 게임 사용
-                        if (!currentGame) {
-                            currentGame = data.games.find(game => 
-                                game.bettingStart === '시작' && 
-                                game.bettingStop === '진행'
-                            );
-                        }
+                        const currentGame = data.games.find(game => 
+                            game.number === selectedGame.number || 
+                            game.gameNumber === selectedGame.gameNumber ||
+                            game._id === selectedGame._id ||
+                            game.id === selectedGame.id
+                        );
                         
                         console.log('🎯 현재 게임:', currentGame);
                         
                         if (currentGame) {
-                            // selectedGame 업데이트 또는 설정
-                            if (!selectedGame) {
-                                selectedGame = {
-                                    _id: currentGame._id,
-                                    id: currentGame.id,
-                                    number: currentGame.number,
-                                    gameNumber: currentGame.gameNumber,
-                                    bettingStart: currentGame.bettingStart,
-                                    bettingStop: currentGame.bettingStop
-                                };
-                            } else {
-                                selectedGame.bettingStart = currentGame.bettingStart;
-                                selectedGame.bettingStop = currentGame.bettingStop;
-                            }
+                            // 선택된 게임 정보 업데이트
+                            selectedGame.bettingStart = currentGame.bettingStart;
+                            selectedGame.bettingStop = currentGame.bettingStop;
                             
                             console.log('✅ 게임 정보 업데이트:', {
                                 bettingStart: selectedGame.bettingStart,
@@ -1193,15 +1171,6 @@
                             // 배팅 선택 버튼 상태 업데이트
                             enableBettingChoices();
                             enablePredictionButton();
-                        } else {
-                            console.log('❌ 활성 게임을 찾을 수 없습니다.');
-                            // 모든 배팅 버튼 비활성화
-                            const betChoiceButtons = document.querySelectorAll('.bet-choice-btn');
-                            betChoiceButtons.forEach(btn => {
-                                btn.disabled = true;
-                                btn.classList.add('opacity-50', 'cursor-not-allowed');
-                                btn.classList.remove('cursor-pointer');
-                            });
                         }
                     }
                 })
@@ -1896,24 +1865,24 @@
             // team-games 컬렉션에서 변환된 데이터 사용
             if (game.noGame) {
                 return game.noGame;
-                } else {
+            } else {
                 return '경기전';
             }
         }
-        
-                function getStatusBadgeClass(game) {
+
+        function getStatusBadgeClass(game) {
             const status = getStatusText(game);
             
             if (status === '경기중') {
-                return 'bg-red-500 text-white';
+                    return 'bg-red-500 text-white';
             } else if (status === '경기끝' || status === '경기종료') {
                 return 'bg-gray-600 text-white';
             } else if (status === '우천취소' || status === '경기취소' || status === '번개/천둥') {
-                return 'bg-yellow-500 text-black';
+                    return 'bg-yellow-500 text-black';
             } else if (status === '경기전') {
                 return 'bg-blue-500 text-white';
                 } else {
-                return 'bg-gray-500 text-white';
+                    return 'bg-gray-500 text-white';
             }
         }
 
@@ -2197,8 +2166,8 @@
                 // 필수 필드들이 올바르게 설정되었는지 확인
                 if (!currentUser || !currentUser.userId) {
                     alert('사용자 정보가 없습니다. 다시 로그인해주세요.');
-                    return;
-                }
+                        return;
+                    }
                 if (!window.selectedChoice) {
                     alert('배팅 선택이 되지 않았습니다.');
                     return;
@@ -2368,7 +2337,7 @@
                                             const winAmount = 100 + pointsPerWinner; // 고정 배팅 포인트(100) + 성공자당 분배 포인트
                                             console.log('💰 획득 포인트:', winAmount);
                                             showSuccessModal(winAmount);
-                                        } else {
+                } else {
                                             // 오류 시 기본값 사용 (배팅 포인트만)
                                             const winAmount = 100;
                                             showSuccessModal(winAmount);
@@ -2378,14 +2347,14 @@
                                         // 오류 시 기본값 사용 (배팅 포인트만)
                                         const winAmount = 100;
                                         showSuccessModal(winAmount);
-                                    }
-                                } else {
+                }
+            } else {
                                     // 실패시 실패 모달 표시
                                     console.log('❌ 예측 실패');
                                     showFailureModal();
                                 }
                             }
-                        } else {
+            } else {
                             console.log('❌ 현재 게임을 찾을 수 없음');
                         }
                     } else {
@@ -2430,8 +2399,8 @@
                 // 모달 내부 컨텐츠를 클릭한 경우 이벤트 전파 방지
                 if (e.target.closest('.bg-gray-800')) {
                     e.stopPropagation();
-                    return;
-                }
+                return;
+            }
                 // 모달 배경을 클릭한 경우에만 기부 모달로 전환
                 modal.remove();
                 showDonationModal();
@@ -2506,8 +2475,8 @@
                     btn.disabled = false;
                     btn.classList.remove('opacity-50', 'cursor-not-allowed');
                     btn.classList.add('cursor-pointer');
-                });
-            } else {
+                    });
+                } else {
                 betChoiceButtons.forEach(btn => {
                     btn.disabled = true;
                     btn.classList.add('opacity-50', 'cursor-not-allowed');
