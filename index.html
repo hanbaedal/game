@@ -501,7 +501,8 @@
                 }
                 window.bettingStatusInterval = setInterval(checkBettingStatus, 500); // 0.5초마다 확인
                 
-
+                // 배팅 선택 버튼 활성화 (즉시 실행)
+                enableBettingChoices();
                 
                 // 배팅 포인트 선택 활성화 (나중에)
                 enableBettingPoints();
@@ -1138,20 +1139,30 @@
         async function checkBettingStatus() {
             if (!selectedGame) return;
             
+            console.log('🔄 배팅 상태 확인 시작...');
+            
             // 서버에서 최신 배팅 상태 가져오기
             fetch('/api/team-games')
                 .then(response => response.json())
                 .then(data => {
+                    console.log('📊 서버 데이터:', data);
                     if (data && data.games) {
                         const currentGame = data.games.find(game => 
                             game.number === selectedGame.number || 
                             game.gameNumber === selectedGame.gameNumber
                         );
                         
+                        console.log('🎯 현재 게임:', currentGame);
+                        
                         if (currentGame) {
                             // 선택된 게임 정보 업데이트
                             selectedGame.bettingStart = currentGame.bettingStart;
                             selectedGame.bettingStop = currentGame.bettingStop;
+                            
+                            console.log('✅ 게임 정보 업데이트:', {
+                                bettingStart: selectedGame.bettingStart,
+                                bettingStop: selectedGame.bettingStop
+                            });
                             
                             // 배팅 선택 버튼 상태 업데이트
                             enableBettingChoices();
