@@ -1172,9 +1172,9 @@
                             enableBettingChoices();
                             enablePredictionButton();
                         }
-                    }
-                })
-                .catch(error => {
+                }
+            })
+            .catch(error => {
                     console.error('배팅 상태 확인 오류:', error);
                 });
         }
@@ -1468,51 +1468,47 @@
 
         function showDonationModal(winPoints = 0) {
             const modal = document.getElementById('donationModal');
-            modal.style.display = 'flex';
-            
-            // 모든 기부 버튼에서 selected 클래스 제거
-            document.querySelectorAll('.donation-btn').forEach(btn => {
-                btn.classList.remove('selected');
-            });
-            
-            // 10% 버튼을 기본 선택으로 설정
-            const defaultBtn = document.querySelector('.donation-btn[data-percent="10"]');
-            if (defaultBtn) {
-                defaultBtn.classList.add('selected');
+            if (modal) {
+                modal.classList.remove('hidden');
+                
+                // 기부 버튼 이벤트 리스너 설정
+                const donationBtns = modal.querySelectorAll('.donation-btn');
+                donationBtns.forEach(btn => {
+                    btn.addEventListener('click', function() {
+                        // 모든 버튼에서 선택 상태 제거
+                        donationBtns.forEach(b => b.classList.remove('selected'));
+                        // 클릭된 버튼에 선택 상태 추가
+                        this.classList.add('selected');
+                        
+                        const percent = this.getAttribute('data-percent');
+                        // 기부하기 버튼 업데이트
+                        const donateBtn = document.getElementById('donateBtn');
+                        if (donateBtn) {
+                            donateBtn.onclick = function() {
+                                handleDonation(parseInt(percent));
+                            };
+                        }
+                    });
+                });
+                
+                // 기부하지 않기 버튼
+                const donateNoBtn = modal.querySelector('#donateNoBtn');
+                if (donateNoBtn) {
+                    donateNoBtn.onclick = function() {
+                        closeDonationModal();
+                        // 기부하지 않고 게임으로 돌아가기
+                        showSelectedGameOnly();
+                        enableBettingSelection();
+                        enableBettingPoints();
+                    };
+                }
+                
+                // 기본적으로 10% 선택
+                const defaultBtn = modal.querySelector('[data-percent="10"]');
+                if (defaultBtn) {
+                    defaultBtn.click();
+                }
             }
-            
-            // 기부 옵션 버튼들에 이벤트 리스너 추가
-            document.querySelectorAll('.donation-btn').forEach(btn => {
-                btn.onclick = function() {
-                    // 모든 버튼에서 selected 클래스 제거
-                    document.querySelectorAll('.donation-btn').forEach(b => b.classList.remove('selected'));
-                    // 클릭된 버튼에 selected 클래스 추가
-                    this.classList.add('selected');
-                    
-                    const percent = parseInt(this.dataset.percent);
-                    const donateAmount = Math.floor(winPoints * percent / 100);
-                    
-                    // 기부 확인 섹션 표시
-                    document.getElementById('selectedPercent').textContent = `${percent}% (${donateAmount}포인트)`;
-                    document.getElementById('donationConfirm').classList.remove('hidden');
-                    
-                    // 예 버튼 이벤트
-                    document.getElementById('confirmYesBtn').onclick = function() {
-                        processDonation(donateAmount, percent);
-                    };
-                    
-                    // 아니오 버튼 이벤트
-                    document.getElementById('confirmNoBtn').onclick = function() {
-                        document.getElementById('donationConfirm').classList.add('hidden');
-                    };
-                };
-            });
-            
-            // 기부안함 버튼 이벤트
-            document.getElementById('donateNoBtn').onclick = function() {
-                modal.style.display = 'none';
-                document.getElementById('donationConfirm').classList.add('hidden');
-            };
         }
 
         function showLoseModal() {
@@ -1576,7 +1572,7 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         gameNumber: selectedGame.gameNumber,
-                        actualResult: currentGame.predictionResult,
+                        actualResult: selectedGame.predictionResult || '',
                         date: selectedGame.date
                     })
                 });
@@ -2065,32 +2061,48 @@
 
         // 기부 모달(간단 예시)
         function showDonationModal() {
-            const oldModal = document.getElementById('donationModal');
-            if (oldModal) oldModal.remove();
-            const modal = document.createElement('div');
-            modal.id = 'donationModal';
-            modal.className = 'fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50';
-            modal.style.zIndex = '60'; // 성공 모달보다 위에 표시
-            modal.innerHTML = `
-                <div class="bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4 text-center">
-                    <h3 class="text-lg font-bold mb-4 text-blue-400">기부하기</h3>
-                    <div class="mb-4">
-                        <p>기부 비율을 선택하세요.</p>
-                        <div class="flex justify-center space-x-4 mt-2">
-                            <button class="donation-percent-btn bg-green-500 text-white font-bold py-2 px-4 rounded" data-percent="10" onclick="selectDonationPercent(10)">10%</button>
-                            <button class="donation-percent-btn bg-blue-500 text-white font-bold py-2 px-4 rounded" data-percent="30" onclick="selectDonationPercent(30)">30%</button>
-                            <button class="donation-percent-btn bg-purple-500 text-white font-bold py-2 px-4 rounded" data-percent="50" onclick="selectDonationPercent(50)">50%</button>
-                            <button class="donation-percent-btn bg-red-500 text-white font-bold py-2 px-4 rounded" data-percent="100" onclick="selectDonationPercent(100)">100%</button>
-                        </div>
-                        <p class="mt-2 text-sm text-gray-300">선택된 기부 비율: <span id="selectedDonationPercent" class="text-yellow-300 font-bold">10%</span></p>
-                    </div>
-                    <button id="donateBtn" class="w-full bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded mt-4" onclick="handleDonation(10)">기부하기</button>
-                </div>
-            `;
-            document.body.appendChild(modal);
-            
-            // 기본적으로 10% 선택
-            selectDonationPercent(10);
+            const modal = document.getElementById('donationModal');
+            if (modal) {
+                modal.classList.remove('hidden');
+                
+                // 기부 버튼 이벤트 리스너 설정
+                const donationBtns = modal.querySelectorAll('.donation-btn');
+                donationBtns.forEach(btn => {
+                    btn.addEventListener('click', function() {
+                        // 모든 버튼에서 선택 상태 제거
+                        donationBtns.forEach(b => b.classList.remove('selected'));
+                        // 클릭된 버튼에 선택 상태 추가
+                        this.classList.add('selected');
+                        
+                        const percent = this.getAttribute('data-percent');
+                        // 기부하기 버튼 업데이트
+                        const donateBtn = document.getElementById('donateBtn');
+                        if (donateBtn) {
+                            donateBtn.onclick = function() {
+                                handleDonation(parseInt(percent));
+                            };
+                        }
+                    });
+                });
+                
+                // 기부하지 않기 버튼
+                const donateNoBtn = modal.querySelector('#donateNoBtn');
+                if (donateNoBtn) {
+                    donateNoBtn.onclick = function() {
+                        closeDonationModal();
+                        // 기부하지 않고 게임으로 돌아가기
+                        showSelectedGameOnly();
+                        enableBettingSelection();
+                        enableBettingPoints();
+                    };
+                }
+                
+                // 기본적으로 10% 선택
+                const defaultBtn = modal.querySelector('[data-percent="10"]');
+                if (defaultBtn) {
+                    defaultBtn.click();
+                }
+            }
         }
         
         // 기부 비율 선택 함수
@@ -2126,7 +2138,7 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         gameNumber: selectedGame.gameNumber,
-                        actualResult: currentGame.predictionResult,
+                        actualResult: selectedGame.predictionResult || '',
                         date: selectedGame.date
                     })
                 });
@@ -2137,7 +2149,7 @@
                 const donationAmount = Math.floor(totalWinAmount * (percent / 100)); // 기부할 포인트
                 const remainingAmount = totalWinAmount - donationAmount; // 남은 포인트
             
-                            // 실제 기부 처리 로직 필요
+                // 실제 기부 처리 로직 필요
                 alert(`${percent}% 기부가 처리되었습니다!\n기부 금액: ${donationAmount}포인트\n받을 포인트: ${remainingAmount}포인트`);
                 
                 // 남은 포인트를 사용자에게 지급
