@@ -482,6 +482,8 @@
                     ...selectedGameData,
                     date: selectedGameData.date || selectedGameData.gameDate || '',
                     gameNumber: selectedGameData.gameNumber || selectedGameData.number || '',
+                    bettingStart: selectedGameData.bettingStart || '',
+                    bettingStop: selectedGameData.bettingStop || ''
                 };
                 
                 // 경기 선택 모달을 선택된 경기만 표시하도록 변경
@@ -498,6 +500,9 @@
                     clearInterval(window.bettingStatusInterval);
                 }
                 window.bettingStatusInterval = setInterval(checkBettingStatus, 2000); // 2초마다 확인
+                
+                // 배팅 선택 버튼 활성화
+                enableBettingChoices();
                 
                 // 배팅 포인트 선택 활성화 (나중에)
                 enableBettingPoints();
@@ -684,7 +689,7 @@
             if (
                 selectedGame &&
                 selectedGame.bettingStart === '시작' &&
-                selectedGame.bettingStop === '진행'
+                selectedGame.bettingStop === '대기'
             ) {
                 betButtons.forEach(b => {
                     b.disabled = false;
@@ -737,10 +742,11 @@
         // 배팅 선택 버튼 활성화
         function enableBettingChoices() {
             const betChoiceButtons = document.querySelectorAll('.bet-choice-btn');
+            
             if (
                 selectedGame &&
                 selectedGame.bettingStart === '시작' &&
-                selectedGame.bettingStop !== '중지'
+                selectedGame.bettingStop === '대기'
             ) {
                 betChoiceButtons.forEach(btn => {
                     btn.disabled = false;
@@ -762,7 +768,7 @@
             if (
                 selectedGame &&
                 selectedGame.bettingStart === '시작' &&
-                selectedGame.bettingStop !== '중지' &&
+                selectedGame.bettingStop === '대기' &&
                 window.selectedChoice
             ) {
                 betBtn.disabled = false;
@@ -2445,10 +2451,11 @@
         // 배팅 선택 버튼 활성화
         function enableBettingChoices() {
             const betChoiceButtons = document.querySelectorAll('.bet-choice-btn');
+            
             if (
                 selectedGame &&
                 selectedGame.bettingStart === '시작' &&
-                selectedGame.bettingStop !== '중지'
+                selectedGame.bettingStop === '대기'
             ) {
                 betChoiceButtons.forEach(btn => {
                     btn.disabled = false;
