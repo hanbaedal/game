@@ -58,6 +58,395 @@ function getRealtimeCollection() {
     return mongoose.connection.db.collection('realtime-monitoring');
 }
 
+// betting-sessions 컬렉션 가져오기 함수 (배팅 세션 관리용)
+function getBettingSessionsCollection() {
+    return mongoose.connection.db.collection('betting-sessions');
+}
+
+// betting-game-1 ~ betting-game-5 컬렉션 가져오기 함수
+function getBettingGameCollection(gameNumber) {
+    return mongoose.connection.db.collection(`betting-game-${gameNumber}`);
+}
+
+// 실시간 모니터링용 API들
+app.get('/api/admin/betting-games', async (req, res) => {
+    if (!checkMongoDBConnection()) {
+        return sendMongoDBErrorResponse(res);
+    }
+
+    try {
+        const { date } = req.query;
+        const targetDate = date || getKoreaDateString();
+        
+        console.log(`[Admin] 배팅 게임 데이터 조회 - 날짜: ${targetDate}`);
+        
+        const gamesData = [];
+        
+        // 1~5경기 데이터 수집
+        for (let gameNumber = 1; gameNumber <= 5; gameNumber++) {
+            try {
+                const collection = getBettingGameCollection(gameNumber);
+                const gameData = await collection.findOne({ 
+                    date: targetDate,
+                    gameNumber: gameNumber 
+                });
+                
+                if (gameData) {
+                    gamesData.push({
+                        gameNumber: gameData.gameNumber,
+                        date: gameData.date,
+                        matchup: gameData.matchup,
+                        status: gameData.status || 'pending',
+                        bettingStart: gameData.bettingStart,
+                        bettingEnd: gameData.bettingEnd,
+                        totalBettors: gameData.bets ? gameData.bets.length : 0,
+                        totalPoints: gameData.bets ? gameData.bets.reduce((sum, bet) => sum + bet.points, 0) : 0,
+                        bets: gameData.bets || [],
+                        actualResult: gameData.actualResult,
+                        winnerCount: gameData.winnerCount,
+                        totalPrize: gameData.totalPrize,
+                        pointsPerWinner: gameData.pointsPerWinner,
+                        pointsDistributed: gameData.pointsDistributed || false,
+                        distributedAt: gameData.distributedAt
+                    });
+                } else {
+                    // 기본 게임 데이터 생성
+                    gamesData.push({
+                        gameNumber: gameNumber,
+                        date: targetDate,
+                        matchup: '',
+                        status: 'pending',
+                        totalBettors: 0,
+                        totalPoints: 0,
+                        bets: [],
+                        actualResult: null,
+                        winnerCount: 0,
+                        totalPrize: 0,
+                        pointsPerWinner: 0
+                    });
+                }
+            } catch (error) {
+                console.error(`[Admin] ${gameNumber}경기 데이터 조회 오류:`, error);
+                gamesData.push({
+                    gameNumber: gameNumber,
+                    date: targetDate,
+                    matchup: '',
+                    status: 'pending',
+                    totalBettors: 0,
+                    totalPoints: 0,
+                    bets: [],
+                    actualResult: null,
+                    winnerCount: 0,
+                    totalPrize: 0,
+                    pointsPerWinner: 0
+                });
+            }
+        }
+        
+        console.log(`[Admin] 배팅 게임 데이터 조회 완료: ${gamesData.length}개 경기`);
+        
+        res.json({
+            success: true,
+            data: gamesData
+        });
+    } catch (error) {
+        console.error('[Admin] 배팅 게임 데이터 조회 오류:', error);
+        res.status(500).json({
+            success: false,
+            message: '배팅 게임 데이터 조회 중 오류가 발생했습니다.'
+        });
+    }
+});
+
+// 특정 경기 배팅 결과 입력 및 승리 포인트 계산
+app.post('/api/admin/betting-game/:gameNumber/result', async (req, res) => {
+    if (!checkMongoDBConnection()) {
+        return sendMongoDBErrorResponse(res);
+    }
+
+    try {
+        const { gameNumber } = req.params;
+        const { actualResult, date } = req.body;
+        const targetDate = date || getKoreaDateString();
+        
+        console.log(`[Admin] ${gameNumber}경기 결과 입력 - 결과: ${actualResult}, 날짜: ${targetDate}`);
+        
+        const collection = getBettingGameCollection(gameNumber);
+        
+        // 기존 게임 데이터 조회
+        let gameData = await collection.findOne({ 
+            date: targetDate,
+            gameNumber: parseInt(gameNumber)
+        });
+        
+        if (!gameData) {
+            // 새로운 게임 데이터 생성
+            gameData = {
+                gameNumber: parseInt(gameNumber),
+                date: targetDate,
+                matchup: '',
+                status: 'completed',
+                bets: [],
+                actualResult: actualResult,
+                winnerCount: 0,
+                totalPrize: 0,
+                pointsPerWinner: 0
+            };
+        } else {
+            gameData.actualResult = actualResult;
+            gameData.status = 'completed';
+        }
+        
+        // 승리자 계산
+        const winners = gameData.bets.filter(bet => bet.prediction === actualResult);
+        const losers = gameData.bets.filter(bet => bet.prediction !== actualResult);
+        
+        const totalLoserPoints = losers.reduce((sum, bet) => sum + bet.points, 0);
+        const pointsPerWinner = winners.length > 0 ? Math.round(totalLoserPoints / winners.length) : 0;
+        const totalWinnings = pointsPerWinner * winners.length;
+        
+        // 게임 데이터 업데이트
+        gameData.winnerCount = winners.length;
+        gameData.totalPrize = totalWinnings;
+        gameData.pointsPerWinner = pointsPerWinner;
+        
+        // 승리자들에게 결과 업데이트
+        gameData.bets.forEach(bet => {
+            bet.result = bet.prediction === actualResult ? 'won' : 'lost';
+        });
+        
+        // 데이터베이스에 저장
+        await collection.updateOne(
+            { date: targetDate, gameNumber: parseInt(gameNumber) },
+            { $set: gameData },
+            { upsert: true }
+        );
+        
+        console.log(`[Admin] ${gameNumber}경기 결과 처리 완료 - 승리자: ${winners.length}명, 분배 포인트: ${pointsPerWinner}`);
+        
+        res.json({
+            success: true,
+            data: {
+                gameNumber: parseInt(gameNumber),
+                actualResult: actualResult,
+                totalBettors: gameData.bets.length,
+                totalPoints: gameData.bets.reduce((sum, bet) => sum + bet.points, 0),
+                winnerCount: winners.length,
+                loserCount: losers.length,
+                totalLoserPoints: totalLoserPoints,
+                pointsPerWinner: pointsPerWinner,
+                totalWinnings: totalWinnings,
+                winners: winners.map(winner => ({
+                    userId: winner.userId,
+                    userName: winner.userName,
+                    points: winner.points,
+                    prediction: winner.prediction
+                }))
+            }
+        });
+    } catch (error) {
+        console.error('[Admin] 경기 결과 입력 오류:', error);
+        res.status(500).json({
+            success: false,
+            message: '경기 결과 입력 중 오류가 발생했습니다.'
+        });
+    }
+});
+
+// 배팅 상태 확인 API
+app.get('/api/betting/status', async (req, res) => {
+    if (!checkMongoDBConnection()) {
+        return sendMongoDBErrorResponse(res);
+    }
+
+    try {
+        const { date } = req.query;
+        const targetDate = date || getKoreaDateString();
+        
+        console.log(`[Betting] 배팅 상태 확인 - 날짜: ${targetDate}`);
+        
+        // 활성 배팅 세션 확인
+        const bettingCollection = getBettingCollection();
+        const activeSession = await bettingCollection.findOne({
+            date: targetDate,
+            status: 'active'
+        });
+        
+        if (activeSession) {
+            res.json({
+                success: true,
+                data: {
+                    isActive: true,
+                    activeGame: {
+                        gameNumber: activeSession.gameNumber,
+                        matchup: activeSession.matchup,
+                        status: 'active'
+                    }
+                }
+            });
+        } else {
+            res.json({
+                success: true,
+                data: {
+                    isActive: false,
+                    activeGame: null
+                }
+            });
+        }
+    } catch (error) {
+        console.error('[Betting] 배팅 상태 확인 오류:', error);
+        res.status(500).json({
+            success: false,
+            message: '배팅 상태 확인 중 오류가 발생했습니다.'
+        });
+    }
+});
+
+// 특정 경기 상세 정보 조회
+app.get('/api/admin/betting-game/:gameNumber', async (req, res) => {
+    if (!checkMongoDBConnection()) {
+        return sendMongoDBErrorResponse(res);
+    }
+
+    try {
+        const { gameNumber } = req.params;
+        const { date } = req.query;
+        const targetDate = date || getKoreaDateString();
+        
+        console.log(`[Admin] ${gameNumber}경기 상세 정보 조회 - 날짜: ${targetDate}`);
+        
+        const collection = getBettingGameCollection(gameNumber);
+        const gameData = await collection.findOne({ 
+            date: targetDate,
+            gameNumber: parseInt(gameNumber)
+        });
+        
+        if (gameData) {
+            res.json({
+                success: true,
+                data: gameData
+            });
+        } else {
+            res.json({
+                success: true,
+                data: {
+                    gameNumber: parseInt(gameNumber),
+                    date: targetDate,
+                    matchup: '',
+                    status: 'pending',
+                    totalBettors: 0,
+                    totalPoints: 0,
+                    bets: [],
+                    actualResult: null,
+                    winnerCount: 0,
+                    totalPrize: 0,
+                    pointsPerWinner: 0
+                }
+            });
+        }
+    } catch (error) {
+        console.error('[Admin] 경기 상세 정보 조회 오류:', error);
+        res.status(500).json({
+            success: false,
+            message: '경기 상세 정보 조회 중 오류가 발생했습니다.'
+        });
+    }
+});
+
+// 승리 포인트 지급
+app.post('/api/admin/distribute-winnings', async (req, res) => {
+    if (!checkMongoDBConnection()) {
+        return sendMongoDBErrorResponse(res);
+    }
+
+    try {
+        const { gameNumber, actualResult, winners, pointsPerWinner, date } = req.body;
+        const targetDate = date || getKoreaDateString();
+        
+        console.log(`[Admin] 승리 포인트 지급 - ${gameNumber}경기, 승리자: ${winners.length}명, 포인트: ${pointsPerWinner}`);
+        
+        const userCollection = getUserCollection();
+        
+        // 승리자들에게 포인트 지급
+        for (const winner of winners) {
+            await userCollection.updateOne(
+                { userId: winner.userId },
+                { 
+                    $inc: { points: pointsPerWinner },
+                    $push: {
+                        pointHistory: {
+                            type: 'betting_win',
+                            amount: pointsPerWinner,
+                            gameNumber: gameNumber,
+                            date: new Date(),
+                            description: `${gameNumber}경기 배팅 승리 보상`
+                        }
+                    }
+                }
+            );
+            
+            console.log(`[Admin] 포인트 지급 완료 - ${winner.userName}: +${pointsPerWinner}포인트`);
+        }
+        
+        // 배팅 기록 업데이트
+        const bettingCollection = getBettingCollection();
+        await bettingCollection.updateMany(
+            { 
+                gameNumber: parseInt(gameNumber),
+                date: targetDate,
+                prediction: actualResult
+            },
+            { 
+                $set: { 
+                    status: 'won',
+                    winnings: pointsPerWinner,
+                    resultAt: new Date()
+                }
+            }
+        );
+        
+        // 실패한 배팅들도 상태 업데이트
+        await bettingCollection.updateMany(
+            { 
+                gameNumber: parseInt(gameNumber),
+                date: targetDate,
+                prediction: { $ne: actualResult }
+            },
+            { 
+                $set: { 
+                    status: 'lost',
+                    winnings: 0,
+                    resultAt: new Date()
+                }
+            }
+        );
+        
+        // betting-game-X 컬렉션에 포인트 지급 완료 상태 업데이트
+        const gameCollection = getBettingGameCollection(gameNumber);
+        await gameCollection.updateOne(
+            { date: targetDate, gameNumber: parseInt(gameNumber) },
+            { $set: { pointsDistributed: true, distributedAt: new Date() } }
+        );
+        
+        console.log(`[Admin] 승리 포인트 지급 완료 - 총 ${winners.length}명에게 ${pointsPerWinner}포인트씩 지급`);
+        
+        res.json({
+            success: true,
+            message: '승리 포인트가 성공적으로 지급되었습니다.',
+            data: {
+                distributedCount: winners.length,
+                totalDistributed: pointsPerWinner * winners.length
+            }
+        });
+    } catch (error) {
+        console.error('[Admin] 승리 포인트 지급 오류:', error);
+        res.status(500).json({
+            success: false,
+            message: '승리 포인트 지급 중 오류가 발생했습니다.'
+        });
+    }
+});
+
 // 미들웨어 설정
 app.use(cors());
 app.use(express.json());
@@ -2377,12 +2766,35 @@ app.post('/api/betting/submit', async (req, res) => {
             betAt: new Date()
         };
         
+        // 사용자 컬렉션에 배팅 기록 저장
         await userCollection.updateOne(
             { userId: userId },
             { 
                 $push: { bettingHistory: bettingRecord },
                 $inc: { points: -parseInt(points) }
             }
+        );
+        
+        // betting-game-X 컬렉션에도 저장 (관리자 모니터링용)
+        const gameCollection = getBettingGameCollection(gameNumber);
+        await gameCollection.updateOne(
+            { 
+                date: date,
+                gameNumber: parseInt(gameNumber)
+            },
+            {
+                $push: {
+                    bets: {
+                        userId: userId,
+                        userName: user.name || user.username,
+                        prediction: prediction,
+                        points: parseInt(points),
+                        betAt: new Date(),
+                        result: null
+                    }
+                }
+            },
+            { upsert: true }
         );
         
         console.log(`게임 배팅 제출: ${userId} - ${prediction} ${points}포인트`);
@@ -3616,6 +4028,430 @@ app.post('/api/betting/calculate-and-save-game-stats', async (req, res) => {
         res.status(500).json({
             success: false,
             message: '게임 통계 계산 및 저장 중 오류가 발생했습니다.'
+        });
+    }
+});
+
+// betting-game-1 ~ betting-game-5 컬렉션 관리자 모니터링 API
+
+// 특정 게임의 배팅 현황 조회
+app.get('/api/admin/betting-game/:gameNumber', async (req, res) => {
+    try {
+        const { gameNumber } = req.params;
+        const { date } = req.query;
+        
+        if (!date || !gameNumber) {
+            return res.status(400).json({
+                success: false,
+                message: '날짜와 게임 번호가 필요합니다.'
+            });
+        }
+        
+        // MongoDB 연결 상태 확인
+        if (!checkMongoDBConnection()) {
+            return sendMongoDBErrorResponse(res, '데이터베이스 연결이 준비되지 않았습니다.');
+        }
+        
+        const collectionName = `betting-game-${gameNumber}`;
+        const gameCollection = mongoose.connection.db.collection(collectionName);
+        
+        // 해당 날짜의 게임 데이터 조회
+        const gameData = await gameCollection.findOne({ date: date });
+        
+        if (!gameData) {
+            return res.status(404).json({
+                success: false,
+                message: '게임 데이터를 찾을 수 없습니다.'
+            });
+        }
+        
+        // 배팅 통계 계산
+        const bettingStats = {
+            totalBets: gameData.bets ? gameData.bets.length : 0,
+            totalPoints: gameData.bets ? gameData.bets.reduce((sum, bet) => sum + bet.points, 0) : 0,
+            predictionStats: {}
+        };
+        
+        // 예측별 통계
+        if (gameData.bets) {
+            gameData.bets.forEach(bet => {
+                if (!bettingStats.predictionStats[bet.prediction]) {
+                    bettingStats.predictionStats[bet.prediction] = {
+                        count: 0,
+                        totalPoints: 0
+                    };
+                }
+                bettingStats.predictionStats[bet.prediction].count++;
+                bettingStats.predictionStats[bet.prediction].totalPoints += bet.points;
+            });
+        }
+        
+        res.json({
+            success: true,
+            data: {
+                gameNumber: gameData.gameNumber,
+                date: gameData.date,
+                matchup: gameData.matchup,
+                status: gameData.status,
+                bettingStart: gameData.bettingStart,
+                bettingEnd: gameData.bettingEnd,
+                actualResult: gameData.actualResult,
+                winnerCount: gameData.winnerCount || 0,
+                totalPrize: gameData.totalPrize || 0,
+                pointsPerWinner: gameData.pointsPerWinner || 0,
+                bettingStats: bettingStats,
+                bets: gameData.bets || []
+            }
+        });
+    } catch (error) {
+        console.error('게임 배팅 현황 조회 오류:', error);
+        res.status(500).json({
+            success: false,
+            message: '게임 배팅 현황 조회 중 오류가 발생했습니다.'
+        });
+    }
+});
+
+// 모든 게임의 배팅 현황 조회
+app.get('/api/admin/betting-games', async (req, res) => {
+    try {
+        const { date } = req.query;
+        
+        if (!date) {
+            return res.status(400).json({
+                success: false,
+                message: '날짜가 필요합니다.'
+            });
+        }
+        
+        // MongoDB 연결 상태 확인
+        if (!checkMongoDBConnection()) {
+            return sendMongoDBErrorResponse(res, '데이터베이스 연결이 준비되지 않았습니다.');
+        }
+        
+        const gamesData = [];
+        
+        // betting-game-1 ~ betting-game-5 컬렉션 조회
+        for (let i = 1; i <= 5; i++) {
+            const collectionName = `betting-game-${i}`;
+            const gameCollection = mongoose.connection.db.collection(collectionName);
+            
+            const gameData = await gameCollection.findOne({ date: date });
+            
+            if (gameData) {
+                const bettingStats = {
+                    totalBets: gameData.bets ? gameData.bets.length : 0,
+                    totalPoints: gameData.bets ? gameData.bets.reduce((sum, bet) => sum + bet.points, 0) : 0
+                };
+                
+                gamesData.push({
+                    gameNumber: i,
+                    date: gameData.date,
+                    matchup: gameData.matchup,
+                    status: gameData.status,
+                    bettingStart: gameData.bettingStart,
+                    bettingEnd: gameData.bettingEnd,
+                    actualResult: gameData.actualResult,
+                    winnerCount: gameData.winnerCount || 0,
+                    totalPrize: gameData.totalPrize || 0,
+                    pointsPerWinner: gameData.pointsPerWinner || 0,
+                    bettingStats: bettingStats
+                });
+            } else {
+                // 데이터가 없는 경우 기본 정보만
+                gamesData.push({
+                    gameNumber: i,
+                    date: date,
+                    matchup: `경기 ${i}`,
+                    status: 'not_started',
+                    bettingStart: null,
+                    bettingEnd: null,
+                    actualResult: null,
+                    winnerCount: 0,
+                    totalPrize: 0,
+                    pointsPerWinner: 0,
+                    bettingStats: {
+                        totalBets: 0,
+                        totalPoints: 0
+                    }
+                });
+            }
+        }
+        
+        res.json({
+            success: true,
+            data: gamesData
+        });
+    } catch (error) {
+        console.error('모든 게임 배팅 현황 조회 오류:', error);
+        res.status(500).json({
+            success: false,
+            message: '모든 게임 배팅 현황 조회 중 오류가 발생했습니다.'
+        });
+    }
+});
+
+// 게임별 배팅 결과 입력 (관리자용)
+app.post('/api/admin/betting-game/:gameNumber/result', async (req, res) => {
+    try {
+        const { gameNumber } = req.params;
+        const { date, actualResult } = req.body;
+        
+        if (!date || !actualResult) {
+            return res.status(400).json({
+                success: false,
+                message: '날짜와 실제 결과가 필요합니다.'
+            });
+        }
+        
+        // MongoDB 연결 상태 확인
+        if (!checkMongoDBConnection()) {
+            return sendMongoDBErrorResponse(res, '데이터베이스 연결이 준비되지 않았습니다.');
+        }
+        
+        const collectionName = `betting-game-${gameNumber}`;
+        const gameCollection = mongoose.connection.db.collection(collectionName);
+        
+        // 게임 데이터 조회
+        const gameData = await gameCollection.findOne({ date: date });
+        
+        if (!gameData) {
+            return res.status(404).json({
+                success: false,
+                message: '게임 데이터를 찾을 수 없습니다.'
+            });
+        }
+        
+        // 승리자 계산
+        let winners = 0;
+        let totalLoserPoints = 0;
+        
+        if (gameData.bets) {
+            gameData.bets.forEach(bet => {
+                if (bet.prediction === actualResult) {
+                    winners++;
+                    bet.result = 'win';
+                } else {
+                    totalLoserPoints += bet.points;
+                    bet.result = 'lose';
+                }
+            });
+        }
+        
+        // 성공자당 분배 포인트 계산
+        const pointsPerWinner = winners > 0 ? Math.floor(totalLoserPoints / winners) : 0;
+        
+        // 게임 데이터 업데이트
+        await gameCollection.updateOne(
+            { date: date },
+            {
+                $set: {
+                    actualResult: actualResult,
+                    winnerCount: winners,
+                    totalPrize: totalLoserPoints,
+                    pointsPerWinner: pointsPerWinner,
+                    status: 'completed',
+                    updatedAt: new Date()
+                }
+            }
+        );
+        
+        console.log(`✅ 게임 ${gameNumber} 결과 입력: ${actualResult}, 승리자 ${winners}명, 성공자당 ${pointsPerWinner}포인트`);
+        
+        res.json({
+            success: true,
+            message: '게임 결과가 입력되었습니다.',
+            data: {
+                actualResult: actualResult,
+                winnerCount: winners,
+                totalPrize: totalLoserPoints,
+                pointsPerWinner: pointsPerWinner
+            }
+        });
+    } catch (error) {
+        console.error('게임 결과 입력 오류:', error);
+        res.status(500).json({
+            success: false,
+            message: '게임 결과 입력 중 오류가 발생했습니다.'
+        });
+    }
+});
+
+// 현재 로그인한 사용자 수와 배팅 참여 현황 조회 API
+app.get('/api/admin/current-stats', async (req, res) => {
+    try {
+        // MongoDB 연결 상태 확인
+        if (!checkMongoDBConnection()) {
+            return sendMongoDBErrorResponse(res, '데이터베이스 연결이 준비되지 않았습니다.');
+        }
+        
+        const userCollection = getUserCollection();
+        
+        // 현재 로그인한 사용자 수 조회
+        const loggedInUsers = await userCollection.countDocuments({ isLoggedIn: true });
+        
+        // 오늘 날짜 계산 (한국 시간)
+        const today = new Date();
+        const koreaTime = new Date(today.getTime() + (9 * 60 * 60 * 1000));
+        const todayString = koreaTime.getFullYear().toString() + 
+                           '-' + String(koreaTime.getMonth() + 1).padStart(2, '0') + 
+                           '-' + String(koreaTime.getDate()).padStart(2, '0');
+        
+        // 오늘 배팅에 참여한 사용자 수 조회
+        const bettingParticipants = await userCollection.countDocuments({
+            'bettingHistory.date': todayString
+        });
+        
+        // 오늘 총 배팅 포인트 조회
+        const todayBets = await userCollection.aggregate([
+            { $unwind: '$bettingHistory' },
+            { $match: { 'bettingHistory.date': todayString } },
+            { $group: { _id: null, totalPoints: { $sum: '$bettingHistory.points' } } }
+        ]).toArray();
+        
+        const totalBettingPoints = todayBets.length > 0 ? todayBets[0].totalPoints : 0;
+        
+        // 게임별 배팅 참여 현황
+        const gameStats = [];
+        for (let i = 1; i <= 5; i++) {
+            const gameBets = await userCollection.aggregate([
+                { $unwind: '$bettingHistory' },
+                { $match: { 
+                    'bettingHistory.date': todayString,
+                    'bettingHistory.gameNumber': i
+                }},
+                { $group: { 
+                    _id: null, 
+                    participantCount: { $sum: 1 },
+                    totalPoints: { $sum: '$bettingHistory.points' }
+                }}
+            ]).toArray();
+            
+            gameStats.push({
+                gameNumber: i,
+                participantCount: gameBets.length > 0 ? gameBets[0].participantCount : 0,
+                totalPoints: gameBets.length > 0 ? gameBets[0].totalPoints : 0
+            });
+        }
+        
+        // 예측별 통계
+        const predictionStats = await userCollection.aggregate([
+            { $unwind: '$bettingHistory' },
+            { $match: { 'bettingHistory.date': todayString } },
+            { $group: { 
+                _id: '$bettingHistory.prediction',
+                count: { $sum: 1 },
+                totalPoints: { $sum: '$bettingHistory.points' }
+            }}
+        ]).toArray();
+        
+        res.json({
+            success: true,
+            data: {
+                date: todayString,
+                loggedInUsers: loggedInUsers,
+                bettingParticipants: bettingParticipants,
+                totalBettingPoints: totalBettingPoints,
+                gameStats: gameStats,
+                predictionStats: predictionStats
+            }
+        });
+        
+    } catch (error) {
+        console.error('현재 통계 조회 오류:', error);
+        res.status(500).json({
+            success: false,
+            message: '현재 통계 조회 중 오류가 발생했습니다.'
+        });
+    }
+});
+
+// 실시간 로그인 사용자 목록 조회 API
+app.get('/api/admin/logged-in-users', async (req, res) => {
+    try {
+        // MongoDB 연결 상태 확인
+        if (!checkMongoDBConnection()) {
+            return sendMongoDBErrorResponse(res, '데이터베이스 연결이 준비되지 않았습니다.');
+        }
+        
+        const userCollection = getUserCollection();
+        
+        // 현재 로그인한 사용자 목록 조회
+        const loggedInUsers = await userCollection.find(
+            { isLoggedIn: true },
+            { 
+                userId: 1, 
+                name: 1, 
+                points: 1, 
+                lastLoginAt: 1,
+                favoriteTeam: 1
+            }
+        ).toArray();
+        
+        res.json({
+            success: true,
+            data: {
+                count: loggedInUsers.length,
+                users: loggedInUsers
+            }
+        });
+        
+    } catch (error) {
+        console.error('로그인 사용자 목록 조회 오류:', error);
+        res.status(500).json({
+            success: false,
+            message: '로그인 사용자 목록 조회 중 오류가 발생했습니다.'
+        });
+    }
+});
+
+// 오늘 배팅 참여자 상세 정보 조회 API
+app.get('/api/admin/betting-participants', async (req, res) => {
+    try {
+        // MongoDB 연결 상태 확인
+        if (!checkMongoDBConnection()) {
+            return sendMongoDBErrorResponse(res, '데이터베이스 연결이 준비되지 않았습니다.');
+        }
+        
+        const userCollection = getUserCollection();
+        
+        // 오늘 날짜 계산 (한국 시간)
+        const today = new Date();
+        const koreaTime = new Date(today.getTime() + (9 * 60 * 60 * 1000));
+        const todayString = koreaTime.getFullYear().toString() + 
+                           '-' + String(koreaTime.getMonth() + 1).padStart(2, '0') + 
+                           '-' + String(koreaTime.getDate()).padStart(2, '0');
+        
+        // 오늘 배팅에 참여한 사용자들의 상세 정보 조회
+        const participants = await userCollection.aggregate([
+            { $unwind: '$bettingHistory' },
+            { $match: { 'bettingHistory.date': todayString } },
+            { $group: { 
+                _id: '$userId',
+                name: { $first: '$name' },
+                points: { $first: '$points' },
+                favoriteTeam: { $first: '$favoriteTeam' },
+                bettingCount: { $sum: 1 },
+                totalBettingPoints: { $sum: '$bettingHistory.points' },
+                bets: { $push: '$bettingHistory' }
+            }},
+            { $sort: { totalBettingPoints: -1 } }
+        ]).toArray();
+        
+        res.json({
+            success: true,
+            data: {
+                date: todayString,
+                participantCount: participants.length,
+                participants: participants
+            }
+        });
+        
+    } catch (error) {
+        console.error('배팅 참여자 상세 정보 조회 오류:', error);
+        res.status(500).json({
+            success: false,
+            message: '배팅 참여자 상세 정보 조회 중 오류가 발생했습니다.'
         });
     }
 });
