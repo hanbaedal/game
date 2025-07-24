@@ -426,8 +426,8 @@
                                 >
                                     <div class="flex justify-between items-center">
                                         <div class="flex-1 min-w-0">
-                                            <div class="font-bold truncate">${game.gameNumber || game.number}경기 ${game.matchup}</div>
-                                            <div class="text-xs opacity-75 truncate">${startTime} | ${progressStatus}</div>
+                                            <div class="font-bold truncate">${game.gameNumber || game.number}경기</div>
+                                            <div class="text-xs opacity-75 truncate">${getMatchupWithLogos(game.matchup)}</div>
                                         </div>
                                         <div class="text-xs ml-2 flex-shrink-0">
                                             ${isSelectable ? '✅' : '❌'}
@@ -500,7 +500,7 @@
                         <div onclick="resetGameSelection()" class="bg-blue-600 rounded-lg p-2 cursor-pointer hover:bg-blue-700 transition-colors">
                             <div class="flex justify-between items-center">
                                 <div class="flex-1 min-w-0">
-                                    <div class="font-bold text-white text-xs truncate">${matchup}</div>
+                                    <div class="font-bold text-white text-xs truncate">${getMatchupWithLogos(matchup)}</div>
                                 </div>
                                 <div class="text-xs text-blue-200 opacity-75 flex-shrink-0 ml-2">
                                     ${startTime} | ${progressStatus}
@@ -2388,6 +2388,46 @@
                 enableBettingSelection();
                 enableBettingPoints();
             };
+        }
+
+        // 팀 로고 반환 함수 (실제 이미지 사용)
+        function getTeamLogo(teamName) {
+            const teamLogos = {
+                '두산': 'https://upload.wikimedia.org/wikipedia/ko/thumb/8/8c/Doosan_Bears_logo.svg/120px-Doosan_Bears_logo.svg.png',
+                'LG': 'https://upload.wikimedia.org/wikipedia/ko/thumb/8/8c/LG_Twins_logo.svg/120px-LG_Twins_logo.svg.png',
+                '삼성': 'https://upload.wikimedia.org/wikipedia/ko/thumb/8/8c/Samsung_Lions_logo.svg/120px-Samsung_Lions_logo.svg.png',
+                '키움': 'https://upload.wikimedia.org/wikipedia/ko/thumb/8/8c/Kiwoom_Heroes_logo.svg/120px-Kiwoom_Heroes_logo.svg.png',
+                '한화': 'https://upload.wikimedia.org/wikipedia/ko/thumb/8/8c/Hanwha_Eagles_logo.svg/120px-Hanwha_Eagles_logo.svg.png',
+                '롯데': 'https://upload.wikimedia.org/wikipedia/ko/thumb/8/8c/Lotte_Giants_logo.svg/120px-Lotte_Giants_logo.svg.png',
+                'KT': 'https://upload.wikimedia.org/wikipedia/ko/thumb/8/8c/KT_Wiz_logo.svg/120px-KT_Wiz_logo.svg.png',
+                'SSG': 'https://upload.wikimedia.org/wikipedia/ko/thumb/8/8c/SSG_Landers_logo.svg/120px-SSG_Landers_logo.svg.png',
+                'NC': 'https://upload.wikimedia.org/wikipedia/ko/thumb/8/8c/NC_Dinos_logo.svg/120px-NC_Dinos_logo.svg.png',
+                'KIA': 'https://upload.wikimedia.org/wikipedia/ko/thumb/8/8c/Kia_Tigers_logo.svg/120px-Kia_Tigers_logo.svg.png'
+            };
+            return teamLogos[teamName] || 'https://via.placeholder.com/30x30/666666/FFFFFF?text=⚾';
+        }
+
+        // 매치업을 로고로 표시하는 함수
+        function getMatchupWithLogos(matchup) {
+            if (!matchup || !matchup.includes(' vs ')) {
+                return matchup;
+            }
+            const teams = matchup.split(' vs ');
+            const homeTeam = teams[0].trim();
+            const awayTeam = teams[1].trim();
+            return `
+                <div class="flex items-center justify-center space-x-2">
+                    <div class="flex items-center">
+                        <img src="${getTeamLogo(homeTeam)}" alt="${homeTeam}" class="w-6 h-6 object-contain">
+                        <span class="ml-1 text-xs">${homeTeam}</span>
+                    </div>
+                    <span class="text-xs">vs</span>
+                    <div class="flex items-center">
+                        <span class="mr-1 text-xs">${awayTeam}</span>
+                        <img src="${getTeamLogo(awayTeam)}" alt="${awayTeam}" class="w-6 h-6 object-contain">
+                    </div>
+                </div>
+            `;
         }
     </script>
 </body>
