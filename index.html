@@ -1481,6 +1481,15 @@
                         this.classList.add('selected');
                         
                         const percent = this.getAttribute('data-percent');
+                        
+                        // 기부 확인 섹션 표시
+                        const confirmSection = modal.querySelector('#donationConfirm');
+                        const selectedPercentSpan = modal.querySelector('#selectedPercent');
+                        if (confirmSection && selectedPercentSpan) {
+                            selectedPercentSpan.textContent = `${percent}%`;
+                            confirmSection.classList.remove('hidden');
+                        }
+                        
                         // 기부하기 버튼 업데이트
                         const donateBtn = document.getElementById('donateBtn');
                         if (donateBtn) {
@@ -1500,6 +1509,32 @@
                         showSelectedGameOnly();
                         enableBettingSelection();
                         enableBettingPoints();
+                    };
+                }
+                
+                // 기부 확인 버튼들
+                const confirmYesBtn = modal.querySelector('#confirmYesBtn');
+                const confirmNoBtn = modal.querySelector('#confirmNoBtn');
+                
+                if (confirmYesBtn) {
+                    confirmYesBtn.onclick = function() {
+                        const selectedBtn = modal.querySelector('.donation-btn.selected');
+                        if (selectedBtn) {
+                            const percent = selectedBtn.getAttribute('data-percent');
+                            handleDonation(parseInt(percent));
+                        }
+                    };
+                }
+                
+                if (confirmNoBtn) {
+                    confirmNoBtn.onclick = function() {
+                        // 기부 확인 섹션 숨기기
+                        const confirmSection = modal.querySelector('#donationConfirm');
+                        if (confirmSection) {
+                            confirmSection.classList.add('hidden');
+                        }
+                        // 선택 상태 제거
+                        donationBtns.forEach(b => b.classList.remove('selected'));
                     };
                 }
                 
@@ -2075,6 +2110,15 @@
                         this.classList.add('selected');
                         
                         const percent = this.getAttribute('data-percent');
+                        
+                        // 기부 확인 섹션 표시
+                        const confirmSection = modal.querySelector('#donationConfirm');
+                        const selectedPercentSpan = modal.querySelector('#selectedPercent');
+                        if (confirmSection && selectedPercentSpan) {
+                            selectedPercentSpan.textContent = `${percent}%`;
+                            confirmSection.classList.remove('hidden');
+                        }
+                        
                         // 기부하기 버튼 업데이트
                         const donateBtn = document.getElementById('donateBtn');
                         if (donateBtn) {
@@ -2094,6 +2138,32 @@
                         showSelectedGameOnly();
                         enableBettingSelection();
                         enableBettingPoints();
+                    };
+                }
+                
+                // 기부 확인 버튼들
+                const confirmYesBtn = modal.querySelector('#confirmYesBtn');
+                const confirmNoBtn = modal.querySelector('#confirmNoBtn');
+                
+                if (confirmYesBtn) {
+                    confirmYesBtn.onclick = function() {
+                        const selectedBtn = modal.querySelector('.donation-btn.selected');
+                        if (selectedBtn) {
+                            const percent = selectedBtn.getAttribute('data-percent');
+                            handleDonation(parseInt(percent));
+                        }
+                    };
+                }
+                
+                if (confirmNoBtn) {
+                    confirmNoBtn.onclick = function() {
+                        // 기부 확인 섹션 숨기기
+                        const confirmSection = modal.querySelector('#donationConfirm');
+                        if (confirmSection) {
+                            confirmSection.classList.add('hidden');
+                        }
+                        // 선택 상태 제거
+                        donationBtns.forEach(b => b.classList.remove('selected'));
                     };
                 }
                 
@@ -2411,8 +2481,8 @@
                 // 모달 내부 컨텐츠를 클릭한 경우 이벤트 전파 방지
                 if (e.target.closest('.bg-gray-800')) {
                     e.stopPropagation();
-                return;
-            }
+                    return;
+                }
                 // 모달 배경을 클릭한 경우에만 기부 모달로 전환
                 modal.remove();
                 showDonationModal();
