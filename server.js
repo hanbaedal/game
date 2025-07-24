@@ -2720,16 +2720,23 @@ app.post('/api/betting/submit', async (req, res) => {
             return sendMongoDBErrorResponse(res, '데이터베이스 연결이 준비되지 않았습니다.');
         }
         
-        const bettingCollection = getBettingCollection();
+        const teamGamesCollection = getTeamGamesCollection();
         
-        // 활성 배팅 세션 확인
-        const activeSession = await bettingCollection.findOne({
+        // team-games 컬렉션에서 배팅 상태 확인
+        const gameSession = await teamGamesCollection.findOne({
             date: date,
-            gameNumber: parseInt(gameNumber),
-            status: 'active'
+            gameNumber: parseInt(gameNumber)
         });
         
-        if (!activeSession) {
+        if (!gameSession) {
+            return res.status(400).json({
+                success: false,
+                message: '해당 경기를 찾을 수 없습니다.'
+            });
+        }
+        
+        // 배팅 상태 확인
+        if (gameSession.bettingStart !== '시작' || gameSession.bettingStop !== '진행') {
             return res.status(400).json({
                 success: false,
                 message: '현재 배팅이 활성화되지 않았습니다.'
@@ -2760,7 +2767,6 @@ app.post('/api/betting/submit', async (req, res) => {
             date: date,
             gameNumber: parseInt(gameNumber),
             gameType: gameType,
-            inning: activeSession.inning,
             prediction: prediction,
             points: parseInt(points),
             betAt: new Date()
