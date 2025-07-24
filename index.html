@@ -1908,13 +1908,11 @@
         }
 
         // selectSimpleGame 함수 내 polling 시작 추가
-        const originalSelectSimpleGame = selectSimpleGame;
-        selectSimpleGame = function(gameId, homeTeam, awayTeam, gameNumber, date, startTime, progressStatus, bettingStart, bettingStop, predictionResult) {
-            originalSelectSimpleGame.apply(this, arguments);
-            if (selectedGame) {
-                startBettingStatusPolling(selectedGame._id || selectedGame.id);
-            }
-        };
+        // const originalSelectSimpleGame = selectSimpleGame;
+        // selectSimpleGame = function(gameId, gameNumber, matchup) {
+        //     originalSelectSimpleGame.apply(this, arguments);
+        //     // polling은 나중에 추가
+        // };
 
         // resetGameSelection 함수 내 polling 중단 추가
         const originalResetGameSelection = resetGameSelection;
