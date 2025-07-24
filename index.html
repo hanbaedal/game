@@ -414,9 +414,31 @@
                             const progressStatus = game.progressStatus || '경기전';
                             const startTime = game.startTime || '시간 미정';
                             const isSelectable = progressStatus === '경기중'; // 경기중만 선택 가능
-                            const buttonClass = isSelectable 
-                                ? 'bg-blue-600 hover:bg-blue-700 text-white' 
-                                : 'bg-gray-500 text-gray-300 cursor-not-allowed';
+                            
+                            // 현재 선택된 경기인지 확인
+                            const isSelected = selectedGame && (
+                                selectedGame.gameNumber === game.gameNumber || 
+                                selectedGame.number === game.number ||
+                                selectedGame._id === game._id ||
+                                selectedGame.id === game.id
+                            );
+                            
+                            // 선택 상태에 따른 스타일 결정
+                            let buttonClass, statusText, statusIcon;
+                            
+                            if (isSelected) {
+                                buttonClass = 'bg-green-600 hover:bg-green-700 text-white border-2 border-green-400';
+                                statusText = '선택됨';
+                                statusIcon = '✅';
+                            } else if (isSelectable) {
+                                buttonClass = 'bg-blue-600 hover:bg-blue-700 text-white';
+                                statusText = '선택 가능';
+                                statusIcon = '🟢';
+                            } else {
+                                buttonClass = 'bg-gray-500 text-gray-300 cursor-not-allowed';
+                                statusText = '선택 불가';
+                                statusIcon = '❌';
+                            }
                             
                             return `
                                 <button 
@@ -429,8 +451,9 @@
                                             <div class="font-bold truncate">${game.gameNumber || game.number}경기</div>
                                             <div class="text-xs opacity-75 truncate">${getMatchupWithLogos(game.matchup)}</div>
                                         </div>
-                                        <div class="text-xs ml-2 flex-shrink-0">
-                                            ${isSelectable ? '✅' : '❌'}
+                                        <div class="text-xs ml-2 flex-shrink-0 flex items-center">
+                                            <span class="mr-1">${statusIcon}</span>
+                                            <span>${statusText}</span>
                                         </div>
                                     </div>
                                 </button>
@@ -467,8 +490,14 @@
                 // 베팅 선택 활성화 (먼저)
                 enableBettingSelection();
                 
-                // 배팅 선택 버튼 활성화
-                enableBettingChoices();
+                // 배팅 상태 실시간 확인 및 업데이트
+                checkBettingStatus();
+                
+                // 배팅 상태 확인을 주기적으로 실행
+                if (window.bettingStatusInterval) {
+                    clearInterval(window.bettingStatusInterval);
+                }
+                window.bettingStatusInterval = setInterval(checkBettingStatus, 2000); // 2초마다 확인
                 
                 // 배팅 포인트 선택 활성화 (나중에)
                 enableBettingPoints();
@@ -1102,39 +1131,32 @@
 
         // 배팅 상태 확인 및 표시 함수 (수정)
         async function checkBettingStatus() {
-            if (!selectedGame) {
-                return;
-            }
+            if (!selectedGame) return;
             
-            try {
-                // 최신 게임 정보 가져오기
-                const response = await fetch(`/api/game/${selectedGame.date}/${selectedGame.gameNumber}`);
-                const data = await response.json();
-                
-                if (data.success) {
-                    const gameInfo = data.game;
-                    
-                    // 선택된 게임 정보 업데이트
-                    selectedGame = gameInfo;
-                    
-                    // bettingStop 상태에 따라 예측하기 버튼 제어
-                    if (gameInfo.bettingStop === '중지') {
-                        const betBtn = document.getElementById('betBtn');
-                        betBtn.disabled = true;
-                        betBtn.classList.add('opacity-50', 'cursor-not-allowed');
-                        betBtn.classList.remove('cursor-pointer');
+            // 서버에서 최신 배팅 상태 가져오기
+            fetch('/api/team-games')
+                .then(response => response.json())
+                .then(data => {
+                    if (data && data.games) {
+                        const currentGame = data.games.find(game => 
+                            game.number === selectedGame.number || 
+                            game.gameNumber === selectedGame.gameNumber
+                        );
                         
-                        // 대기 모달 표시
-                        if (selectedChoice) { // 배팅 선택이 되어있을 때만
-                            showWaitingModal();
+                        if (currentGame) {
+                            // 선택된 게임 정보 업데이트
+                            selectedGame.bettingStart = currentGame.bettingStart;
+                            selectedGame.bettingStop = currentGame.bettingStop;
+                            
+                            // 배팅 선택 버튼 상태 업데이트
+                            enableBettingChoices();
+                            enablePredictionButton();
                         }
-                    } else if (gameInfo.bettingStart === '시작') {
-                        enablePredictionButton();
                     }
-                }
-            } catch (error) {
-                console.error('배팅 상태 확인 오류:', error);
-            }
+                })
+                .catch(error => {
+                    console.error('배팅 상태 확인 오류:', error);
+                });
         }
 
         // 로그아웃 함수
@@ -2418,6 +2440,28 @@
         // 매치업을 일반 텍스트로 표시하는 함수
         function getMatchupWithLogos(matchup) {
             return matchup || '';
+        }
+
+        // 배팅 선택 버튼 활성화
+        function enableBettingChoices() {
+            const betChoiceButtons = document.querySelectorAll('.bet-choice-btn');
+            if (
+                selectedGame &&
+                selectedGame.bettingStart === '시작' &&
+                selectedGame.bettingStop === '진행'
+            ) {
+                betChoiceButtons.forEach(btn => {
+                    btn.disabled = false;
+                    btn.classList.remove('opacity-50', 'cursor-not-allowed');
+                    btn.classList.add('cursor-pointer');
+                });
+            } else {
+                betChoiceButtons.forEach(btn => {
+                    btn.disabled = true;
+                    btn.classList.add('opacity-50', 'cursor-not-allowed');
+                    btn.classList.remove('cursor-pointer');
+                });
+            }
         }
     </script>
 </body>
