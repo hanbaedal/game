@@ -82,6 +82,162 @@ function getBettingGameCollection(gameNumber) {
     return mongoose.connection.db.collection(`betting-game-${gameNumber}`);
 }
 
+// 데이터 마이그레이션 API (영문 키를 한글 키로 변환)
+app.post('/api/migrate-betting-data', async (req, res) => {
+    try {
+        console.log('🔄 배팅 데이터 마이그레이션 시작...');
+        
+        // 한국 시간대로 오늘 날짜 계산
+        const today = new Date();
+        const koreaTime = new Date(today.getTime() + (9 * 60 * 60 * 1000));
+        const todayString = koreaTime.getFullYear().toString() + 
+                           '-' + String(koreaTime.getMonth() + 1).padStart(2, '0') + 
+                           '-' + String(koreaTime.getDate()).padStart(2, '0');
+        
+        // 영문-한글 매핑
+        const englishToKorean = {
+            '1base': '1루',
+            '2base': '2루',
+            '3base': '3루',
+            'homerun': '홈런',
+            'strikeout': '삼진',
+            'out': '아웃'
+        };
+        
+        let migratedCount = 0;
+        
+        // 1~5경기 데이터 마이그레이션
+        for (let gameNumber = 1; gameNumber <= 5; gameNumber++) {
+            const gameCollection = getBettingGameCollection(gameNumber);
+            const gameData = await gameCollection.findOne({ 
+                date: todayString,
+                gameNumber: gameNumber 
+            });
+            
+            if (gameData && gameData.bets && gameData.bets.length > 0) {
+                // bets 배열의 prediction을 한글로 변환
+                const updatedBets = gameData.bets.map(bet => ({
+                    ...bet,
+                    prediction: englishToKorean[bet.prediction] || bet.prediction
+                }));
+                
+                // betCounts를 한글 키로 재계산
+                const newBetCounts = {
+                    '1루': 0, '2루': 0, '3루': 0, '홈런': 0, '삼진': 0, '아웃': 0
+                };
+                
+                updatedBets.forEach(bet => {
+                    if (newBetCounts.hasOwnProperty(bet.prediction)) {
+                        newBetCounts[bet.prediction]++;
+                    }
+                });
+                
+                // 데이터 업데이트
+                await gameCollection.updateOne(
+                    { 
+                        date: todayString,
+                        gameNumber: gameNumber 
+                    },
+                    {
+                        $set: {
+                            bets: updatedBets,
+                            betCounts: newBetCounts
+                        }
+                    }
+                );
+                
+                migratedCount++;
+                console.log(`✅ 경기 ${gameNumber} 마이그레이션 완료`);
+            }
+        }
+        
+        console.log(`✅ 총 ${migratedCount}개 경기 마이그레이션 완료`);
+        
+        res.json({
+            success: true,
+            message: `마이그레이션 완료: ${migratedCount}개 경기`,
+            migratedCount: migratedCount
+        });
+        
+    } catch (error) {
+        console.error('❌ 마이그레이션 오류:', error);
+        res.status(500).json({
+            success: false,
+            message: '마이그레이션 중 오류가 발생했습니다.'
+        });
+    }
+});
+
+// betCounts 초기화 API (기존 데이터 수정용)
+app.post('/api/fix-betcounts', async (req, res) => {
+    try {
+        console.log('🔧 betCounts 초기화 시작...');
+        
+        // 한국 시간대로 오늘 날짜 계산
+        const today = new Date();
+        const koreaTime = new Date(today.getTime() + (9 * 60 * 60 * 1000));
+        const todayString = koreaTime.getFullYear().toString() + 
+                           '-' + String(koreaTime.getMonth() + 1).padStart(2, '0') + 
+                           '-' + String(koreaTime.getDate()).padStart(2, '0');
+        
+        let fixedCount = 0;
+        
+        // 1~5경기 데이터 수정
+        for (let gameNumber = 1; gameNumber <= 5; gameNumber++) {
+            const gameCollection = getBettingGameCollection(gameNumber);
+            const gameData = await gameCollection.findOne({ 
+                date: todayString,
+                gameNumber: gameNumber 
+            });
+            
+            if (gameData && gameData.bets && gameData.bets.length > 0) {
+                // bets 배열을 기반으로 betCounts 재계산
+                const newBetCounts = {
+                    '1루': 0, '2루': 0, '3루': 0, '홈런': 0, '삼진': 0, '아웃': 0
+                };
+                
+                gameData.bets.forEach(bet => {
+                    if (newBetCounts.hasOwnProperty(bet.prediction)) {
+                        newBetCounts[bet.prediction]++;
+                    }
+                });
+                
+                // 데이터 업데이트
+                await gameCollection.updateOne(
+                    { 
+                        date: todayString,
+                        gameNumber: gameNumber 
+                    },
+                    {
+                        $set: {
+                            betCounts: newBetCounts,
+                            totalBets: gameData.bets.length
+                        }
+                    }
+                );
+                
+                fixedCount++;
+                console.log(`✅ 경기 ${gameNumber} betCounts 수정 완료:`, newBetCounts);
+            }
+        }
+        
+        console.log(`✅ 총 ${fixedCount}개 경기 betCounts 수정 완료`);
+        
+        res.json({
+            success: true,
+            message: `betCounts 수정 완료: ${fixedCount}개 경기`,
+            fixedCount: fixedCount
+        });
+        
+    } catch (error) {
+        console.error('❌ betCounts 수정 오류:', error);
+        res.status(500).json({
+            success: false,
+            message: 'betCounts 수정 중 오류가 발생했습니다.'
+        });
+    }
+});
+
 // team-games API
 app.get('/api/team-games', async (req, res) => {
     try {
@@ -171,6 +327,11 @@ app.post('/api/betting/submit', async (req, res) => {
         
         if (!existingGame) {
             // 기존 데이터가 없으면 새로운 집계 데이터 생성
+            const initialBetCounts = {
+                '1루': 0, '2루': 0, '3루': 0, '홈런': 0, '삼진': 0, '아웃': 0
+            };
+            initialBetCounts[prediction] = 1;
+            
             await gameCollection.insertOne({
                 date: date,
                 gameNumber: parseInt(gameNumber),
@@ -179,14 +340,7 @@ app.post('/api/betting/submit', async (req, res) => {
                 bettingStart: '시작',
                 bettingStop: '진행',
                 totalBets: 1,
-                betCounts: {
-                    '1루': prediction === '1루' ? 1 : 0,
-                    '2루': prediction === '2루' ? 1 : 0,
-                    '3루': prediction === '3루' ? 1 : 0,
-                    '홈런': prediction === '홈런' ? 1 : 0,
-                    '삼진': prediction === '삼진' ? 1 : 0,
-                    '아웃': prediction === '아웃' ? 1 : 0
-                },
+                betCounts: initialBetCounts,
                 bets: [{
                     userId: userId,
                     userName: user.name || user.username,
@@ -197,26 +351,29 @@ app.post('/api/betting/submit', async (req, res) => {
             });
         } else {
             // 기존 데이터가 있으면 집계 업데이트 및 bets 배열에 추가
+            // betCounts가 없거나 한글 키가 없으면 초기화
+            const updateData = {
+                $inc: { totalBets: 1 },
+                $push: {
+                    bets: {
+                        userId: userId,
+                        userName: user.name || user.username,
+                        prediction: prediction,
+                        points: parseInt(points),
+                        betTime: new Date()
+                    }
+                }
+            };
+            
+            // betCounts 업데이트 (한글 키 사용)
+            updateData.$inc[`betCounts.${prediction}`] = 1;
+            
             await gameCollection.updateOne(
                 { 
                     date: date,
                     gameNumber: parseInt(gameNumber)
                 },
-                {
-                    $inc: {
-                        totalBets: 1,
-                        [`betCounts.${prediction}`]: 1
-                    },
-                    $push: {
-                        bets: {
-                            userId: userId,
-                            userName: user.name || user.username,
-                            prediction: prediction,
-                            points: parseInt(points),
-                            betTime: new Date()
-                        }
-                    }
-                }
+                updateData
             );
         }
         
