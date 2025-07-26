@@ -168,6 +168,167 @@ app.post('/api/migrate-betting-data', async (req, res) => {
     }
 });
 
+// 승리포인트 계산 및 지급 API (간단 버전)
+app.post('/api/betting/calculate-game-winners', async (req, res) => {
+    try {
+        const { gameNumber, actualResult, date } = req.body;
+        
+        if (!gameNumber || !actualResult || !date) {
+            return res.status(400).json({
+                success: false,
+                message: '게임번호, 실제결과, 날짜가 필요합니다.'
+            });
+        }
+        
+        const gameCollection = getBettingGameCollection(gameNumber);
+        const userCollection = getUserCollection();
+        
+        // betting-game-X 컬렉션에서 게임 데이터 조회
+        const gameData = await gameCollection.findOne({
+            date: date,
+            gameNumber: parseInt(gameNumber)
+        });
+        
+        if (!gameData || !gameData.bets) {
+            return res.status(404).json({
+                success: false,
+                message: '게임 데이터를 찾을 수 없습니다.'
+            });
+        }
+        
+        // 승리자 찾기 (bets 배열에서 actualResult와 일치하는 사용자들)
+        const winners = gameData.bets.filter(bet => bet.prediction === actualResult);
+        const winnerCount = winners.length;
+        const totalBets = gameData.bets.length;
+        const loserCount = totalBets - winnerCount;
+        
+        // 승리 포인트 계산: (패자 수 × 100) ÷ 승리자 수
+        const totalLoserPoints = loserCount * 100;
+        const pointsPerWinner = winnerCount > 0 ? Math.floor(totalLoserPoints / winnerCount) : 0;
+        
+        // 승리자들에게 포인트 지급
+        for (const winner of winners) {
+            await userCollection.updateOne(
+                { userId: winner.userId },
+                { $inc: { points: pointsPerWinner } }
+            );
+        }
+        
+        console.log(`✅ 게임 ${gameNumber} 승리포인트 계산 및 지급 완료:`);
+        console.log(`- 총 배팅: ${totalBets}명`);
+        console.log(`- 승리자: ${winnerCount}명`);
+        console.log(`- 패자: ${loserCount}명`);
+        console.log(`- 성공자당 분배 포인트: ${pointsPerWinner}`);
+        
+        res.json({
+            success: true,
+            message: '승리포인트 계산 및 지급이 완료되었습니다.',
+            data: {
+                gameNumber: gameNumber,
+                actualResult: actualResult,
+                totalBets: totalBets,
+                winnerCount: winnerCount,
+                loserCount: loserCount,
+                pointsPerWinner: pointsPerWinner
+            }
+        });
+        
+    } catch (error) {
+        console.error('승리포인트 계산 오류:', error);
+        res.status(500).json({
+            success: false,
+            message: '승리포인트 계산 중 오류가 발생했습니다.'
+        });
+    }
+});
+
+// 영문 키 완전 제거 및 한글 통일 API
+app.post('/api/clean-english-data', async (req, res) => {
+    try {
+        console.log('🧹 영문 키 완전 제거 및 한글 통일 시작...');
+        
+        // 한국 시간대로 오늘 날짜 계산
+        const today = new Date();
+        const koreaTime = new Date(today.getTime() + (9 * 60 * 60 * 1000));
+        const todayString = koreaTime.getFullYear().toString() + 
+                           '-' + String(koreaTime.getMonth() + 1).padStart(2, '0') + 
+                           '-' + String(koreaTime.getDate()).padStart(2, '0');
+        
+        // 영문-한글 매핑
+        const englishToKorean = {
+            '1base': '1루',
+            '2base': '2루',
+            '3base': '3루',
+            'homerun': '홈런',
+            'strikeout': '삼진',
+            'out': '아웃'
+        };
+        
+        let cleanedCount = 0;
+        
+        // 1~5경기 데이터 정리
+        for (let gameNumber = 1; gameNumber <= 5; gameNumber++) {
+            const gameCollection = getBettingGameCollection(gameNumber);
+            const gameData = await gameCollection.findOne({ 
+                date: todayString,
+                gameNumber: gameNumber 
+            });
+            
+            if (gameData && gameData.bets && gameData.bets.length > 0) {
+                // 1. bets 배열의 prediction을 한글로 변환 (영문 완전 제거)
+                const updatedBets = gameData.bets.map(bet => ({
+                    ...bet,
+                    prediction: englishToKorean[bet.prediction] || bet.prediction
+                }));
+                
+                // 2. betCounts를 한글 키로만 재계산 (영문 키 완전 제거)
+                const newBetCounts = {
+                    '1루': 0, '2루': 0, '3루': 0, '홈런': 0, '삼진': 0, '아웃': 0
+                };
+                
+                updatedBets.forEach(bet => {
+                    if (newBetCounts.hasOwnProperty(bet.prediction)) {
+                        newBetCounts[bet.prediction]++;
+                    }
+                });
+                
+                // 3. 데이터 완전 교체 (영문 키 완전 제거)
+                await gameCollection.updateOne(
+                    { 
+                        date: todayString,
+                        gameNumber: gameNumber 
+                    },
+                    {
+                        $set: {
+                            bets: updatedBets,
+                            betCounts: newBetCounts,
+                            totalBets: updatedBets.length
+                        }
+                    }
+                );
+                
+                cleanedCount++;
+                console.log(`✅ 경기 ${gameNumber} 영문 제거 완료:`, newBetCounts);
+            }
+        }
+        
+        console.log(`✅ 영문 키 완전 제거 완료: ${cleanedCount}개 경기`);
+        
+        res.json({
+            success: true,
+            message: `영문 키 완전 제거 완료: ${cleanedCount}개 경기`,
+            cleanedCount: cleanedCount
+        });
+        
+    } catch (error) {
+        console.error('❌ 영문 제거 오류:', error);
+        res.status(500).json({
+            success: false,
+            message: '영문 제거 중 오류가 발생했습니다.'
+        });
+    }
+});
+
 // betCounts 초기화 API (기존 데이터 수정용)
 app.post('/api/fix-betcounts', async (req, res) => {
     try {
@@ -796,7 +957,7 @@ app.get('/api/admin/betting-aggregation', async (req, res) => {
     }
 });
 
-// 승리포인트 계산 API (수정된 구조)
+// 승리포인트 계산 API (관리자용)
 app.post('/api/admin/calculate-winnings', async (req, res) => {
     try {
         const { gameNumber, predictionResult, date } = req.body;
@@ -909,6 +1070,85 @@ const startServer = async () => {
             console.log(`📍 포트: ${PORT}`);
             console.log(`🗄️ MongoDB 상태: 연결됨`);
         });
+        
+        // 서버 시작 후 자동으로 데이터 수정 실행
+        setTimeout(async () => {
+            try {
+                console.log('🔄 서버 시작 후 자동 데이터 수정 시작...');
+                
+                // 한국 시간대로 오늘 날짜 계산
+                const today = new Date();
+                const koreaTime = new Date(today.getTime() + (9 * 60 * 60 * 1000));
+                const todayString = koreaTime.getFullYear().toString() + 
+                                   '-' + String(koreaTime.getMonth() + 1).padStart(2, '0') + 
+                                   '-' + String(koreaTime.getDate()).padStart(2, '0');
+                
+                // 영문-한글 매핑
+                const englishToKorean = {
+                    '1base': '1루',
+                    '2base': '2루',
+                    '3base': '3루',
+                    'homerun': '홈런',
+                    'strikeout': '삼진',
+                    'out': '아웃'
+                };
+                
+                let migratedCount = 0;
+                let fixedCount = 0;
+                
+                // 1~5경기 데이터 자동 수정
+                for (let gameNumber = 1; gameNumber <= 5; gameNumber++) {
+                    const gameCollection = getBettingGameCollection(gameNumber);
+                    const gameData = await gameCollection.findOne({ 
+                        date: todayString,
+                        gameNumber: gameNumber 
+                    });
+                    
+                    if (gameData && gameData.bets && gameData.bets.length > 0) {
+                        // 1. bets 배열의 prediction을 한글로 변환 (영문 제거)
+                        const updatedBets = gameData.bets.map(bet => ({
+                            ...bet,
+                            prediction: englishToKorean[bet.prediction] || bet.prediction
+                        }));
+                        
+                        // 2. betCounts를 한글 키로만 재계산 (영문 키 완전 제거)
+                        const newBetCounts = {
+                            '1루': 0, '2루': 0, '3루': 0, '홈런': 0, '삼진': 0, '아웃': 0
+                        };
+                        
+                        updatedBets.forEach(bet => {
+                            if (newBetCounts.hasOwnProperty(bet.prediction)) {
+                                newBetCounts[bet.prediction]++;
+                            }
+                        });
+                        
+                        // 3. 데이터 업데이트 (영문 키 완전 제거)
+                        await gameCollection.updateOne(
+                            { 
+                                date: todayString,
+                                gameNumber: gameNumber 
+                            },
+                            {
+                                $set: {
+                                    bets: updatedBets,
+                                    betCounts: newBetCounts,
+                                    totalBets: updatedBets.length
+                                }
+                            }
+                        );
+                        
+                        migratedCount++;
+                        fixedCount++;
+                        console.log(`✅ 경기 ${gameNumber} 자동 수정 완료 (영문 제거):`, newBetCounts);
+                    }
+                }
+                
+                console.log(`✅ 자동 데이터 수정 완료: ${migratedCount}개 경기 마이그레이션, ${fixedCount}개 경기 betCounts 수정 (영문 키 완전 제거)`);
+                
+            } catch (error) {
+                console.error('❌ 자동 데이터 수정 오류:', error);
+            }
+        }, 3000); // 서버 시작 3초 후 실행
         
     } catch (error) {
         console.error('❌ 서버 시작 실패:', error);
