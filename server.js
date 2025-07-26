@@ -82,6 +82,34 @@ function getBettingGameCollection(gameNumber) {
     return mongoose.connection.db.collection(`betting-game-${gameNumber}`);
 }
 
+// team-games API
+app.get('/api/team-games', async (req, res) => {
+    try {
+        // 한국 시간대로 오늘 날짜 계산
+        const today = new Date();
+        const koreaTime = new Date(today.getTime() + (9 * 60 * 60 * 1000));
+        const todayString = koreaTime.getFullYear().toString() + 
+                           '-' + String(koreaTime.getMonth() + 1).padStart(2, '0') + 
+                           '-' + String(koreaTime.getDate()).padStart(2, '0');
+        
+        // team-games 컬렉션에서 오늘의 모든 경기 조회
+        const teamGamesCollection = getTeamGamesCollection();
+        const todayGames = await teamGamesCollection.find({ date: todayString }).sort({ gameNumber: 1 }).toArray();
+        
+        res.json({
+            success: true,
+            date: todayString,
+            games: todayGames
+        });
+    } catch (error) {
+        console.error('team-games 조회 오류:', error);
+        res.status(500).json({
+            success: false,
+            message: 'team-games 조회 중 오류가 발생했습니다.'
+        });
+    }
+});
+
 // 배팅 제출 API (수정된 구조)
 app.post('/api/betting/submit', async (req, res) => {
     try {
