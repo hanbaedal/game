@@ -9,6 +9,10 @@
         // Tailwind CSS CDN 경고 숨기기
         console.warn = function() {};
     </script>
+    <script>
+        // Tailwind CSS CDN 경고 숨기기
+        console.warn = function() {};
+    </script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
 </head>
 <body class="bg-black text-white">
@@ -239,15 +243,17 @@
                 const response = await fetch(`/api/board?page=${currentPage}&limit=${itemsPerPage}&search=${searchKeyword}`);
                 const data = await response.json();
                 
-                if (response.ok) {
-                    totalItems = data.total || data.boards.length;
+                if (response.ok && data.success) {
+                    const boards = data.data.boards || [];
+                    const pagination = data.data.pagination || {};
+                    totalItems = pagination.totalCount || boards.length;
                     document.getElementById('totalCount').textContent = totalItems;
                     
                     const boardList = document.getElementById('boardList');
                     boardList.innerHTML = '';
                     
-                    if (data.boards && data.boards.length > 0) {
-                        data.boards.forEach((board, index) => {
+                    if (boards && boards.length > 0) {
+                        boards.forEach((board, index) => {
                             const row = document.createElement('tr');
                             row.className = 'border-b border-gray-700 hover:bg-gray-700 cursor-pointer';
                             row.onclick = () => viewBoard(board._id);
@@ -534,21 +540,20 @@
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({
+                        userId: currentUser.userId,
+                        userName: currentUser.name,
                         title,
-                        content,
-                        author: currentUser.userId,
-                        authorName: currentUser.name,
-                        authorId: currentUser.userId
+                        content
                     })
                 });
                 
                 const data = await response.json();
-                if (response.ok) {
+                if (response.ok && data.success) {
                     closeWriteModal();
                     loadBoards();
                     alert('게시글이 작성되었습니다.');
                 } else {
-                    alert(data.error || '게시글 작성 중 오류가 발생했습니다.');
+                    alert(data.message || '게시글 작성 중 오류가 발생했습니다.');
                 }
             } catch (error) {
                 console.error('게시글 작성 오류:', error);

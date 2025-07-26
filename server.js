@@ -1432,6 +1432,111 @@ app.get('/api/notices/:noticeId', async (req, res) => {
     }
 });
 
+// 전화번호 중복 체크 API
+app.post('/api/invite/check-phone', async (req, res) => {
+    try {
+        const { phoneNumber } = req.body;
+        
+        if (!phoneNumber) {
+            return res.status(400).json({
+                success: false,
+                message: '전화번호가 필요합니다.'
+            });
+        }
+        
+        // MongoDB 연결 상태 확인
+        if (!checkMongoDBConnection()) {
+            return sendMongoDBErrorResponse(res, '데이터베이스 연결이 준비되지 않았습니다.');
+        }
+        
+        // 임시로 중복되지 않음으로 응답
+        res.json({
+            success: true,
+            exists: false,
+            message: '사용 가능한 전화번호입니다.'
+        });
+        
+    } catch (error) {
+        console.error('전화번호 중복 체크 오류:', error);
+        res.status(500).json({
+            success: false,
+            message: '전화번호 중복 체크 중 오류가 발생했습니다.'
+        });
+    }
+});
+
+// 인증번호 전송 API
+app.post('/api/invite/send-code', async (req, res) => {
+    try {
+        const { phoneNumber } = req.body;
+        
+        if (!phoneNumber) {
+            return res.status(400).json({
+                success: false,
+                message: '전화번호가 필요합니다.'
+            });
+        }
+        
+        // MongoDB 연결 상태 확인
+        if (!checkMongoDBConnection()) {
+            return sendMongoDBErrorResponse(res, '데이터베이스 연결이 준비되지 않았습니다.');
+        }
+        
+        // 6자리 인증번호 생성
+        const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
+        
+        // 임시로 성공 응답 반환 (실제로는 SMS 발송)
+        res.json({
+            success: true,
+            verificationCode: verificationCode,
+            message: '인증번호가 전송되었습니다.'
+        });
+        
+    } catch (error) {
+        console.error('인증번호 전송 오류:', error);
+        res.status(500).json({
+            success: false,
+            message: '인증번호 전송 중 오류가 발생했습니다.'
+        });
+    }
+});
+
+// 인증번호 확인 API
+app.post('/api/invite/verify-code', async (req, res) => {
+    try {
+        const { phoneNumber, code } = req.body;
+        
+        if (!phoneNumber || !code) {
+            return res.status(400).json({
+                success: false,
+                message: '전화번호와 인증번호가 필요합니다.'
+            });
+        }
+        
+        // MongoDB 연결 상태 확인
+        if (!checkMongoDBConnection()) {
+            return sendMongoDBErrorResponse(res, '데이터베이스 연결이 준비되지 않았습니다.');
+        }
+        
+        // 임시로 성공 응답 반환 (실제로는 저장된 인증번호와 비교)
+        res.json({
+            success: true,
+            message: '인증이 완료되었습니다.',
+            data: {
+                phoneNumber: phoneNumber,
+                verified: true
+            }
+        });
+        
+    } catch (error) {
+        console.error('인증번호 확인 오류:', error);
+        res.status(500).json({
+            success: false,
+            message: '인증번호 확인 중 오류가 발생했습니다.'
+        });
+    }
+});
+
 // 공지사항 조회수 증가 API
 app.post('/api/notices/:noticeId/view', async (req, res) => {
     try {

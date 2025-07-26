@@ -427,17 +427,12 @@
                     },
                     body: JSON.stringify({
                         phoneNumber: cleanedPhone,
-                        verificationCode: verificationCode,
-                        inputCode: code,
-                        memberName: currentUser.name || 'Unknown',
-                        memberId: currentUser.userId,
-                        memberPhone: userInfo?.phone || currentUser?.phone || 'Unknown',
-                        inviterPhone: cleanedPhone
+                        code: code
                     })
                 });
                 
                 const data = await response.json();
-                if (data.message) {
+                if (data.success) {
                     // 인증 성공 시 입력 필드 초기화
                     document.getElementById('phoneNumber').value = '';
                     document.getElementById('verificationCode').value = '';
@@ -454,7 +449,7 @@
                     // 초대 리스트 새로고침
                     loadInvites();
                 } else {
-                    alert(data.error || '인증에 실패했습니다.');
+                    alert(data.message || '인증에 실패했습니다.');
                 }
             } catch (error) {
                 console.error('인증번호 확인 중 오류:', error);
