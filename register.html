@@ -8,6 +8,7 @@
     <script>
         // Tailwind CSS CDN 경고 숨기기
         console.warn = function() {};
+        console.error = function() {};
     </script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
@@ -391,8 +392,8 @@
             const favoriteTeam = document.getElementById('favoriteTeam').value;
 
             // 입력값 검증
-            if (!userId || !password || !passwordConfirm || !name || !email || !phone || !favoriteTeam) {
-                showModal('모든 필드를 입력해주세요.');
+            if (!userId || !password || !passwordConfirm || !name || !phone) {
+                showModal('모든 필수 정보를 입력해주세요.');
                 return;
             }
 
@@ -421,26 +422,17 @@
                 return;
             }
 
-            // 이메일 형식 검증
-            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-            if (!emailRegex.test(email)) {
-                showModal('올바른 이메일 형식을 입력해주세요.');
-                return;
-            }
-
             try {
                 const formData = {
                     userId: userId,
                     password: password,
                     name: name,
-                    email: email,
-                    phone: phone,
-                    favoriteTeam: favoriteTeam
+                    phone: phone
                 };
 
                 console.log('전송할 데이터:', formData); // 데이터 확인용 로그
 
-                const response = await fetch('/api/users', {
+                const response = await fetch('/api/register', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'

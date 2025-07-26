@@ -1578,6 +1578,134 @@ app.get('/api/notices/:noticeId', async (req, res) => {
     }
 });
 
+// 아이디 중복 확인 API
+app.post('/api/check-id', async (req, res) => {
+    try {
+        const { userId } = req.body;
+        
+        if (!userId) {
+            return res.status(400).json({
+                success: false,
+                message: '아이디를 입력해주세요.'
+            });
+        }
+        
+        // 아이디 형식 검증
+        if (userId.length < 4) {
+            return res.status(400).json({
+                success: false,
+                message: '아이디는 4자 이상 입력해주세요.'
+            });
+        }
+        
+        // MongoDB 연결 상태 확인
+        if (!checkMongoDBConnection()) {
+            return sendMongoDBErrorResponse(res, '데이터베이스 연결이 준비되지 않았습니다.');
+        }
+        
+        const userCollection = getUserCollection();
+        
+        // 아이디 중복 확인
+        const existingUser = await userCollection.findOne({ userId: userId });
+        
+        if (existingUser) {
+            return res.json({
+                success: true,
+                available: false,
+                message: '이미 사용 중인 아이디입니다.'
+            });
+        }
+        
+        console.log(`✅ 아이디 중복 확인 완료: ${userId} (사용 가능)`);
+        
+        res.json({
+            success: true,
+            available: true,
+            message: '사용 가능한 아이디입니다.'
+        });
+        
+    } catch (error) {
+        console.error('아이디 중복 확인 오류:', error);
+        res.status(500).json({
+            success: false,
+            message: '아이디 중복 확인 중 오류가 발생했습니다.'
+        });
+    }
+});
+
+// 회원가입 API
+app.post('/api/register', async (req, res) => {
+    try {
+        const { userId, password, name, phone } = req.body;
+        
+        if (!userId || !password || !name || !phone) {
+            return res.status(400).json({
+                success: false,
+                message: '모든 필수 정보를 입력해주세요.'
+            });
+        }
+        
+        // MongoDB 연결 상태 확인
+        if (!checkMongoDBConnection()) {
+            return sendMongoDBErrorResponse(res, '데이터베이스 연결이 준비되지 않았습니다.');
+        }
+        
+        const userCollection = getUserCollection();
+        
+        // 아이디 중복 확인
+        const existingUser = await userCollection.findOne({ userId: userId });
+        if (existingUser) {
+            return res.status(409).json({
+                success: false,
+                message: '이미 사용 중인 아이디입니다.'
+            });
+        }
+        
+        // 전화번호 중복 확인
+        const existingPhone = await userCollection.findOne({ phone: phone });
+        if (existingPhone) {
+            return res.status(409).json({
+                success: false,
+                message: '이미 등록된 전화번호입니다.'
+            });
+        }
+        
+        // 새 사용자 생성
+        const todayString = getKoreaDateString();
+        const newUser = {
+            userId: userId,
+            password: password,
+            name: name,
+            phone: phone,
+            points: 1000, // 기본 포인트
+            createdAt: todayString,
+            updatedAt: todayString,
+            lastLogin: null
+        };
+        
+        const result = await userCollection.insertOne(newUser);
+        
+        console.log(`✅ 회원가입 완료: ${userId} (${name})`);
+        
+        res.json({
+            success: true,
+            message: '회원가입이 완료되었습니다.',
+            data: {
+                userId: userId,
+                name: name,
+                points: 1000
+            }
+        });
+        
+    } catch (error) {
+        console.error('회원가입 오류:', error);
+        res.status(500).json({
+            success: false,
+            message: '회원가입 중 오류가 발생했습니다.'
+        });
+    }
+});
+
 // 아이디 찾기 API
 app.post('/api/find-id', async (req, res) => {
     try {
