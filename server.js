@@ -2788,11 +2788,18 @@ app.post('/api/betting/submit', async (req, res) => {
         });
         
         if (!existingGame) {
+            // team-games 컬렉션에서 매치업 정보 가져오기
+            const teamGamesCollection = getTeamGamesCollection();
+            const teamGame = await teamGamesCollection.findOne({
+                date: date,
+                gameNumber: parseInt(gameNumber)
+            });
+            
             // 새로운 게임 데이터 생성
             await gameCollection.insertOne({
                 date: date,
                 gameNumber: parseInt(gameNumber),
-                matchup: selectedGame.matchup,
+                matchup: teamGame ? teamGame.matchup : '',
                 status: 'active',
                 bettingStart: '시작',
                 bettingStop: '진행',
