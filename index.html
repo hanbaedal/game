@@ -994,20 +994,18 @@
                                 console.log('✅ 예측결과 감지:', currentGame.predictionResult);
                                 console.log('👤 사용자 선택:', window.selectedChoice);
                                 
-                                // 사용자의 배팅 선택과 관리자의 예측결과 비교
+                                // 실제 배팅 데이터에서 사용자의 선택 확인
                                 const userChoice = window.selectedChoice;
                                 const adminResult = currentGame.predictionResult;
                                 
-                                console.log('🔍 승리/실패 판정 디버깅 (첫 번째):');
-                                console.log('- 사용자 선택:', userChoice);
-                                console.log('- 관리자 결과:', adminResult);
-                                console.log('- 선택 타입:', typeof userChoice);
-                                console.log('- 결과 타입:', typeof adminResult);
-                                
-                                // 성공/실패 판정 (정확한 비교)
+                                // 성공/실패 판정
                                 const isSuccess = userChoice === adminResult;
                                 
-                                console.log('🏆 성공 여부:', isSuccess);
+                                console.log('🏆 승리/실패 판정:', {
+                                    userChoice: userChoice,
+                                    adminResult: adminResult,
+                                    isSuccess: isSuccess
+                                });
                                 
                                 if (isSuccess) {
                                     // 성공 시 획득 포인트 계산 (실제 로직에 맞게 수정)
@@ -2421,26 +2419,24 @@
                                 console.log('✅ 예측결과 감지:', currentGame.predictionResult);
                                 console.log('👤 사용자 선택:', window.selectedChoice);
                                 
-                                // 사용자의 배팅 선택과 관리자의 예측결과 비교
+                                // 실제 배팅 데이터에서 사용자의 선택 확인
                                 const userChoice = window.selectedChoice;
                                 const adminResult = currentGame.predictionResult;
                                 
-                                console.log('🔍 승리/실패 판정 디버깅 (두 번째):');
-                                console.log('- 사용자 선택:', userChoice);
-                                console.log('- 관리자 결과:', adminResult);
-                                console.log('- 선택 타입:', typeof userChoice);
-                                console.log('- 결과 타입:', typeof adminResult);
-                                
-                                // 성공/실패 판정 (정확한 비교)
+                                // 성공/실패 판정
                                 const isSuccess = userChoice === adminResult;
                                 
-                                console.log('🏆 성공 여부:', isSuccess);
+                                console.log('🏆 승리/실패 판정:', {
+                                    userChoice: userChoice,
+                                    adminResult: adminResult,
+                                    isSuccess: isSuccess
+                                });
                                 
                                 if (isSuccess) {
-                                    // 성공 시 획득 포인트 계산 (실제 계산식 사용)
+                                    // 성공 시 획득 포인트 계산
                                     try {
-                                        // 경기별 승리자 계산 및 통계 저장 API 호출
-                                        const pointsResponse = await fetch('/api/betting/calculate-and-save-game-stats', {
+                                        // 승리 포인트 계산 API 호출
+                                        const pointsResponse = await fetch('/api/betting/calculate-game-winners', {
                                             method: 'POST',
                                             headers: { 'Content-Type': 'application/json' },
                                             body: JSON.stringify({
@@ -2452,11 +2448,11 @@
                                         const pointsData = await pointsResponse.json();
                                         
                                         if (pointsData.success) {
-                                            const pointsPerWinner = pointsData.data.pointsPerWinner || 4000;
+                                            const pointsPerWinner = pointsData.data.pointsPerWinner || 0;
                                             const winAmount = 100 + pointsPerWinner; // 고정 배팅 포인트(100) + 성공자당 분배 포인트
                                             console.log('💰 획득 포인트:', winAmount);
                                             showSuccessModal(winAmount);
-                } else {
+                                        } else {
                                             // 오류 시 기본값 사용 (배팅 포인트만)
                                             const winAmount = 100;
                                             showSuccessModal(winAmount);
@@ -2466,8 +2462,8 @@
                                         // 오류 시 기본값 사용 (배팅 포인트만)
                                         const winAmount = 100;
                                         showSuccessModal(winAmount);
-                }
-            } else {
+                                    }
+                                } else {
                                     // 실패시 실패 모달 표시
                                     console.log('❌ 예측 실패');
                                     showFailureModal();
