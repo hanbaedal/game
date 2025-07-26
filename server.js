@@ -260,14 +260,27 @@ app.post('/api/clear-all-betting-data', async (req, res) => {
         for (let gameNumber = 1; gameNumber <= 5; gameNumber++) {
             const gameCollection = getBettingGameCollection(gameNumber);
             
-            // 해당 날짜의 모든 데이터 삭제
-            const deleteResult = await gameCollection.deleteMany({
-                date: todayString,
-                gameNumber: gameNumber
-            });
+            // betCounts를 0으로, bets 배열을 비우고, totalBets를 0으로 초기화
+            await gameCollection.updateOne(
+                { 
+                    date: todayString,
+                    gameNumber: gameNumber
+                },
+                {
+                    $set: {
+                        totalBets: 0,
+                        betCounts: {
+                            '1루': 0, '2루': 0, '3루': 0, '홈런': 0, '삼진': 0, '아웃': 0
+                        },
+                        bets: [], // bets 배열 완전 비우기
+                        predictionResult: '' // 예측 결과도 초기화
+                    }
+                },
+                { upsert: true } // 데이터가 없으면 생성
+            );
             
             clearedCount++;
-            console.log(`✅ 경기 ${gameNumber} 데이터 완전 삭제 완료: ${deleteResult.deletedCount}개 레코드`);
+            console.log(`✅ 경기 ${gameNumber} 데이터 초기화 완료: betCounts=0, bets=[], totalBets=0`);
         }
         
         console.log(`✅ 모든 배팅 데이터 완전 초기화 완료: ${clearedCount}개 경기`);
@@ -840,12 +853,13 @@ app.put('/api/admin/game/:gameNumber/end-game', async (req, res) => {
                             '삼진': 0,
                             '아웃': 0
                         },
-                        bets: [], // bets 배열도 초기화
+                        bets: [], // bets 배열 완전 비우기
                         predictionResult: '' // 예측 결과도 초기화
                     }
                 },
                 { upsert: true }
             );
+            console.log(`✅ 관리자 다음타자: 경기 ${i} 초기화 완료 - betCounts=0, bets=[], totalBets=0`);
         }
         
         console.log(`✅ 모든 경기별 배팅 집계 초기화 완료`);

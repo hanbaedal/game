@@ -468,6 +468,8 @@
         async function clearAllBettingData() {
             try {
                 console.log('🧹 경기 선택 시 배팅 데이터 클리어 시작...');
+                
+                // 서버에 완전 초기화 요청
                 const response = await fetch('/api/clear-all-betting-data', {
                     method: 'POST',
                     headers: {
@@ -478,6 +480,31 @@
                 const data = await response.json();
                 if (data.success) {
                     console.log('✅ 배팅 데이터 클리어 완료:', data.message);
+                    
+                    // 클라이언트 측 변수도 초기화
+                    window.selectedChoice = null;
+                    selectedGame = null;
+                    selectedChoice = null;
+                    selectedAmount = 100;
+                    
+                    // 배팅 선택 버튼 초기화
+                    document.querySelectorAll('.bet-choice-btn').forEach(btn => {
+                        btn.classList.remove('bg-blue-600', 'border-blue-400');
+                        btn.classList.add('bg-gray-600');
+                        btn.disabled = true;
+                        btn.classList.add('opacity-50', 'cursor-not-allowed');
+                        btn.classList.remove('cursor-pointer');
+                    });
+                    
+                    // 예측하기 버튼 비활성화
+                    const betBtn = document.getElementById('betBtn');
+                    if (betBtn) {
+                        betBtn.disabled = true;
+                        betBtn.classList.add('opacity-50', 'cursor-not-allowed');
+                        betBtn.classList.remove('cursor-pointer');
+                    }
+                    
+                    console.log('✅ 클라이언트 측 변수도 초기화 완료');
                 } else {
                     console.error('❌ 배팅 데이터 클리어 실패:', data.message);
                 }
@@ -487,11 +514,11 @@
         }
 
         // DB 데이터를 사용한 경기 선택 함수
-        function selectSimpleGame(gameId, gameNumber, matchup) {
+        async function selectSimpleGame(gameId, gameNumber, matchup) {
             console.log(`🎯 경기 선택: ${gameNumber}경기 ${matchup}`);
             
-            // 경기 선택 시 모든 배팅 데이터 클리어
-            clearAllBettingData();
+            // 경기 선택 시 모든 배팅 데이터 클리어 (await 추가)
+            await clearAllBettingData();
             
             // 전체 경기 데이터에서 해당 경기 찾기
             const allGames = window.allGamesData || [];
