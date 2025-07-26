@@ -153,7 +153,7 @@ app.post('/api/migrate-betting-data', async (req, res) => {
         
         console.log(`✅ 총 ${migratedCount}개 경기 마이그레이션 완료`);
         
-        res.json({
+        res.json({ 
             success: true,
             message: `마이그레이션 완료: ${migratedCount}개 경기`,
             migratedCount: migratedCount
@@ -291,15 +291,15 @@ app.post('/api/clear-all-betting-data', async (req, res) => {
         console.log(`✅ 모든 배팅 데이터 완전 초기화 완료: ${clearedCount}개 경기`);
         
         res.json({
-            success: true,
+                success: true, 
             message: `모든 배팅 데이터 초기화 완료: ${clearedCount}개 경기`,
             clearedCount: clearedCount
         });
         
     } catch (error) {
         console.error('❌ 배팅 데이터 초기화 오류:', error);
-        res.status(500).json({
-            success: false,
+        res.status(500).json({ 
+            success: false, 
             message: '배팅 데이터 초기화 중 오류가 발생했습니다.'
         });
     }
@@ -432,8 +432,8 @@ app.post('/api/fix-betcounts', async (req, res) => {
                         date: todayString,
                         gameNumber: gameNumber 
                     },
-                    {
-                        $set: {
+            {
+                $set: {
                             betCounts: newBetCounts,
                             totalBets: gameData.bets.length
                         }
@@ -455,7 +455,7 @@ app.post('/api/fix-betcounts', async (req, res) => {
         
     } catch (error) {
         console.error('❌ betCounts 수정 오류:', error);
-        res.status(500).json({
+        res.status(500).json({ 
             success: false,
             message: 'betCounts 수정 중 오류가 발생했습니다.'
         });
@@ -476,15 +476,15 @@ app.get('/api/team-games', async (req, res) => {
         const teamGamesCollection = getTeamGamesCollection();
         const todayGames = await teamGamesCollection.find({ date: todayString }).sort({ gameNumber: 1 }).toArray();
         
-        res.json({
+        res.json({ 
             success: true,
             date: todayString,
             games: todayGames
         });
     } catch (error) {
         console.error('team-games 조회 오류:', error);
-        res.status(500).json({
-            success: false,
+        res.status(500).json({ 
+            success: false, 
             message: 'team-games 조회 중 오류가 발생했습니다.'
         });
     }
@@ -496,8 +496,8 @@ app.post('/api/betting/submit', async (req, res) => {
         const { userId, gameNumber, prediction, points } = req.body;
         
         if (!userId || !gameNumber || !prediction || !points) {
-            return res.status(400).json({
-                success: false,
+            return res.status(400).json({ 
+                success: false, 
                 message: '필수 정보가 누락되었습니다.'
             });
         }
@@ -513,8 +513,8 @@ app.post('/api/betting/submit', async (req, res) => {
         // 사용자 정보 조회
         const user = await userCollection.findOne({ userId: userId });
         if (!user) {
-            return res.status(404).json({
-                success: false,
+            return res.status(404).json({ 
+                success: false, 
                 message: '사용자를 찾을 수 없습니다.'
             });
         }
@@ -522,7 +522,7 @@ app.post('/api/betting/submit', async (req, res) => {
         // 포인트 확인
         if (user.points < parseInt(points)) {
             return res.status(400).json({
-                success: false,
+            success: false, 
                 message: '포인트가 부족합니다.'
             });
         }
@@ -632,8 +632,8 @@ app.post('/api/betting/submit', async (req, res) => {
         
         console.log(`게임 배팅 제출: ${userId} - ${prediction} ${points}포인트`);
         
-        res.json({
-            success: true,
+        res.json({ 
+            success: true, 
             message: '배팅이 완료되었습니다.',
             remainingPoints: user.points - parseInt(points)
         });
@@ -763,7 +763,7 @@ app.put('/api/admin/game/:gameNumber/stop-betting', async (req, res) => {
         
         if (!game) {
             return res.status(404).json({ 
-                success: false, 
+                success: false,
                 message: '경기를 찾을 수 없습니다.' 
             });
         }
@@ -871,7 +871,7 @@ app.put('/api/admin/game/:gameNumber/end-game', async (req, res) => {
         
         console.log(`✅ 게임 종료: 경기 ${gameNumber} (${game.matchup})`);
         
-        res.json({
+        res.json({ 
             success: true,
             message: '게임이 종료되었습니다.',
             game: {
@@ -1197,8 +1197,8 @@ app.get('/api/user/:userId', async (req, res) => {
         }
         
         const userCollection = getUserCollection();
-        
-        // 사용자 정보 조회
+
+// 사용자 정보 조회
         const user = await userCollection.findOne({ userId: userId });
         if (!user) {
             return res.status(404).json({
@@ -1212,9 +1212,9 @@ app.get('/api/user/:userId', async (req, res) => {
             success: true,
             message: '사용자 정보를 조회했습니다.',
             data: {
-                userId: user.userId,
+            userId: user.userId,
                 name: user.name || user.username,
-                email: user.email,
+            email: user.email,
                 points: user.points || 0,
                 joinDate: user.createdAt || user.joinDate,
                 lastLogin: user.lastLogin,
@@ -1363,7 +1363,7 @@ app.get('/api/notices', async (req, res) => {
         const totalCount = sampleNotices.length;
         const totalPages = Math.ceil(totalCount / limit);
         
-        res.json({
+        res.json({ 
             success: true,
             message: '공지사항 목록을 조회했습니다.',
             data: {
@@ -1417,7 +1417,7 @@ app.get('/api/notices/:noticeId', async (req, res) => {
             attachments: []
         };
         
-        res.json({
+        res.json({ 
             success: true,
             message: '공지사항을 조회했습니다.',
             data: sampleNotice
@@ -1450,7 +1450,7 @@ app.post('/api/invite/check-phone', async (req, res) => {
         }
         
         // 임시로 중복되지 않음으로 응답
-        res.json({
+        res.json({ 
             success: true,
             exists: false,
             message: '사용 가능한 전화번호입니다.'
@@ -1486,7 +1486,7 @@ app.post('/api/invite/send-code', async (req, res) => {
         const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
         
         // 임시로 성공 응답 반환 (실제로는 SMS 발송)
-        res.json({
+        res.json({ 
             success: true,
             verificationCode: verificationCode,
             message: '인증번호가 전송되었습니다.'
@@ -1530,7 +1530,7 @@ app.post('/api/invite/verify-code', async (req, res) => {
         
     } catch (error) {
         console.error('인증번호 확인 오류:', error);
-        res.status(500).json({
+        res.status(500).json({ 
             success: false,
             message: '인증번호 확인 중 오류가 발생했습니다.'
         });
@@ -1555,7 +1555,7 @@ app.post('/api/notices/:noticeId/view', async (req, res) => {
         }
         
         // 임시로 성공 응답 반환
-        res.json({
+        res.json({ 
             success: true,
             message: '조회수가 증가되었습니다.',
             data: {
@@ -1621,8 +1621,8 @@ app.put('/api/user/:userId', async (req, res) => {
         const { name, email } = req.body;
         
         if (!userId) {
-            return res.status(400).json({
-                success: false,
+            return res.status(400).json({ 
+                success: false, 
                 message: '사용자 ID가 필요합니다.'
             });
         }
@@ -1675,8 +1675,8 @@ app.get('/api/board/:boardId', async (req, res) => {
         const { boardId } = req.params;
         
         if (!boardId) {
-            return res.status(400).json({
-                success: false,
+            return res.status(400).json({ 
+                success: false, 
                 message: '게시글 ID가 필요합니다.'
             });
         }
@@ -1705,7 +1705,7 @@ app.get('/api/board/:boardId', async (req, res) => {
     } catch (error) {
         console.error('게시글 상세 조회 오류:', error);
         res.status(500).json({
-            success: false,
+                success: false,
             message: '게시글 상세 조회 중 오류가 발생했습니다.'
         });
     }
@@ -1762,9 +1762,9 @@ app.get('/api/invites', async (req, res) => {
         const { userId } = req.query;
         
         if (!userId) {
-            return res.status(400).json({
-                success: false,
-                message: '사용자 ID가 필요합니다.'
+            return res.status(400).json({ 
+                success: false, 
+                message: '사용자 ID가 필요합니다.' 
             });
         }
         
@@ -1798,8 +1798,8 @@ app.post('/api/update-points', async (req, res) => {
         const { userId, points } = req.body;
         
         if (!userId || points === undefined) {
-            return res.status(400).json({
-                success: false,
+            return res.status(400).json({ 
+                success: false, 
                 message: '사용자 ID와 포인트가 필요합니다.'
             });
         }
@@ -1849,8 +1849,8 @@ app.post('/api/admin/calculate-winnings', async (req, res) => {
         const { gameNumber, predictionResult, date } = req.body;
         
         if (!gameNumber || !predictionResult || !date) {
-            return res.status(400).json({
-                success: false,
+            return res.status(400).json({ 
+                success: false, 
                 message: '게임번호, 예측결과, 날짜가 필요합니다.'
             });
         }
@@ -1878,7 +1878,7 @@ app.post('/api/admin/calculate-winnings', async (req, res) => {
         
         // 예측결과를 betting-game-X 컬렉션에 저장
         await gameCollection.updateOne(
-            { 
+            {
                 date: date,
                 gameNumber: parseInt(gameNumber)
             },
@@ -2093,7 +2093,117 @@ const connectToMongoDB = async () => {
 // 메인 페이지 라우팅
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
-});
-
-// 서버 시작
-startServer(); 
+        });
+        
+        // 댓글 관련 API
+        app.get('/api/comments/:boardId', async (req, res) => {
+            try {
+                const { boardId } = req.params;
+                if (!boardId) { return res.status(400).json({ success: false, message: '게시글 ID가 필요합니다.' }); }
+                if (!checkMongoDBConnection()) { return sendMongoDBErrorResponse(res, '데이터베이스 연결이 준비되지 않았습니다.'); }
+                res.json({ success: true, message: '댓글을 조회했습니다.', comments: [] });
+            } catch (error) {
+                console.error('댓글 조회 오류:', error);
+                res.status(500).json({ success: false, message: '댓글 조회 중 오류가 발생했습니다.' });
+            }
+        });
+        
+        app.post('/api/comment', async (req, res) => {
+            try {
+                const { boardId, author, authorName, content } = req.body;
+                if (!boardId || !author || !authorName || !content) { return res.status(400).json({ success: false, message: '필수 정보가 누락되었습니다.' }); }
+                if (!checkMongoDBConnection()) { return sendMongoDBErrorResponse(res, '데이터베이스 연결이 준비되지 않았습니다.'); }
+                const today = new Date();
+                const koreaTime = new Date(today.getTime() + (9 * 60 * 60 * 1000));
+                const todayString = koreaTime.getFullYear().toString() + '-' + String(koreaTime.getMonth() + 1).padStart(2, '0') + '-' + String(koreaTime.getDate()).padStart(2, '0');
+                res.json({ success: true, message: '댓글이 작성되었습니다.', data: { commentId: 'temp_' + Date.now(), boardId: boardId, author: author, authorName: authorName, content: content, createdAt: todayString } });
+            } catch (error) {
+                console.error('댓글 작성 오류:', error);
+                res.status(500).json({ success: false, message: '댓글 작성 중 오류가 발생했습니다.' });
+            }
+        });
+        
+        app.delete('/api/comment/:commentId', async (req, res) => {
+            try {
+                const { commentId } = req.params;
+                const { author } = req.body;
+                if (!commentId || !author) { return res.status(400).json({ success: false, message: '댓글 ID와 작성자 정보가 필요합니다.' }); }
+                if (!checkMongoDBConnection()) { return sendMongoDBErrorResponse(res, '데이터베이스 연결이 준비되지 않았습니다.'); }
+                res.json({ success: true, message: '댓글이 삭제되었습니다.' });
+            } catch (error) {
+                console.error('댓글 삭제 오류:', error);
+                res.status(500).json({ success: false, message: '댓글 삭제 중 오류가 발생했습니다.' });
+            }
+        });
+        
+        // 게시글 수정/삭제 API
+        app.put('/api/board/:boardId', async (req, res) => {
+            try {
+                const { boardId } = req.params;
+                const { title, content, authorId } = req.body;
+                if (!boardId || !title || !content || !authorId) { return res.status(400).json({ success: false, message: '필수 정보가 누락되었습니다.' }); }
+                if (!checkMongoDBConnection()) { return sendMongoDBErrorResponse(res, '데이터베이스 연결이 준비되지 않았습니다.'); }
+                res.json({ success: true, message: '게시글이 수정되었습니다.' });
+            } catch (error) {
+                console.error('게시글 수정 오류:', error);
+                res.status(500).json({ success: false, message: '게시글 수정 중 오류가 발생했습니다.' });
+            }
+        });
+        
+        app.delete('/api/board/:boardId', async (req, res) => {
+            try {
+                const { boardId } = req.params;
+                const { authorId } = req.body;
+                if (!boardId || !authorId) { return res.status(400).json({ success: false, message: '게시글 ID와 작성자 정보가 필요합니다.' }); }
+                if (!checkMongoDBConnection()) { return sendMongoDBErrorResponse(res, '데이터베이스 연결이 준비되지 않았습니다.'); }
+                res.json({ success: true, message: '게시글이 삭제되었습니다.' });
+            } catch (error) {
+                console.error('게시글 삭제 오류:', error);
+                res.status(500).json({ success: false, message: '게시글 삭제 중 오류가 발생했습니다.' });
+            }
+        });
+        
+        // 공지사항 조회수 증가 API
+        app.post('/api/notices/:noticeId/view', async (req, res) => {
+            try {
+                const { noticeId } = req.params;
+                if (!noticeId) { return res.status(400).json({ success: false, message: '공지사항 ID가 필요합니다.' }); }
+                if (!checkMongoDBConnection()) { return sendMongoDBErrorResponse(res, '데이터베이스 연결이 준비되지 않았습니다.'); }
+                res.json({ success: true, message: '조회수가 증가되었습니다.', data: { noticeId: noticeId, views: 151 } });
+            } catch (error) {
+                console.error('공지사항 조회수 증가 오류:', error);
+                res.status(500).json({ success: false, message: '공지사항 조회수 증가 중 오류가 발생했습니다.' });
+            }
+        });
+        
+        // 게시글 조회수 증가 API
+        app.post('/api/board/:boardId/view', async (req, res) => {
+            try {
+                const { boardId } = req.params;
+                if (!boardId) { return res.status(400).json({ success: false, message: '게시글 ID가 필요합니다.' }); }
+                if (!checkMongoDBConnection()) { return sendMongoDBErrorResponse(res, '데이터베이스 연결이 준비되지 않았습니다.'); }
+                res.json({ success: true, message: '조회수가 증가되었습니다.', data: { boardId: boardId, views: 25 } });
+            } catch (error) {
+                console.error('게시글 조회수 증가 오류:', error);
+                res.status(500).json({ success: false, message: '게시글 조회수 증가 중 오류가 발생했습니다.' });
+            }
+        });
+        
+        // 사용자 포인트 조회 API
+        app.get('/api/user/:userId/points', async (req, res) => {
+            try {
+                const { userId } = req.params;
+                if (!userId) { return res.status(400).json({ success: false, message: '사용자 ID가 필요합니다.' }); }
+                if (!checkMongoDBConnection()) { return sendMongoDBErrorResponse(res, '데이터베이스 연결이 준비되지 않았습니다.'); }
+                const userCollection = getUserCollection();
+                const user = await userCollection.findOne({ userId: userId });
+                if (!user) { return res.status(404).json({ success: false, message: '사용자를 찾을 수 없습니다.' }); }
+                res.json({ success: true, message: '포인트를 조회했습니다.', data: { userId: userId, points: user.points || 0 } });
+            } catch (error) {
+                console.error('포인트 조회 오류:', error);
+                res.status(500).json({ success: false, message: '포인트 조회 중 오류가 발생했습니다.' });
+            }
+        });
+        
+        // 서버 시작
+        startServer(); 

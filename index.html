@@ -1564,8 +1564,8 @@
                         this.classList.add('selected');
                         
                         const percent = this.getAttribute('data-percent');
-                        
-                        // 기부 확인 섹션 표시
+                    
+                    // 기부 확인 섹션 표시
                         const confirmSection = modal.querySelector('#donationConfirm');
                         const selectedPercentSpan = modal.querySelector('#selectedPercent');
                         if (confirmSection && selectedPercentSpan) {
@@ -2329,14 +2329,14 @@
         async function processBetting(isRetry) {
             try {
                 // 필수 필드들이 올바르게 설정되었는지 확인
-                if (!currentUser || !currentUser.userId) {
+            if (!currentUser || !currentUser.userId) {
                     alert('사용자 정보가 없습니다. 다시 로그인해주세요.');
-                        return;
-                    }
+                return;
+            }
                 if (!window.selectedChoice) {
                     alert('배팅 선택이 되지 않았습니다.');
-                    return;
-                }
+                return;
+            }
                 if (!selectedAmount) {
                     alert('배팅 금액이 설정되지 않았습니다.');
                     return;
@@ -2499,14 +2499,14 @@
                                     try {
                                         // 승리 포인트 계산 API 호출
                                         const pointsResponse = await fetch('/api/betting/calculate-game-winners', {
-                                            method: 'POST',
+                    method: 'POST',
                                             headers: { 'Content-Type': 'application/json' },
-                                            body: JSON.stringify({
+                    body: JSON.stringify({
                                                 gameNumber: selectedGame.gameNumber,
                                                 actualResult: currentGame.predictionResult,
                                                 date: selectedGame.date
-                                            })
-                                        });
+                    })
+                });
                                         const pointsData = await pointsResponse.json();
                                         
                                         if (pointsData.success) {
@@ -2514,12 +2514,12 @@
                                             const winAmount = 100 + pointsPerWinner; // 고정 배팅 포인트(100) + 성공자당 분배 포인트
                                             console.log('💰 획득 포인트:', winAmount);
                                             showSuccessModal(winAmount);
-                                        } else {
+                } else {
                                             // 오류 시 기본값 사용 (배팅 포인트만)
                                             const winAmount = 100;
                                             showSuccessModal(winAmount);
-                                        }
-                                    } catch (error) {
+                }
+            } catch (error) {
                                         console.error('포인트 계산 오류:', error);
                                         // 오류 시 기본값 사용 (배팅 포인트만)
                                         const winAmount = 100;
