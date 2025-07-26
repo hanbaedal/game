@@ -1532,6 +1532,116 @@ app.get('/api/notices/:noticeId', async (req, res) => {
     }
 });
 
+// 로그인 API
+app.post('/api/login', async (req, res) => {
+    try {
+        const { userId, password } = req.body;
+        
+        if (!userId || !password) {
+            return res.status(400).json({
+                success: false,
+                message: '아이디와 비밀번호를 입력해주세요.'
+            });
+        }
+        
+        // MongoDB 연결 상태 확인
+        if (!checkMongoDBConnection()) {
+            return sendMongoDBErrorResponse(res, '데이터베이스 연결이 준비되지 않았습니다.');
+        }
+        
+        const userCollection = getUserCollection();
+        
+        // 사용자 조회
+        const user = await userCollection.findOne({ userId: userId });
+        
+        if (!user) {
+            return res.status(401).json({
+                success: false,
+                message: '아이디 또는 비밀번호가 일치하지 않습니다.'
+            });
+        }
+        
+        // 비밀번호 확인 (실제로는 해시 비교)
+        if (user.password !== password) {
+            return res.status(401).json({
+                success: false,
+                message: '아이디 또는 비밀번호가 일치하지 않습니다.'
+            });
+        }
+        
+        // 로그인 성공 시 사용자 정보 반환
+        const userInfo = {
+            userId: user.userId,
+            name: user.name || user.username || '사용자',
+            points: user.points || 0,
+            phone: user.phone || '',
+            isGuest: false
+        };
+        
+        console.log(`✅ 로그인 성공: ${userId}`);
+        
+        res.json({
+            success: true,
+            message: '로그인이 완료되었습니다.',
+            user: userInfo
+        });
+        
+    } catch (error) {
+        console.error('로그인 오류:', error);
+        res.status(500).json({
+            success: false,
+            message: '로그인 처리 중 오류가 발생했습니다.'
+        });
+    }
+});
+
+// 로그아웃 API
+app.post('/api/logout', async (req, res) => {
+    try {
+        const { userId } = req.body;
+        
+        if (!userId) {
+            return res.status(400).json({
+                success: false,
+                message: '사용자 ID가 필요합니다.'
+            });
+        }
+        
+        // MongoDB 연결 상태 확인
+        if (!checkMongoDBConnection()) {
+            return sendMongoDBErrorResponse(res, '데이터베이스 연결이 준비되지 않았습니다.');
+        }
+        
+        const userCollection = getUserCollection();
+        
+        // 마지막 로그인 시간 업데이트
+        const today = new Date();
+        const koreaTime = new Date(today.getTime() + (9 * 60 * 60 * 1000));
+        const todayString = koreaTime.getFullYear().toString() + 
+                           '-' + String(koreaTime.getMonth() + 1).padStart(2, '0') + 
+                           '-' + String(koreaTime.getDate()).padStart(2, '0');
+        
+        await userCollection.updateOne(
+            { userId: userId },
+            { $set: { lastLogin: todayString } }
+        );
+        
+        console.log(`✅ 로그아웃 완료: ${userId}`);
+        
+        res.json({
+            success: true,
+            message: '로그아웃이 완료되었습니다.'
+        });
+        
+    } catch (error) {
+        console.error('로그아웃 오류:', error);
+        res.status(500).json({
+            success: false,
+            message: '로그아웃 처리 중 오류가 발생했습니다.'
+        });
+    }
+});
+
 // 공지사항 작성 API (관리자용)
 app.post('/api/notices', async (req, res) => {
     try {
