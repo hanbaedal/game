@@ -242,6 +242,51 @@ app.post('/api/betting/calculate-game-winners', async (req, res) => {
     }
 });
 
+// 모든 배팅 데이터 완전 초기화 API
+app.post('/api/clear-all-betting-data', async (req, res) => {
+    try {
+        console.log('🧹 모든 배팅 데이터 완전 초기화 시작...');
+        
+        // 한국 시간대로 오늘 날짜 계산
+        const today = new Date();
+        const koreaTime = new Date(today.getTime() + (9 * 60 * 60 * 1000));
+        const todayString = koreaTime.getFullYear().toString() + 
+                           '-' + String(today.getMonth() + 1).padStart(2, '0') + 
+                           '-' + String(today.getDate()).padStart(2, '0');
+        
+        let clearedCount = 0;
+        
+        // 1~5경기 데이터 완전 초기화
+        for (let gameNumber = 1; gameNumber <= 5; gameNumber++) {
+            const gameCollection = getBettingGameCollection(gameNumber);
+            
+            // 해당 날짜의 모든 데이터 삭제
+            const deleteResult = await gameCollection.deleteMany({
+                date: todayString,
+                gameNumber: gameNumber
+            });
+            
+            clearedCount++;
+            console.log(`✅ 경기 ${gameNumber} 데이터 완전 삭제 완료: ${deleteResult.deletedCount}개 레코드`);
+        }
+        
+        console.log(`✅ 모든 배팅 데이터 완전 초기화 완료: ${clearedCount}개 경기`);
+        
+        res.json({
+            success: true,
+            message: `모든 배팅 데이터 초기화 완료: ${clearedCount}개 경기`,
+            clearedCount: clearedCount
+        });
+        
+    } catch (error) {
+        console.error('❌ 배팅 데이터 초기화 오류:', error);
+        res.status(500).json({
+            success: false,
+            message: '배팅 데이터 초기화 중 오류가 발생했습니다.'
+        });
+    }
+});
+
 // 영문 키 완전 제거 및 한글 통일 API
 app.post('/api/clean-english-data', async (req, res) => {
     try {
@@ -462,6 +507,29 @@ app.post('/api/betting/submit', async (req, res) => {
                 success: false,
                 message: '포인트가 부족합니다.'
             });
+        }
+        
+        // 중복 배팅 체크 (오늘 날짜에 이미 배팅했는지 확인)
+        const checkToday = new Date();
+        const checkKoreaTime = new Date(checkToday.getTime() + (9 * 60 * 60 * 1000));
+        const checkTodayString = checkKoreaTime.getFullYear().toString() + 
+                                '-' + String(checkToday.getMonth() + 1).padStart(2, '0') + 
+                                '-' + String(checkToday.getDate()).padStart(2, '0');
+        
+        // 모든 게임에서 오늘 배팅했는지 확인
+        for (let i = 1; i <= 5; i++) {
+            const checkCollection = getBettingGameCollection(i);
+            const existingBet = await checkCollection.findOne({
+                date: checkTodayString,
+                'bets.userId': userId
+            });
+            
+            if (existingBet) {
+                return res.status(400).json({
+                    success: false,
+                    message: '오늘 이미 배팅하셨습니다. 다음 타자까지 기다려주세요.'
+                });
+            }
         }
         
         // 한국 시간대로 오늘 날짜 계산
