@@ -121,10 +121,10 @@
                 }
                 
                 const data = await response.json();
-                notices = data.notices || [];
+                notices = data.data.notices || [];
                 
                 // 총 건수 표시
-                totalCount.textContent = `총 ${notices.length}건`;
+                totalCount.textContent = `총 ${data.data.pagination.totalCount || notices.length}건`;
                 
                 noticeList.innerHTML = '';
                 

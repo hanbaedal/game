@@ -92,6 +92,11 @@ function getBoardCollection() {
     return mongoose.connection.db.collection('game-board');
 }
 
+// game-notices 컬렉션 가져오기 함수
+function getNoticeCollection() {
+    return mongoose.connection.db.collection('game-notices');
+}
+
 // 데이터 마이그레이션 API (영문 키를 한글 키로 변환)
 app.post('/api/migrate-betting-data', async (req, res) => {
     try {
@@ -1411,45 +1416,39 @@ app.get('/api/notices', async (req, res) => {
             return sendMongoDBErrorResponse(res, '데이터베이스 연결이 준비되지 않았습니다.');
         }
         
-        // 임시로 샘플 공지사항 반환
-        const sampleNotices = [
-            {
-                noticeId: 'notice_1',
-                title: '게임 이용 안내',
-                content: '배팅 게임 이용 방법을 안내드립니다.',
-                category: '안내',
-                isImportant: true,
-                createdAt: '2025-01-01',
-                views: 150
-            },
-            {
-                noticeId: 'notice_2',
-                title: '포인트 충전 방법',
-                content: '광고 시청을 통해 포인트를 충전할 수 있습니다.',
-                category: '안내',
-                isImportant: false,
-                createdAt: '2025-01-02',
-                views: 89
-            },
-            {
-                noticeId: 'notice_3',
-                title: '시스템 점검 안내',
-                content: '정기 시스템 점검이 예정되어 있습니다.',
-                category: '점검',
-                isImportant: true,
-                createdAt: '2025-01-03',
-                views: 234
-            }
-        ];
+        const noticeCollection = getNoticeCollection();
         
-        const totalCount = sampleNotices.length;
+        // 검색 조건 설정
+        let query = {};
+        if (search) {
+            query = {
+                $or: [
+                    { title: { $regex: search, $options: 'i' } },
+                    { content: { $regex: search, $options: 'i' } },
+                    { category: { $regex: search, $options: 'i' } }
+                ]
+            };
+        }
+        
+        // 전체 공지사항 수 조회
+        const totalCount = await noticeCollection.countDocuments(query);
         const totalPages = Math.ceil(totalCount / limit);
+        const skip = (parseInt(page) - 1) * parseInt(limit);
+        
+        // 공지사항 목록 조회 (최신순, 중요도순)
+        const notices = await noticeCollection.find(query)
+            .sort({ isImportant: -1, createdAt: -1 })
+            .skip(skip)
+            .limit(parseInt(limit))
+            .toArray();
+        
+        console.log(`✅ 공지사항 목록 조회 완료: ${notices.length}건 (총 ${totalCount}건)`);
         
         res.json({ 
             success: true,
             message: '공지사항 목록을 조회했습니다.',
             data: {
-                notices: sampleNotices,
+                notices: notices,
                 pagination: {
                     currentPage: parseInt(page),
                     totalPages: totalPages,
@@ -1486,23 +1485,42 @@ app.get('/api/notices/:noticeId', async (req, res) => {
             return sendMongoDBErrorResponse(res, '데이터베이스 연결이 준비되지 않았습니다.');
         }
         
-        // 임시로 샘플 공지사항 데이터 반환
-        const sampleNotice = {
-            noticeId: noticeId,
-            title: '샘플 공지사항',
-            content: '이것은 샘플 공지사항의 내용입니다. 실제 공지사항 내용이 여기에 표시됩니다.',
-            category: '안내',
-            isImportant: true,
-            createdAt: '2025-01-01',
-            views: 150,
-            author: '관리자',
-            attachments: []
-        };
+        const noticeCollection = getNoticeCollection();
+        
+        // ObjectId로 변환 (MongoDB ObjectId 형식인 경우)
+        let query = { _id: noticeId };
+        if (noticeId.match(/^[0-9a-fA-F]{24}$/)) {
+            const { ObjectId } = require('mongodb');
+            query = { _id: new ObjectId(noticeId) };
+        }
+        
+        // 공지사항 조회
+        const notice = await noticeCollection.findOne(query);
+        
+        if (!notice) {
+            return res.status(404).json({
+                success: false,
+                message: '공지사항을 찾을 수 없습니다.'
+            });
+        }
+        
+        // 조회수 증가
+        await noticeCollection.updateOne(
+            { _id: notice._id },
+            { $inc: { views: 1 } }
+        );
+        
+        console.log(`✅ 공지사항 상세 조회 완료: ${noticeId} -> ${notice.title}`);
         
         res.json({ 
             success: true,
             message: '공지사항을 조회했습니다.',
-            data: sampleNotice
+            data: {
+                notice: {
+                    ...notice,
+                    views: notice.views + 1
+                }
+            }
         });
         
     } catch (error) {
@@ -1510,6 +1528,72 @@ app.get('/api/notices/:noticeId', async (req, res) => {
         res.status(500).json({
             success: false,
             message: '공지사항 상세 조회 중 오류가 발생했습니다.'
+        });
+    }
+});
+
+// 공지사항 작성 API (관리자용)
+app.post('/api/notices', async (req, res) => {
+    try {
+        const { title, content, category, isImportant, author } = req.body;
+        
+        if (!title || !content || !author) {
+            return res.status(400).json({
+                success: false,
+                message: '제목, 내용, 작성자가 필요합니다.'
+            });
+        }
+        
+        // MongoDB 연결 상태 확인
+        if (!checkMongoDBConnection()) {
+            return sendMongoDBErrorResponse(res, '데이터베이스 연결이 준비되지 않았습니다.');
+        }
+        
+        const noticeCollection = getNoticeCollection();
+        
+        const today = new Date();
+        const koreaTime = new Date(today.getTime() + (9 * 60 * 60 * 1000));
+        const todayString = koreaTime.getFullYear().toString() + 
+                           '-' + String(koreaTime.getMonth() + 1).padStart(2, '0') + 
+                           '-' + String(koreaTime.getDate()).padStart(2, '0');
+        
+        // 공지사항 데이터 생성
+        const noticeData = {
+            title: title,
+            content: content,
+            category: category || '일반',
+            isImportant: isImportant || false,
+            author: author,
+            createdAt: todayString,
+            updatedAt: todayString,
+            views: 0
+        };
+        
+        // 공지사항 저장
+        const result = await noticeCollection.insertOne(noticeData);
+        
+        console.log(`✅ 공지사항 작성 완료: ${author} -> ${title}`);
+        
+        res.json({
+            success: true,
+            message: '공지사항이 작성되었습니다.',
+            data: {
+                noticeId: result.insertedId,
+                title: title,
+                content: content,
+                category: category,
+                isImportant: isImportant,
+                author: author,
+                createdAt: todayString,
+                views: 0
+            }
+        });
+        
+    } catch (error) {
+        console.error('공지사항 작성 오류:', error);
+        res.status(500).json({
+            success: false,
+            message: '공지사항 작성 중 오류가 발생했습니다.'
         });
     }
 });
