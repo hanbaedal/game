@@ -771,7 +771,9 @@ app.put('/api/admin/game/:gameNumber/end-game', async (req, res) => {
                             '홈런': 0,
                             '삼진': 0,
                             '아웃': 0
-                        }
+                        },
+                        bets: [], // bets 배열도 초기화
+                        predictionResult: '' // 예측 결과도 초기화
                     }
                 },
                 { upsert: true }
