@@ -221,12 +221,12 @@
                 const data = await response.json();
                 
                 // 총 건수 표시
-                totalCount.textContent = `총 ${data.invites ? data.invites.length : 0}건`;
+                totalCount.textContent = `총 ${data.data ? data.data.totalCount : 0}건`;
                 
                 inviteListItems.innerHTML = '';
                 
-                if (data.invites && data.invites.length > 0) {
-                    data.invites.forEach(invite => {
+                if (data.data && data.data.invites && data.data.invites.length > 0) {
+                    data.data.invites.forEach(invite => {
                         const inviteItem = document.createElement('div');
                         inviteItem.className = 'bg-gray-700 p-3 rounded-lg mb-2';
                         inviteItem.innerHTML = `
@@ -431,6 +431,7 @@
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({
+                        userId: currentUser.userId,
                         phoneNumber: cleanedPhone,
                         code: code
                     })

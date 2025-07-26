@@ -82,6 +82,11 @@ function getBettingGameCollection(gameNumber) {
     return mongoose.connection.db.collection(`betting-game-${gameNumber}`);
 }
 
+// game-invite 컬렉션 가져오기 함수
+function getInviteCollection() {
+    return mongoose.connection.db.collection('game-invite');
+}
+
 // 데이터 마이그레이션 API (영문 키를 한글 키로 변환)
 app.post('/api/migrate-betting-data', async (req, res) => {
     try {
@@ -1518,13 +1523,63 @@ app.post('/api/invite/verify-code', async (req, res) => {
             return sendMongoDBErrorResponse(res, '데이터베이스 연결이 준비되지 않았습니다.');
         }
         
-        // 임시로 성공 응답 반환 (실제로는 저장된 인증번호와 비교)
+        // 현재 사용자 정보 가져오기 (요청 본문에서)
+        const { userId } = req.body;
+        if (!userId) {
+            return res.status(400).json({
+                success: false,
+                message: '사용자 ID가 필요합니다.'
+            });
+        }
+        
+        // game-invite 컬렉션에 초대 데이터 저장
+        const inviteCollection = getInviteCollection();
+        const userCollection = getUserCollection();
+        
+        // 초대하는 사용자 정보 조회
+        const inviter = await userCollection.findOne({ userId: userId });
+        if (!inviter) {
+            return res.status(404).json({
+                success: false,
+                message: '초대하는 사용자 정보를 찾을 수 없습니다.'
+            });
+        }
+        
+        // 초대 데이터 생성
+        const inviteData = {
+            memberName: inviter.name || inviter.username || 'Unknown',
+            memberId: userId,
+            memberPhone: inviter.phone || 'Unknown',
+            inviterPhone: phoneNumber,
+            status: 'pending',
+            inviteDate: new Date()
+        };
+        
+        // 중복 체크 (같은 전화번호로 이미 초대한 경우)
+        const existingInvite = await inviteCollection.findOne({
+            memberId: userId,
+            inviterPhone: phoneNumber
+        });
+        
+        if (existingInvite) {
+            return res.status(400).json({
+                success: false,
+                message: '이미 초대한 전화번호입니다.'
+            });
+        }
+        
+        // 초대 데이터 저장
+        await inviteCollection.insertOne(inviteData);
+        
+        console.log(`✅ 초대 데이터 저장 완료: ${userId} -> ${phoneNumber}`);
+        
         res.json({
             success: true,
             message: '인증이 완료되었습니다.',
             data: {
                 phoneNumber: phoneNumber,
-                verified: true
+                verified: true,
+                inviteId: inviteData._id
             }
         });
         
@@ -1773,13 +1828,21 @@ app.get('/api/invites', async (req, res) => {
             return sendMongoDBErrorResponse(res, '데이터베이스 연결이 준비되지 않았습니다.');
         }
         
-        // 임시로 빈 배열 반환 (초대 기능은 나중에 구현)
+        // game-invite 컬렉션에서 해당 사용자의 초대 데이터 조회
+        const inviteCollection = getInviteCollection();
+        
+        const invites = await inviteCollection.find({ 
+            memberId: userId 
+        }).sort({ inviteDate: -1 }).toArray();
+        
+        console.log(`✅ 초대 리스트 조회 완료: ${userId} -> ${invites.length}건`);
+        
         res.json({
             success: true,
             message: '초대 리스트를 조회했습니다.',
             data: {
-                invites: [],
-                totalCount: 0
+                invites: invites,
+                totalCount: invites.length
             }
         });
         
