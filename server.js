@@ -2794,12 +2794,12 @@ app.post('/api/betting/submit', async (req, res) => {
                 gameNumber: parseInt(gameNumber),
                 totalBets: 1,
                 betCounts: {
-                    '1base': prediction === '1base' ? 1 : 0,
-                    '2base': prediction === '2base' ? 1 : 0,
-                    '3base': prediction === '3base' ? 1 : 0,
-                    'homerun': prediction === 'homerun' ? 1 : 0,
-                    'strikeout': prediction === 'strikeout' ? 1 : 0,
-                    'out': prediction === 'out' ? 1 : 0
+                    '1루': prediction === '1루' ? 1 : 0,
+                    '2루': prediction === '2루' ? 1 : 0,
+                    '3루': prediction === '3루' ? 1 : 0,
+                    '홈런': prediction === '홈런' ? 1 : 0,
+                    '삼진': prediction === '삼진' ? 1 : 0,
+                    '아웃': prediction === '아웃' ? 1 : 0
                 }
             });
         } else {
@@ -3384,12 +3384,12 @@ app.put('/api/admin/game/:gameNumber/end-game', async (req, res) => {
                     $set: {
                         totalBets: 0,
                         betCounts: {
-                            '1base': 0,
-                            '2base': 0,
-                            '3base': 0,
-                            'homerun': 0,
-                            'strikeout': 0,
-                            'out': 0
+                            '1루': 0,
+                            '2루': 0,
+                            '3루': 0,
+                            '홈런': 0,
+                            '삼진': 0,
+                            '아웃': 0
                         }
                     }
                 },
@@ -4529,7 +4529,7 @@ app.get('/api/admin/betting-aggregation', async (req, res) => {
                 // 성공률 계산
                 const totalBets = gameData.totalBets || 0;
                 const betCounts = gameData.betCounts || {
-                    '1base': 0, '2base': 0, '3base': 0, 'homerun': 0, 'strikeout': 0, 'out': 0
+                    '1루': 0, '2루': 0, '3루': 0, '홈런': 0, '삼진': 0, '아웃': 0
                 };
                 
                 // 각 선택별 성공률 계산 (실제 결과가 있을 때만)
@@ -4555,10 +4555,10 @@ app.get('/api/admin/betting-aggregation', async (req, res) => {
                     gameNumber: gameNumber,
                     totalBets: 0,
                     betCounts: {
-                        '1base': 0, '2base': 0, '3base': 0, 'homerun': 0, 'strikeout': 0, 'out': 0
+                        '1루': 0, '2루': 0, '3루': 0, '홈런': 0, '삼진': 0, '아웃': 0
                     },
                     successRates: {
-                        '1base': 0, '2base': 0, '3base': 0, 'homerun': 0, 'strikeout': 0, 'out': 0
+                        '1루': 0, '2루': 0, '3루': 0, '홈런': 0, '삼진': 0, '아웃': 0
                     },
                     predictionResult: ''
                 });
