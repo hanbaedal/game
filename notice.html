@@ -38,7 +38,26 @@
         <div class="bg-gray-800 max-w-4xl mx-auto p-6 rounded-lg">
             <div class="flex justify-between items-center mb-6">
                 <h2 class="text-xl font-bold">공지사항</h2>
-                <div class="text-xs text-gray-400" id="totalCount">총 0건</div>
+                <div class="flex items-center space-x-4">
+                    <div class="text-xs text-gray-400" id="totalCount">총 0건</div>
+                    <button id="adminButton" onclick="showAdminPanel()" class="px-3 py-1 bg-red-500 text-white text-xs rounded hover:bg-red-600 hidden">
+                        <i class="fas fa-cog mr-1"></i>관리자
+                    </button>
+                </div>
+            </div>
+            
+            <!-- 검색 기능 -->
+            <div class="mb-6">
+                <div class="flex space-x-2">
+                    <input type="text" id="searchInput" placeholder="공지사항 검색..." 
+                           class="flex-1 p-2 rounded bg-gray-700 text-white border border-gray-600 focus:border-blue-500 focus:outline-none">
+                    <button onclick="searchNotices()" class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">
+                        <i class="fas fa-search"></i>
+                    </button>
+                    <button onclick="clearSearch()" class="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
             </div>
             
             <!-- 공지사항 리스트 -->
@@ -68,12 +87,65 @@
         </div>
     </div>
 
+    <!-- 관리자 패널 모달 -->
+    <div id="adminPanelModal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center z-50">
+        <div class="bg-gray-800 p-6 rounded-lg max-w-2xl w-full mx-4 max-h-[80vh] overflow-y-auto">
+            <div class="flex justify-between items-start mb-4">
+                <h3 class="text-lg font-bold">공지사항 관리</h3>
+                <button onclick="closeAdminPanel()" class="text-gray-400 hover:text-white">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+            
+            <!-- 공지사항 작성 폼 -->
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-bold mb-2">제목</label>
+                    <input type="text" id="noticeTitle" class="w-full p-2 rounded bg-gray-700 text-white" placeholder="공지사항 제목">
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-bold mb-2">카테고리</label>
+                    <select id="noticeCategory" class="w-full p-2 rounded bg-gray-700 text-white">
+                        <option value="일반">일반</option>
+                        <option value="안내">안내</option>
+                        <option value="점검">점검</option>
+                        <option value="이벤트">이벤트</option>
+                        <option value="중요">중요</option>
+                    </select>
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-bold mb-2">내용</label>
+                    <textarea id="noticeContent" rows="8" class="w-full p-2 rounded bg-gray-700 text-white" placeholder="공지사항 내용"></textarea>
+                </div>
+                
+                <div class="flex items-center space-x-4">
+                    <label class="flex items-center">
+                        <input type="checkbox" id="noticeImportant" class="mr-2">
+                        <span class="text-sm">중요 공지사항</span>
+                    </label>
+                </div>
+                
+                <div class="flex space-x-2">
+                    <button onclick="submitNotice()" class="flex-1 bg-blue-500 text-white py-2 rounded hover:bg-blue-600">
+                        공지사항 등록
+                    </button>
+                    <button onclick="closeAdminPanel()" class="flex-1 bg-gray-500 text-white py-2 rounded hover:bg-gray-600">
+                        취소
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script>
         let notices = [];
 
         // 페이지 로드 시 초기화
         document.addEventListener('DOMContentLoaded', () => {
             loadUserInfo();
+            checkAdminStatus();
             loadNotices();
         });
 
@@ -106,7 +178,7 @@
         }
 
         // 공지사항 목록 로드
-        async function loadNotices() {
+        async function loadNotices(searchTerm = '') {
             const noticeList = document.getElementById('noticeList');
             const totalCount = document.getElementById('totalCount');
             
@@ -115,7 +187,8 @@
                 noticeList.innerHTML = '<div class="text-center text-gray-400 py-8">공지사항을 불러오는 중...</div>';
                 totalCount.textContent = '총 0건';
                 
-                const response = await fetch('/api/notices');
+                const url = searchTerm ? `/api/notices?search=${encodeURIComponent(searchTerm)}` : '/api/notices';
+                const response = await fetch(url);
                 if (!response.ok) {
                     throw new Error(`HTTP error! status: ${response.status}`);
                 }
@@ -152,7 +225,8 @@
                         noticeList.appendChild(noticeItem);
                     });
                 } else {
-                    noticeList.innerHTML = '<div class="text-center text-gray-400 py-8">등록된 공지사항이 없습니다.</div>';
+                    const message = searchTerm ? '검색 결과가 없습니다.' : '등록된 공지사항이 없습니다.';
+                    noticeList.innerHTML = `<div class="text-center text-gray-400 py-8">${message}</div>`;
                 }
             } catch (error) {
                 console.error('공지사항 로드 중 오류:', error);
@@ -196,10 +270,109 @@
             return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')} ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
         }
 
+        // 검색 기능
+        function searchNotices() {
+            const searchTerm = document.getElementById('searchInput').value.trim();
+            loadNotices(searchTerm);
+        }
+        
+        // 검색 초기화
+        function clearSearch() {
+            document.getElementById('searchInput').value = '';
+            loadNotices();
+        }
+        
+        // 엔터키로 검색
+        document.getElementById('searchInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                searchNotices();
+            }
+        });
+        
+        // 관리자 패널 표시
+        function showAdminPanel() {
+            const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
+            if (currentUser.userId === 'admin' || currentUser.name === '관리자') {
+                document.getElementById('adminPanelModal').style.display = 'flex';
+            } else {
+                alert('관리자만 접근할 수 있습니다.');
+            }
+        }
+        
+        // 관리자 패널 닫기
+        function closeAdminPanel() {
+            document.getElementById('adminPanelModal').style.display = 'none';
+            // 폼 초기화
+            document.getElementById('noticeTitle').value = '';
+            document.getElementById('noticeCategory').value = '일반';
+            document.getElementById('noticeContent').value = '';
+            document.getElementById('noticeImportant').checked = false;
+        }
+        
+        // 공지사항 등록
+        async function submitNotice() {
+            const title = document.getElementById('noticeTitle').value.trim();
+            const category = document.getElementById('noticeCategory').value;
+            const content = document.getElementById('noticeContent').value.trim();
+            const isImportant = document.getElementById('noticeImportant').checked;
+            
+            if (!title || !content) {
+                alert('제목과 내용을 입력해주세요.');
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/notices', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        title: title,
+                        content: content,
+                        category: category,
+                        isImportant: isImportant,
+                        author: '관리자'
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    alert('공지사항이 등록되었습니다.');
+                    closeAdminPanel();
+                    loadNotices(); // 목록 새로고침
+                } else {
+                    alert(data.message || '공지사항 등록에 실패했습니다.');
+                }
+            } catch (error) {
+                console.error('공지사항 등록 오류:', error);
+                alert('공지사항 등록 중 오류가 발생했습니다.');
+            }
+        }
+        
+        // 관리자 버튼 표시 여부 확인
+        function checkAdminStatus() {
+            const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
+            const adminButton = document.getElementById('adminButton');
+            
+            if (currentUser.userId === 'admin' || currentUser.name === '관리자') {
+                adminButton.classList.remove('hidden');
+            } else {
+                adminButton.classList.add('hidden');
+            }
+        }
+        
         // 모달 외부 클릭 시 닫기
         document.getElementById('noticeDetailModal').addEventListener('click', function(e) {
             if (e.target === this) {
                 closeNoticeModal();
+            }
+        });
+        
+        document.getElementById('adminPanelModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeAdminPanel();
             }
         });
     </script>

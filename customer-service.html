@@ -190,12 +190,12 @@
                 const data = await response.json();
                 
                 // 총 건수 표시
-                totalCount.textContent = `총 ${data.inquiries ? data.inquiries.length : 0}건`;
+                totalCount.textContent = `총 ${data.data.inquiries ? data.data.inquiries.length : 0}건`;
                 
                 inquiryListItems.innerHTML = '';
                 
-                if (data.inquiries && data.inquiries.length > 0) {
-                    data.inquiries.forEach(inquiry => {
+                if (data.data.inquiries && data.data.inquiries.length > 0) {
+                    data.data.inquiries.forEach(inquiry => {
                         const inquiryItem = document.createElement('div');
                         inquiryItem.className = 'bg-gray-700 p-3 rounded-lg cursor-pointer hover:bg-gray-600';
                         inquiryItem.onclick = () => showInquiryDetail(inquiry._id);
@@ -318,7 +318,7 @@
                 }
                 
                 const data = await response.json();
-                const inquiry = data.inquiry;
+                const inquiry = data.data.inquiry;
                 
                 const detailContent = document.getElementById('inquiryDetailContent');
                 detailContent.innerHTML = `

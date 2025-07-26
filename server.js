@@ -97,6 +97,11 @@ function getNoticeCollection() {
     return mongoose.connection.db.collection('game-notices');
 }
 
+// game-inquiries 컬렉션 가져오기 함수
+function getInquiryCollection() {
+    return mongoose.connection.db.collection('game-inquiries');
+}
+
 // 데이터 마이그레이션 API (영문 키를 한글 키로 변환)
 app.post('/api/migrate-betting-data', async (req, res) => {
     try {
@@ -1338,13 +1343,21 @@ app.get('/api/inquiries', async (req, res) => {
             return sendMongoDBErrorResponse(res, '데이터베이스 연결이 준비되지 않았습니다.');
         }
         
-        // 임시로 빈 문의 목록 반환
+        const inquiryCollection = getInquiryCollection();
+        
+        // 사용자의 문의 목록 조회 (최신순)
+        const inquiries = await inquiryCollection.find({ userId: userId })
+            .sort({ createdAt: -1 })
+            .toArray();
+        
+        console.log(`✅ 문의 목록 조회 완료: ${userId} -> ${inquiries.length}건`);
+        
         res.json({
             success: true,
             message: '문의 목록을 조회했습니다.',
             data: {
-                inquiries: [],
-                totalCount: 0
+                inquiries: inquiries,
+                totalCount: inquiries.length
             }
         });
         
@@ -1374,26 +1387,46 @@ app.post('/api/inquiries', async (req, res) => {
             return sendMongoDBErrorResponse(res, '데이터베이스 연결이 준비되지 않았습니다.');
         }
         
+        const inquiryCollection = getInquiryCollection();
+        
         const today = new Date();
         const koreaTime = new Date(today.getTime() + (9 * 60 * 60 * 1000));
         const todayString = koreaTime.getFullYear().toString() + 
                            '-' + String(koreaTime.getMonth() + 1).padStart(2, '0') + 
                            '-' + String(koreaTime.getDate()).padStart(2, '0');
         
-        // 임시로 성공 응답 반환
+        // 문의 데이터 생성
+        const inquiryData = {
+            userId: userId,
+            userName: userName,
+            title: title,
+            content: content,
+            category: category,
+            status: 'pending',
+            createdAt: todayString,
+            updatedAt: todayString,
+            answer: null,
+            answeredAt: null
+        };
+        
+        // 문의 저장
+        const result = await inquiryCollection.insertOne(inquiryData);
+        
+        console.log(`✅ 문의 작성 완료: ${userId} -> ${title}`);
+        
         res.json({
             success: true,
             message: '문의가 등록되었습니다.',
             data: {
-                inquiryId: 'temp_' + Date.now(),
+                inquiryId: result.insertedId,
                 userId: userId,
                 userName: userName,
                 title: title,
                 content: content,
                 category: category,
-                status: '대기중',
+                status: 'pending',
                 createdAt: todayString,
-                adminResponse: null
+                answer: null
             }
         });
         
@@ -1916,18 +1949,32 @@ app.get('/api/inquiries/:inquiryId', async (req, res) => {
             return sendMongoDBErrorResponse(res, '데이터베이스 연결이 준비되지 않았습니다.');
         }
         
-        // 임시로 빈 문의 데이터 반환
+        const inquiryCollection = getInquiryCollection();
+        
+        // ObjectId로 변환 (MongoDB ObjectId 형식인 경우)
+        let query = { _id: inquiryId };
+        if (inquiryId.match(/^[0-9a-fA-F]{24}$/)) {
+            const { ObjectId } = require('mongodb');
+            query = { _id: new ObjectId(inquiryId) };
+        }
+        
+        // 문의 조회
+        const inquiry = await inquiryCollection.findOne(query);
+        
+        if (!inquiry) {
+            return res.status(404).json({
+                success: false,
+                message: '문의를 찾을 수 없습니다.'
+            });
+        }
+        
+        console.log(`✅ 문의 상세 조회 완료: ${inquiryId} -> ${inquiry.title}`);
+        
         res.json({
             success: true,
             message: '문의를 조회했습니다.',
             data: {
-                inquiryId: inquiryId,
-                title: '임시 문의',
-                content: '문의 내용이 여기에 표시됩니다.',
-                category: '일반',
-                status: '대기중',
-                createdAt: '2025-01-01',
-                adminResponse: null
+                inquiry: inquiry
             }
         });
         
