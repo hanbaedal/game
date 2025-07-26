@@ -1475,13 +1475,21 @@ app.get('/api/notices', async (req, res) => {
             .limit(parseInt(limit))
             .toArray();
         
-        console.log(`✅ 공지사항 목록 조회 완료: ${notices.length}건 (총 ${totalCount}건)`);
+        // 누락된 필드들을 기본값으로 처리
+        const processedNotices = notices.map(notice => ({
+            ...notice,
+            author: notice.author || '관리자',
+            category: notice.category || '일반',
+            views: notice.views || 0
+        }));
+        
+        console.log(`✅ 공지사항 목록 조회 완료: ${processedNotices.length}건 (총 ${totalCount}건)`);
         
         res.json({ 
             success: true,
             message: '공지사항 목록을 조회했습니다.',
             data: {
-                notices: notices,
+                notices: processedNotices,
                 pagination: {
                     currentPage: parseInt(page),
                     totalPages: totalPages,
@@ -1543,16 +1551,21 @@ app.get('/api/notices/:noticeId', async (req, res) => {
             { $inc: { views: 1 } }
         );
         
+        // 누락된 필드들을 기본값으로 처리
+        const processedNotice = {
+            ...notice,
+            author: notice.author || '관리자',
+            category: notice.category || '일반',
+            views: (notice.views || 0) + 1
+        };
+        
         console.log(`✅ 공지사항 상세 조회 완료: ${noticeId} -> ${notice.title}`);
         
         res.json({ 
             success: true,
             message: '공지사항을 조회했습니다.',
             data: {
-                notice: {
-                    ...notice,
-                    views: notice.views + 1
-                }
+                notice: processedNotice
             }
         });
         
@@ -1561,6 +1574,113 @@ app.get('/api/notices/:noticeId', async (req, res) => {
         res.status(500).json({
             success: false,
             message: '공지사항 상세 조회 중 오류가 발생했습니다.'
+        });
+    }
+});
+
+// 아이디 찾기 API
+app.post('/api/find-id', async (req, res) => {
+    try {
+        const { name, phone } = req.body;
+        
+        if (!name || !phone) {
+            return res.status(400).json({
+                success: false,
+                message: '이름과 전화번호를 모두 입력해주세요.'
+            });
+        }
+        
+        // MongoDB 연결 상태 확인
+        if (!checkMongoDBConnection()) {
+            return sendMongoDBErrorResponse(res, '데이터베이스 연결이 준비되지 않았습니다.');
+        }
+        
+        const userCollection = getUserCollection();
+        
+        // 사용자 정보 조회
+        const user = await userCollection.findOne({ 
+            name: name,
+            phone: phone
+        });
+        
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: '입력하신 정보와 일치하는 회원을 찾을 수 없습니다.'
+            });
+        }
+        
+        console.log(`✅ 아이디 찾기 완료: ${user.userId}`);
+        
+        res.json({
+            success: true,
+            message: '아이디를 찾았습니다.',
+            userId: user.userId,
+            name: user.name
+        });
+        
+    } catch (error) {
+        console.error('아이디 찾기 오류:', error);
+        res.status(500).json({
+            success: false,
+            message: '아이디 찾기 중 오류가 발생했습니다.'
+        });
+    }
+});
+
+// 비밀번호 찾기 API
+app.post('/api/find-password', async (req, res) => {
+    try {
+        const { userId, name, phone } = req.body;
+        
+        if (!userId || !name || !phone) {
+            return res.status(400).json({
+                success: false,
+                message: '아이디, 이름, 전화번호를 모두 입력해주세요.'
+            });
+        }
+        
+        // MongoDB 연결 상태 확인
+        if (!checkMongoDBConnection()) {
+            return sendMongoDBErrorResponse(res, '데이터베이스 연결이 준비되지 않았습니다.');
+        }
+        
+        const userCollection = getUserCollection();
+        
+        // 사용자 정보 조회
+        const user = await userCollection.findOne({ 
+            userId: userId,
+            name: name,
+            phone: phone
+        });
+        
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: '입력하신 정보와 일치하는 회원을 찾을 수 없습니다.'
+            });
+        }
+        
+        // 비밀번호 마스킹 처리 (보안상 전체 비밀번호는 노출하지 않음)
+        const password = user.password || '';
+        const maskedPassword = password.length > 2 
+            ? password.charAt(0) + '*'.repeat(password.length - 2) + password.charAt(password.length - 1)
+            : '*'.repeat(password.length);
+        
+        console.log(`✅ 비밀번호 찾기 완료: ${userId}`);
+        
+        res.json({
+            success: true,
+            message: '비밀번호를 찾았습니다.',
+            maskedPassword: maskedPassword,
+            userId: userId
+        });
+        
+    } catch (error) {
+        console.error('비밀번호 찾기 오류:', error);
+        res.status(500).json({
+            success: false,
+            message: '비밀번호 찾기 중 오류가 발생했습니다.'
         });
     }
 });

@@ -1,174 +1,190 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>아이디 찾기</title>
-  <style>
-    body {
-      font-family: 'Noto Sans KR', sans-serif;
-      max-width: 1200px;
-      margin: 0 auto;
-      padding: 20px;
-      background-color: #f0f8ff;
-    }
-
-    h1 {
-      color: #1e90ff;
-      text-align: center;
-      margin-bottom: 30px;
-    }
-
-    .container {
-      background-color: white;
-      padding: 30px;
-      border-radius: 10px;
-      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-      max-width: 400px;
-      margin: 0 auto;
-    }
-
-    .form-group {
-      margin-bottom: 15px;
-    }
-
-    label {
-      display: block;
-      margin-bottom: 5px;
-      color: #333;
-    }
-
-    input {
-      width: 100%;
-      padding: 8px;
-      border: 1px solid #ddd;
-      border-radius: 4px;
-      box-sizing: border-box;
-    }
-
-    button {
-      width: 100%;
-      background-color: #1e90ff;
-      color: white;
-      border: none;
-      padding: 10px 20px;
-      border-radius: 4px;
-      cursor: pointer;
-      transition: background-color 0.3s;
-      margin-bottom: 10px;
-    }
-
-    button:hover {
-      background-color: #187bcd;
-    }
-
-    .error {
-      color: red;
-      font-size: 0.9em;
-      margin-top: 5px;
-    }
-
-    .success {
-      color: green;
-      font-size: 0.9em;
-      margin-top: 5px;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>아이디 찾기</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        // Tailwind CSS CDN 경고 숨기기
+        console.warn = function() {};
+        console.error = function() {};
+    </script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
 </head>
-<body>
-  <div class="container">
-    <h1>아이디 찾기</h1>
+<body class="bg-black text-white min-h-screen">
+    <!-- 상단 네비게이션 -->
+    <header class="flex justify-between items-center px-6 py-4 border-b border-gray-700">
+        <div class="flex items-center space-x-3">
+            <a href="index.html" class="cursor-pointer">
+                <img src="/img/logo.png" width="40" height="8" alt="PPADUN 로고">
+            </a>
+        </div>
+        <div class="flex space-x-6">
+            <div class="text-center cursor-pointer" onclick="location.href='/login.html'">
+                <i class="fas fa-sign-in-alt text-2xl"></i>
+                <p class="text-sm mt-1">로그인</p>
+            </div>
+        </div>
+    </header>
+
+    <!-- 메인 컨테이너 -->
+    <main class="flex items-center justify-center min-h-screen py-8">
+        <div class="bg-gray-800 max-w-md w-full mx-4 p-8 rounded-lg shadow-lg">
+            <div class="text-center mb-8">
+                <i class="fas fa-user text-4xl text-blue-400 mb-4"></i>
+                <h1 class="text-2xl font-bold">아이디 찾기</h1>
+                <p class="text-gray-400 text-sm mt-2">가입 시 입력한 정보로 아이디를 찾을 수 있습니다.</p>
+            </div>
     
-    <form id="findIdForm" onsubmit="return false;">
-      <div class="form-group">
-        <label for="name">이름</label>
-        <input type="text" id="name" required>
-      </div>
+            <form id="findIdForm" onsubmit="return false;" class="space-y-6">
+                <div>
+                    <label for="name" class="block text-sm font-bold mb-2">이름</label>
+                    <input type="text" id="name" required 
+                           class="w-full p-3 rounded bg-gray-700 text-white border border-gray-600 focus:border-blue-500 focus:outline-none"
+                           placeholder="이름을 입력하세요">
+                </div>
 
-      <div class="form-group">
-        <label for="phone">전화번호</label>
-        <input type="tel" id="phone" required maxlength="13" placeholder="010-0000-0000">
-      </div>
+                <div>
+                    <label for="phone" class="block text-sm font-bold mb-2">전화번호</label>
+                    <input type="tel" id="phone" required maxlength="13" 
+                           class="w-full p-3 rounded bg-gray-700 text-white border border-gray-600 focus:border-blue-500 focus:outline-none"
+                           placeholder="010-0000-0000">
+                </div>
 
-      <div id="resultMessage" style="margin-bottom: 15px;"></div>
+                <div id="resultMessage" class="mb-4"></div>
 
-      <button onclick="findId()">아이디 찾기</button>
-      <button onclick="location.href='login.html'" style="background-color: #4CAF50;">로그인으로 돌아가기</button>
-    </form>
-  </div>
+                <div class="space-y-3">
+                    <button onclick="findId()" 
+                            class="w-full bg-blue-500 text-white py-3 rounded-lg hover:bg-blue-600 transition-colors font-bold">
+                        <i class="fas fa-search mr-2"></i>아이디 찾기
+                    </button>
+                    <button onclick="location.href='login.html'" 
+                            class="w-full bg-gray-500 text-white py-3 rounded-lg hover:bg-gray-600 transition-colors">
+                        <i class="fas fa-arrow-left mr-2"></i>로그인으로 돌아가기
+                    </button>
+                </div>
+            </form>
+        </div>
+    </main>
 
-  <script>
-    // 전화번호 입력 시 자동 하이픈 추가
-    document.getElementById('phone').addEventListener('input', function(e) {
-      let value = e.target.value;
-      value = value.replace(/[^0-9]/g, '');
-      
-      if (value.length > 3 && value.length <= 7) {
-        value = value.slice(0, 3) + '-' + value.slice(3);
-      } else if (value.length > 7) {
-        value = value.slice(0, 3) + '-' + value.slice(3, 7) + '-' + value.slice(7);
-      }
-      
-      if (value.length > 13) {
-        value = value.slice(0, 13);
-      }
-      
-      e.target.value = value;
-    });
-
-    async function findId() {
-      const name = document.getElementById('name').value;
-      const phone = document.getElementById('phone').value;
-      const resultDiv = document.getElementById('resultMessage');
-
-      if (!name || !phone) {
-        resultDiv.className = 'error';
-        resultDiv.textContent = '이름과 전화번호를 모두 입력해주세요.';
-        return;
-      }
-
-      // 전화번호 형식 검증
-      const phoneRegex = /^010-\d{4}-\d{4}$/;
-      if (!phoneRegex.test(phone)) {
-        resultDiv.className = 'error';
-        resultDiv.textContent = '올바른 전화번호 형식이 아닙니다. (예: 010-0000-0000)';
-        return;
-      }
-
-      try {
-        const response = await fetch('/api/find-id', {
-          method: 'POST',
-          headers: { 
-            'Content-Type': 'application/json',
-            'Accept': 'application/json'
-          },
-          body: JSON.stringify({ name, phone })
+    <script>
+        // 전화번호 입력 시 자동 하이픈 추가
+        document.getElementById('phone').addEventListener('input', function(e) {
+            let value = e.target.value;
+            value = value.replace(/[^0-9]/g, '');
+            
+            if (value.length > 3 && value.length <= 7) {
+                value = value.slice(0, 3) + '-' + value.slice(3);
+            } else if (value.length > 7) {
+                value = value.slice(0, 3) + '-' + value.slice(3, 7) + '-' + value.slice(7);
+            }
+            
+            if (value.length > 13) {
+                value = value.slice(0, 13);
+            }
+            
+            e.target.value = value;
         });
 
-        const data = await response.json();
-        console.log('서버 응답:', data); // 디버깅용 로그
-        
-        if (data.success) {
-          resultDiv.className = 'success';
-          resultDiv.innerHTML = `
-            <div>회원님의 아이디는 <strong>${data.userId}</strong> 입니다.</div>
-          `;
-        } else {
-          resultDiv.className = 'error';
-          resultDiv.innerHTML = `
-            <div>${data.message}</div>
-            <div style="margin-top: 10px; font-size: 0.9em;">
-              - 입력하신 이름과 전화번호를 다시 한 번 확인해주세요.<br>
-              - 회원가입을 하지 않으셨다면 <a href="register.html" style="color: #1e90ff;">회원가입</a>을 진행해주세요.
-            </div>
-          `;
+        async function findId() {
+            const name = document.getElementById('name').value.trim();
+            const phone = document.getElementById('phone').value.trim();
+            const resultDiv = document.getElementById('resultMessage');
+
+            // 입력값 검증
+            if (!name || !phone) {
+                showMessage('이름과 전화번호를 모두 입력해주세요.', 'error');
+                return;
+            }
+
+            // 전화번호 형식 검증
+            const phoneRegex = /^010-\d{4}-\d{4}$/;
+            if (!phoneRegex.test(phone)) {
+                showMessage('올바른 전화번호 형식이 아닙니다. (예: 010-0000-0000)', 'error');
+                return;
+            }
+
+            // 로딩 상태 표시
+            showMessage('<i class="fas fa-spinner fa-spin mr-2"></i>아이디를 찾는 중...', 'loading');
+
+            try {
+                const response = await fetch('/api/find-id', {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify({ name, phone })
+                });
+
+                const data = await response.json();
+                
+                if (data.success) {
+                    showMessage(`
+                        <div class="text-center">
+                            <i class="fas fa-check-circle text-green-400 text-2xl mb-2"></i>
+                            <div class="font-bold mb-2">아이디를 찾았습니다!</div>
+                            <div class="text-lg font-mono bg-gray-700 p-3 rounded mb-3">
+                                ${data.userId}
+                            </div>
+                            <div class="text-xs text-gray-400">
+                                로그인 후 비밀번호를 변경하시는 것을 권장합니다.
+                            </div>
+                        </div>
+                    `, 'success');
+                } else {
+                    showMessage(`
+                        <div class="text-center">
+                            <i class="fas fa-exclamation-triangle text-red-400 text-2xl mb-2"></i>
+                            <div class="font-bold mb-2">${data.message}</div>
+                            <div class="text-xs text-gray-400">
+                                - 입력하신 이름과 전화번호를 다시 한 번 확인해주세요.<br>
+                                - 회원가입을 하지 않으셨다면 <a href="register.html" class="text-blue-400 underline">회원가입</a>을 진행해주세요.
+                            </div>
+                        </div>
+                    `, 'error');
+                }
+            } catch (error) {
+                console.error('아이디 찾기 오류:', error);
+                showMessage(`
+                    <div class="text-center">
+                        <i class="fas fa-exclamation-triangle text-red-400 text-2xl mb-2"></i>
+                        <div class="font-bold mb-2">서버 오류가 발생했습니다.</div>
+                        <div class="text-xs text-gray-400">잠시 후 다시 시도해주세요.</div>
+                    </div>
+                `, 'error');
+            }
         }
-      } catch (error) {
-        console.error('아이디 찾기 오류:', error); // 디버깅용 로그
-        resultDiv.className = 'error';
-        resultDiv.textContent = '서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요.';
-      }
-    }
-  </script>
+
+        // 메시지 표시 함수
+        function showMessage(message, type) {
+            const resultDiv = document.getElementById('resultMessage');
+            resultDiv.innerHTML = message;
+            
+            // 기존 클래스 제거
+            resultDiv.className = 'mb-4 p-4 rounded-lg';
+            
+            // 타입에 따른 스타일 적용
+            switch(type) {
+                case 'success':
+                    resultDiv.classList.add('bg-green-900', 'border', 'border-green-500');
+                    break;
+                case 'error':
+                    resultDiv.classList.add('bg-red-900', 'border', 'border-red-500');
+                    break;
+                case 'loading':
+                    resultDiv.classList.add('bg-blue-900', 'border', 'border-blue-500');
+                    break;
+            }
+        }
+
+        // 엔터키로 폼 제출
+        document.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                findId();
+            }
+        });
+    </script>
 </body>
 </html> 
