@@ -2781,64 +2781,32 @@ app.post('/api/betting/submit', async (req, res) => {
         // betting-game-X 컬렉션에도 저장 (관리자 모니터링용)
         const gameCollection = getBettingGameCollection(gameNumber);
         
-        // 기존 게임 데이터 조회 또는 생성
+        // 기존 게임 데이터 조회
         const existingGame = await gameCollection.findOne({ 
             date: date,
             gameNumber: parseInt(gameNumber)
         });
         
+        // 기존 데이터가 없으면 배팅 데이터만 추가 (더미 데이터 생성 방지)
         if (!existingGame) {
-            // team-games 컬렉션에서 매치업 정보 가져오기
-            const teamGamesCollection = getTeamGamesCollection();
-            const teamGame = await teamGamesCollection.findOne({
-                date: date,
-                gameNumber: parseInt(gameNumber)
-            });
-            
-            // 새로운 게임 데이터 생성
-            await gameCollection.insertOne({
-                date: date,
-                gameNumber: parseInt(gameNumber),
-                matchup: teamGame ? teamGame.matchup : '',
-                status: 'active',
-                bettingStart: '시작',
-                bettingStop: '진행',
-                totalBets: 0,
-                betCounts: {
-                    '1루': 0,
-                    '2루': 0,
-                    '3루': 0,
-                    '홈런': 0,
-                    '삼진': 0,
-                    '아웃': 0
-                },
-                bets: []
-            });
+            console.log(`경기 ${gameNumber}에 대한 기존 집계 데이터가 없습니다. 배팅 데이터만 추가합니다.`);
         }
         
-        // 배팅 데이터 추가 및 집계 업데이트
-        await gameCollection.updateOne(
-            { 
-                date: date,
-                gameNumber: parseInt(gameNumber)
-            },
-            {
-                $push: {
-                    bets: {
-                        userId: userId,
-                        userName: user.name || user.username,
-                        prediction: prediction,
-                        points: parseInt(points),
-                        betAt: new Date(),
-                        result: null
-                    }
+        // 배팅 집계 업데이트 (기존 데이터가 있을 때만)
+        if (existingGame) {
+            await gameCollection.updateOne(
+                { 
+                    date: date,
+                    gameNumber: parseInt(gameNumber)
                 },
-                $inc: {
-                    totalBets: 1,
-                    [`betCounts.${prediction}`]: 1
+                {
+                    $inc: {
+                        totalBets: 1,
+                        [`betCounts.${prediction}`]: 1
+                    }
                 }
-            }
-        );
+            );
+        }
         
         console.log(`게임 배팅 제출: ${userId} - ${prediction} ${points}포인트`);
         
@@ -3406,14 +3374,13 @@ app.put('/api/admin/game/:gameNumber/end-game', async (req, res) => {
                     $set: {
                         totalBets: 0,
                         betCounts: {
-                            '1루': 0,
-                            '2루': 0,
-                            '3루': 0,
-                            '홈런': 0,
-                            '삼진': 0,
-                            '아웃': 0
-                        },
-                        bets: []
+                            '1base': 0,
+                            '2base': 0,
+                            '3base': 0,
+                            'homerun': 0,
+                            'strikeout': 0,
+                            'out': 0
+                        }
                     }
                 },
                 { upsert: true }
@@ -4552,7 +4519,7 @@ app.get('/api/admin/betting-aggregation', async (req, res) => {
                 // 성공률 계산
                 const totalBets = gameData.totalBets || 0;
                 const betCounts = gameData.betCounts || {
-                    '1루': 0, '2루': 0, '3루': 0, '홈런': 0, '삼진': 0, '아웃': 0
+                    '1base': 0, '2base': 0, '3base': 0, 'homerun': 0, 'strikeout': 0, 'out': 0
                 };
                 
                 // 각 선택별 성공률 계산 (실제 결과가 있을 때만)
@@ -4567,27 +4534,23 @@ app.get('/api/admin/betting-aggregation', async (req, res) => {
                 
                 aggregationData.push({
                     gameNumber: gameNumber,
-                    matchup: gameData.matchup || '',
                     totalBets: totalBets,
                     betCounts: betCounts,
                     successRates: successRates,
-                    predictionResult: gameData.predictionResult || '',
-                    status: gameData.status || 'pending'
+                    predictionResult: gameData.predictionResult || ''
                 });
             } else {
                 // 데이터가 없는 경우 기본값
                 aggregationData.push({
                     gameNumber: gameNumber,
-                    matchup: '',
                     totalBets: 0,
                     betCounts: {
-                        '1루': 0, '2루': 0, '3루': 0, '홈런': 0, '삼진': 0, '아웃': 0
+                        '1base': 0, '2base': 0, '3base': 0, 'homerun': 0, 'strikeout': 0, 'out': 0
                     },
                     successRates: {
-                        '1루': 0, '2루': 0, '3루': 0, '홈런': 0, '삼진': 0, '아웃': 0
+                        '1base': 0, '2base': 0, '3base': 0, 'homerun': 0, 'strikeout': 0, 'out': 0
                     },
-                    predictionResult: '',
-                    status: 'pending'
+                    predictionResult: ''
                 });
             }
         }
