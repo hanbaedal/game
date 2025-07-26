@@ -175,7 +175,7 @@
                 if (data.success) {
                     // 서버 응답 구조에 맞게 수정
                     const earnedPoints = data.data.points;
-                    currentUser.points += earnedPoints;
+                    currentUser.points = data.data.totalPoints; // 서버에서 받은 총 포인트로 업데이트
                     localStorage.setItem('currentUser', JSON.stringify(currentUser));
                     alert(`${earnedPoints}포인트가 적립되었습니다!`);
                     loadAttendanceData(); // 출석 현황 새로고침

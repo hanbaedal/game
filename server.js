@@ -1068,12 +1068,41 @@ app.get('/api/attendance/:userId', async (req, res) => {
             return sendMongoDBErrorResponse(res, '데이터베이스 연결이 준비되지 않았습니다.');
         }
         
-        // 임시로 빈 출석 데이터 반환
+        const userCollection = getUserCollection();
+        
+        // 사용자 정보 조회
+        const user = await userCollection.findOne({ userId: userId });
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: '사용자를 찾을 수 없습니다.'
+            });
+        }
+        
+        const attendanceRecords = user.attendance || [];
+        
+        // 현재 월 계산
         const today = new Date();
         const koreaTime = new Date(today.getTime() + (9 * 60 * 60 * 1000));
+        const currentYear = koreaTime.getFullYear();
+        const currentMonth = koreaTime.getMonth() + 1;
         const todayString = koreaTime.getFullYear().toString() + 
                            '-' + String(koreaTime.getMonth() + 1).padStart(2, '0') + 
                            '-' + String(koreaTime.getDate()).padStart(2, '0');
+        
+        // 이번달 출석 기록 필터링
+        const monthAttendance = attendanceRecords.filter(date => {
+            const [year, month] = date.split('-');
+            return parseInt(year) === currentYear && parseInt(month) === currentMonth;
+        });
+        
+        // 출석 기록을 날짜별로 변환
+        const attendanceHistory = attendanceRecords.map(date => ({
+            date: date,
+            checked: true
+        }));
+        
+        console.log(`✅ 출석 현황 조회 완료: ${userId} -> 이번달: ${monthAttendance.length}일, 전체: ${attendanceRecords.length}일`);
         
         res.json({
             success: true,
@@ -1081,11 +1110,11 @@ app.get('/api/attendance/:userId', async (req, res) => {
             data: {
                 userId: userId,
                 today: todayString,
-                attendanceCount: 0,
-                consecutiveDays: 0,
-                totalDays: 0,
-                attendanceHistory: [],
-                rewards: []
+                attendanceCount: monthAttendance.length,
+                totalDays: attendanceRecords.length,
+                attendanceHistory: attendanceHistory,
+                monthPoints: monthAttendance.length * 100,
+                totalPoints: attendanceRecords.length * 100
             }
         });
         
@@ -1783,13 +1812,53 @@ app.post('/api/attendance/check', async (req, res) => {
             return sendMongoDBErrorResponse(res, '데이터베이스 연결이 준비되지 않았습니다.');
         }
         
+        const userCollection = getUserCollection();
+        
+        // 사용자 정보 조회
+        const user = await userCollection.findOne({ userId: userId });
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: '사용자를 찾을 수 없습니다.'
+            });
+        }
+        
         const today = new Date();
         const koreaTime = new Date(today.getTime() + (9 * 60 * 60 * 1000));
         const todayString = koreaTime.getFullYear().toString() + 
                            '-' + String(koreaTime.getMonth() + 1).padStart(2, '0') + 
                            '-' + String(koreaTime.getDate()).padStart(2, '0');
         
-        // 임시로 성공 응답 반환
+        // 오늘 이미 출석했는지 확인
+        const existingAttendance = user.attendance || [];
+        const todayAttendance = existingAttendance.find(a => a === todayString);
+        
+        if (todayAttendance) {
+            return res.status(400).json({
+                success: false,
+                message: '오늘 이미 출석체크를 하셨습니다.'
+            });
+        }
+        
+        // 출석 기록 추가
+        const updatedAttendance = [...existingAttendance, todayString];
+        
+        // 포인트 추가 (100포인트)
+        const newPoints = (user.points || 0) + 100;
+        
+        // 사용자 정보 업데이트
+        await userCollection.updateOne(
+            { userId: userId },
+            { 
+                $set: { 
+                    attendance: updatedAttendance,
+                    points: newPoints
+                } 
+            }
+        );
+        
+        console.log(`✅ 출석체크 완료: ${userId} -> ${todayString}, 포인트: ${newPoints}`);
+        
         res.json({
             success: true,
             message: '출석 체크가 완료되었습니다.',
@@ -1798,7 +1867,8 @@ app.post('/api/attendance/check', async (req, res) => {
                 userName: userName,
                 checkDate: todayString,
                 points: 100,
-                consecutiveDays: 1
+                consecutiveDays: 1,
+                totalPoints: newPoints
             }
         });
         
