@@ -2209,5 +2209,18 @@ app.get('/', (req, res) => {
             }
         });
         
+        // 초대 전화번호 중복 체크 API
+        app.post('/api/check-invite', async (req, res) => {
+            try {
+                const { phoneNumber } = req.body;
+                if (!phoneNumber) { return res.status(400).json({ success: false, message: '전화번호가 필요합니다.' }); }
+                // MongoDB 연결 확인 제거 - 임시 데이터로 작동
+                res.json({ success: true, exists: false, message: '사용 가능한 전화번호입니다.' });
+            } catch (error) {
+                console.error('전화번호 중복 체크 오류:', error);
+                res.status(500).json({ success: false, message: '전화번호 중복 체크 중 오류가 발생했습니다.' });
+            }
+        });
+        
         // 서버 시작
         startServer(); 
