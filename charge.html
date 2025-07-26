@@ -242,15 +242,15 @@
                 localStorage.setItem('adWatched_' + duration, Date.now().toString());
                 renderAdMenu();
                 
-                // 포인트 지급 처리 (클라이언트 측에서만 처리)
+                // 포인트 지급 처리
                 try {
-                    // 서버 API 호출 시도
+                    // 서버 API 호출 시도 (포인트 추가 방식)
                     const response = await fetch('/api/update-points', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ 
                             userId: currentUser.userId, 
-                            points: currentUser.points + points 
+                            addPoints: points  // 추가할 포인트
                         })
                     });
                     

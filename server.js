@@ -2007,7 +2007,7 @@ app.get('/api/invites', async (req, res) => {
 // 포인트 업데이트 API
 app.post('/api/update-points', async (req, res) => {
     try {
-        const { userId, points } = req.body;
+        const { userId, points, addPoints } = req.body;
         
         if (!userId || points === undefined) {
             return res.status(400).json({ 
@@ -2032,18 +2032,30 @@ app.post('/api/update-points', async (req, res) => {
             });
         }
         
-        // 포인트 업데이트
-        await userCollection.updateOne(
-            { userId: userId },
-            { $set: { points: parseInt(points) } }
-        );
+        // 포인트 업데이트 (추가 또는 설정)
+        let newPoints;
+        if (addPoints !== undefined) {
+            // 포인트 추가 방식
+            newPoints = (user.points || 0) + parseInt(addPoints);
+            await userCollection.updateOne(
+                { userId: userId },
+                { $inc: { points: parseInt(addPoints) } }
+            );
+        } else {
+            // 포인트 설정 방식
+            newPoints = parseInt(points);
+            await userCollection.updateOne(
+                { userId: userId },
+                { $set: { points: newPoints } }
+            );
+        }
         
-        console.log(`✅ 포인트 업데이트 완료: ${userId} -> ${points}포인트`);
+        console.log(`✅ 포인트 업데이트 완료: ${userId} -> ${newPoints}포인트`);
         
         res.json({
             success: true,
             message: '포인트가 업데이트되었습니다.',
-            points: parseInt(points)
+            points: newPoints
         });
         
     } catch (error) {
