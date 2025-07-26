@@ -2787,13 +2787,23 @@ app.post('/api/betting/submit', async (req, res) => {
             gameNumber: parseInt(gameNumber)
         });
         
-        // 기존 데이터가 없으면 배팅 데이터만 추가 (더미 데이터 생성 방지)
         if (!existingGame) {
-            console.log(`경기 ${gameNumber}에 대한 기존 집계 데이터가 없습니다. 배팅 데이터만 추가합니다.`);
-        }
-        
-        // 배팅 집계 업데이트 (기존 데이터가 있을 때만)
-        if (existingGame) {
+            // 기존 데이터가 없으면 새로운 집계 데이터 생성
+            await gameCollection.insertOne({
+                date: date,
+                gameNumber: parseInt(gameNumber),
+                totalBets: 1,
+                betCounts: {
+                    '1base': prediction === '1base' ? 1 : 0,
+                    '2base': prediction === '2base' ? 1 : 0,
+                    '3base': prediction === '3base' ? 1 : 0,
+                    'homerun': prediction === 'homerun' ? 1 : 0,
+                    'strikeout': prediction === 'strikeout' ? 1 : 0,
+                    'out': prediction === 'out' ? 1 : 0
+                }
+            });
+        } else {
+            // 기존 데이터가 있으면 집계 업데이트
             await gameCollection.updateOne(
                 { 
                     date: date,
@@ -4568,6 +4578,118 @@ app.get('/api/admin/betting-aggregation', async (req, res) => {
         res.status(500).json({
             success: false,
             message: '경기별 배팅 집계 조회 중 오류가 발생했습니다.'
+        });
+    }
+});
+
+// 404 핸들링은 맨 마지막에 처리
+app.use((req, res) => {
+    res.status(404).json({ error: '요청한 리소스를 찾을 수 없습니다.' });
+});
+
+// 서버 시작
+startServer();
+
+// 승리포인트 계산 API (관리자가 예측결과 선택 시)
+app.post('/api/admin/calculate-winnings', async (req, res) => {
+    try {
+        const { gameNumber, predictionResult, date } = req.body;
+        
+        if (!gameNumber || !predictionResult || !date) {
+            return res.status(400).json({
+                success: false,
+                message: '게임번호, 예측결과, 날짜가 필요합니다.'
+            });
+        }
+        
+        // MongoDB 연결 상태 확인
+        if (!checkMongoDBConnection()) {
+            return sendMongoDBErrorResponse(res, '데이터베이스 연결이 준비되지 않았습니다.');
+        }
+        
+        const gameCollection = getBettingGameCollection(gameNumber);
+        const userCollection = getUserCollection();
+        
+        // 해당 게임의 배팅 집계 데이터 조회
+        const gameData = await gameCollection.findOne({
+            date: date,
+            gameNumber: parseInt(gameNumber)
+        });
+        
+        if (!gameData) {
+            return res.status(404).json({
+                success: false,
+                message: '게임 데이터를 찾을 수 없습니다.'
+            });
+        }
+        
+        // 예측결과를 betting-game-X 컬렉션에 저장
+        await gameCollection.updateOne(
+            { 
+                date: date,
+                gameNumber: parseInt(gameNumber)
+            },
+            {
+                $set: {
+                    predictionResult: predictionResult
+                }
+            }
+        );
+        
+        // 승리자 수와 패자 포인트 계산
+        const totalBets = gameData.totalBets || 0;
+        const betCounts = gameData.betCounts || {};
+        const winnerCount = betCounts[predictionResult] || 0;
+        const loserCount = totalBets - winnerCount;
+        const totalLoserPoints = loserCount * 100; // 고정 배팅 포인트 100
+        
+        // 성공자당 분배 포인트 계산
+        const pointsPerWinner = winnerCount > 0 ? Math.floor(totalLoserPoints / winnerCount) : 0;
+        
+        // 승리자들에게 포인트 지급
+        if (winnerCount > 0) {
+            // 해당 게임에 배팅한 사용자들 중 승리자 찾기
+            const bettingUsers = await userCollection.find({
+                'bettingHistory.date': date,
+                'bettingHistory.gameNumber': parseInt(gameNumber),
+                'bettingHistory.prediction': predictionResult
+            }).toArray();
+            
+            // 승리자들에게 포인트 지급
+            for (const user of bettingUsers) {
+                await userCollection.updateOne(
+                    { userId: user.userId },
+                    { $inc: { points: pointsPerWinner } }
+                );
+            }
+        }
+        
+        console.log(`✅ 게임 ${gameNumber} 승리포인트 계산 완료:`);
+        console.log(`- 총 배팅: ${totalBets}명`);
+        console.log(`- 승리자: ${winnerCount}명`);
+        console.log(`- 패자: ${loserCount}명`);
+        console.log(`- 총 패자 포인트: ${totalLoserPoints}`);
+        console.log(`- 성공자당 분배 포인트: ${pointsPerWinner}`);
+        
+        res.json({
+            success: true,
+            message: '승리포인트 계산 및 지급이 완료되었습니다.',
+            data: {
+                gameNumber: gameNumber,
+                predictionResult: predictionResult,
+                totalBets: totalBets,
+                winnerCount: winnerCount,
+                loserCount: loserCount,
+                totalLoserPoints: totalLoserPoints,
+                pointsPerWinner: pointsPerWinner
+            }
+        });
+        
+    } catch (error) {
+        console.error('승리포인트 계산 오류:', error);
+        res.status(500).json({
+            success: false,
+            message: '승리포인트 계산 중 오류가 발생했습니다.'
         });
     }
 });
