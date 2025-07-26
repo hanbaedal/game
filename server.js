@@ -560,9 +560,6 @@ const startServer = async () => {
     }
 };
 
-// 서버 시작 (한 번만)
-startServer();
-
 // 정적 파일 서빙 설정
 app.use(express.static(path.join(__dirname)));
 
