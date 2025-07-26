@@ -1947,14 +1947,17 @@ const startServer = async () => {
     try {
         console.log('서버 시작 중...');
         
-        // MongoDB 연결
-        await connectToMongoDB();
+        // MongoDB 연결 (실패해도 서버는 시작)
+        const mongoConnected = await connectToMongoDB();
         
         // Express 서버 시작
         app.listen(PORT, () => {
             console.log(`✅ 서버가 성공적으로 시작되었습니다!`);
             console.log(`📍 포트: ${PORT}`);
-            console.log(`🗄️ MongoDB 상태: 연결됨`);
+            console.log(`🗄️ MongoDB 상태: ${mongoConnected ? '연결됨' : '연결 안됨'}`);
+            if (!mongoConnected) {
+                console.log('⚠️ MongoDB 연결 없이 서버가 실행 중입니다. (일부 기능 제한)');
+            }
         });
         
         // 서버 시작 후 자동으로 데이터 수정 실행
@@ -2047,7 +2050,7 @@ const connectToMongoDB = async () => {
     try {
         console.log('MongoDB 연결 시도 중...');
         
-        const mongoUri = process.env.MONGODB_URI;
+        const mongoUri = process.env.MONGODB_URI || 'mongodb://localhost:27017/member-management';
         console.log('🔗 연결 문자열 확인:', mongoUri ? mongoUri.substring(0, 20) + '...' : 'undefined');
         
         const dbName = 'member-management';
@@ -2078,9 +2081,12 @@ const connectToMongoDB = async () => {
         console.log('📊 실제 연결된 데이터베이스:', dbNameActual);
         console.log('✅ 올바른 데이터베이스에 연결되었습니다.');
         
+        return true;
+        
     } catch (error) {
         console.error('❌ MongoDB 연결 실패:', error);
-        throw error;
+        console.log('⚠️ MongoDB 없이 서버를 시작합니다. (일부 기능 제한)');
+        return false;
     }
 };
 
