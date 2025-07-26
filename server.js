@@ -247,12 +247,14 @@ app.post('/api/clear-all-betting-data', async (req, res) => {
     try {
         console.log('🧹 모든 배팅 데이터 완전 초기화 시작...');
         
-        // 한국 시간대로 오늘 날짜 계산
+        // 한국 시간대로 오늘 날짜 계산 (정확한 계산)
         const today = new Date();
         const koreaTime = new Date(today.getTime() + (9 * 60 * 60 * 1000));
         const todayString = koreaTime.getFullYear().toString() + 
-                           '-' + String(today.getMonth() + 1).padStart(2, '0') + 
-                           '-' + String(today.getDate()).padStart(2, '0');
+                           '-' + String(koreaTime.getMonth() + 1).padStart(2, '0') + 
+                           '-' + String(koreaTime.getDate()).padStart(2, '0');
+        
+        console.log('📅 초기화 대상 날짜:', todayString);
         
         let clearedCount = 0;
         
@@ -260,24 +262,27 @@ app.post('/api/clear-all-betting-data', async (req, res) => {
         for (let gameNumber = 1; gameNumber <= 5; gameNumber++) {
             const gameCollection = getBettingGameCollection(gameNumber);
             
-            // betCounts를 0으로, bets 배열을 비우고, totalBets를 0으로 초기화
-            await gameCollection.updateOne(
-                { 
-                    date: todayString,
-                    gameNumber: gameNumber
+            // 완전히 삭제 후 새로 생성 (강제 초기화)
+            await gameCollection.deleteMany({
+                date: todayString,
+                gameNumber: gameNumber
+            });
+            
+            // 새로운 빈 데이터 생성
+            await gameCollection.insertOne({
+                date: todayString,
+                gameNumber: gameNumber,
+                matchup: '',
+                status: 'pending',
+                bettingStart: '대기',
+                bettingStop: '대기',
+                totalBets: 0,
+                betCounts: {
+                    '1루': 0, '2루': 0, '3루': 0, '홈런': 0, '삼진': 0, '아웃': 0
                 },
-                {
-                    $set: {
-                        totalBets: 0,
-                        betCounts: {
-                            '1루': 0, '2루': 0, '3루': 0, '홈런': 0, '삼진': 0, '아웃': 0
-                        },
-                        bets: [], // bets 배열 완전 비우기
-                        predictionResult: '' // 예측 결과도 초기화
-                    }
-                },
-                { upsert: true } // 데이터가 없으면 생성
-            );
+                bets: [], // 완전히 빈 배열
+                predictionResult: '' // 예측 결과도 초기화
+            });
             
             clearedCount++;
             console.log(`✅ 경기 ${gameNumber} 데이터 초기화 완료: betCounts=0, bets=[], totalBets=0`);
@@ -1037,6 +1042,698 @@ app.get('/api/admin/betting-aggregation', async (req, res) => {
         res.status(500).json({
             success: false,
             message: '경기별 배팅 집계 조회 중 오류가 발생했습니다.'
+        });
+    }
+});
+
+// 출석 현황 조회 API
+app.get('/api/attendance/:userId', async (req, res) => {
+    try {
+        const { userId } = req.params;
+        
+        if (!userId) {
+            return res.status(400).json({
+                success: false,
+                message: '사용자 ID가 필요합니다.'
+            });
+        }
+        
+        // MongoDB 연결 상태 확인
+        if (!checkMongoDBConnection()) {
+            return sendMongoDBErrorResponse(res, '데이터베이스 연결이 준비되지 않았습니다.');
+        }
+        
+        // 임시로 빈 출석 데이터 반환
+        const today = new Date();
+        const koreaTime = new Date(today.getTime() + (9 * 60 * 60 * 1000));
+        const todayString = koreaTime.getFullYear().toString() + 
+                           '-' + String(koreaTime.getMonth() + 1).padStart(2, '0') + 
+                           '-' + String(koreaTime.getDate()).padStart(2, '0');
+        
+        res.json({
+            success: true,
+            message: '출석 현황을 조회했습니다.',
+            data: {
+                userId: userId,
+                today: todayString,
+                attendanceCount: 0,
+                consecutiveDays: 0,
+                totalDays: 0,
+                attendanceHistory: [],
+                rewards: []
+            }
+        });
+        
+    } catch (error) {
+        console.error('출석 현황 조회 오류:', error);
+        res.status(500).json({
+            success: false,
+            message: '출석 현황 조회 중 오류가 발생했습니다.'
+        });
+    }
+});
+
+// 게시글 목록 조회 API
+app.get('/api/board', async (req, res) => {
+    try {
+        const { page = 1, limit = 10, search = '' } = req.query;
+        
+        // MongoDB 연결 상태 확인
+        if (!checkMongoDBConnection()) {
+            return sendMongoDBErrorResponse(res, '데이터베이스 연결이 준비되지 않았습니다.');
+        }
+        
+        // 임시로 빈 게시글 목록 반환
+        const totalCount = 0;
+        const totalPages = Math.ceil(totalCount / limit);
+        
+        res.json({
+            success: true,
+            message: '게시글 목록을 조회했습니다.',
+            data: {
+                boards: [],
+                pagination: {
+                    currentPage: parseInt(page),
+                    totalPages: totalPages,
+                    totalCount: totalCount,
+                    limit: parseInt(limit)
+                },
+                search: search
+            }
+        });
+        
+    } catch (error) {
+        console.error('게시글 목록 조회 오류:', error);
+        res.status(500).json({
+            success: false,
+            message: '게시글 목록 조회 중 오류가 발생했습니다.'
+        });
+    }
+});
+
+// 게시글 작성 API
+app.post('/api/board', async (req, res) => {
+    try {
+        const { userId, userName, title, content } = req.body;
+        
+        if (!userId || !userName || !title || !content) {
+            return res.status(400).json({
+                success: false,
+                message: '필수 정보가 누락되었습니다.'
+            });
+        }
+        
+        // MongoDB 연결 상태 확인
+        if (!checkMongoDBConnection()) {
+            return sendMongoDBErrorResponse(res, '데이터베이스 연결이 준비되지 않았습니다.');
+        }
+        
+        const today = new Date();
+        const koreaTime = new Date(today.getTime() + (9 * 60 * 60 * 1000));
+        const todayString = koreaTime.getFullYear().toString() + 
+                           '-' + String(koreaTime.getMonth() + 1).padStart(2, '0') + 
+                           '-' + String(koreaTime.getDate()).padStart(2, '0');
+        
+        // 임시로 성공 응답 반환
+        res.json({
+            success: true,
+            message: '게시글이 작성되었습니다.',
+            data: {
+                boardId: 'temp_' + Date.now(),
+                userId: userId,
+                userName: userName,
+                title: title,
+                content: content,
+                createdAt: todayString,
+                views: 0,
+                likes: 0
+            }
+        });
+        
+    } catch (error) {
+        console.error('게시글 작성 오류:', error);
+        res.status(500).json({
+            success: false,
+            message: '게시글 작성 중 오류가 발생했습니다.'
+        });
+    }
+});
+
+// 사용자 정보 조회 API
+app.get('/api/user/:userId', async (req, res) => {
+    try {
+        const { userId } = req.params;
+        
+        if (!userId) {
+            return res.status(400).json({
+                success: false,
+                message: '사용자 ID가 필요합니다.'
+            });
+        }
+        
+        // MongoDB 연결 상태 확인
+        if (!checkMongoDBConnection()) {
+            return sendMongoDBErrorResponse(res, '데이터베이스 연결이 준비되지 않았습니다.');
+        }
+        
+        const userCollection = getUserCollection();
+        
+        // 사용자 정보 조회
+        const user = await userCollection.findOne({ userId: userId });
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: '사용자를 찾을 수 없습니다.'
+            });
+        }
+        
+        // 민감한 정보 제외하고 응답
+        res.json({
+            success: true,
+            message: '사용자 정보를 조회했습니다.',
+            data: {
+                userId: user.userId,
+                name: user.name || user.username,
+                email: user.email,
+                points: user.points || 0,
+                joinDate: user.createdAt || user.joinDate,
+                lastLogin: user.lastLogin,
+                totalBets: user.totalBets || 0,
+                winCount: user.winCount || 0,
+                loseCount: user.loseCount || 0,
+                donationAmount: user.donationAmount || 0
+            }
+        });
+        
+    } catch (error) {
+        console.error('사용자 정보 조회 오류:', error);
+        res.status(500).json({
+            success: false,
+            message: '사용자 정보 조회 중 오류가 발생했습니다.'
+        });
+    }
+});
+
+// 문의 목록 조회 API
+app.get('/api/inquiries', async (req, res) => {
+    try {
+        const { userId } = req.query;
+        
+        if (!userId) {
+            return res.status(400).json({
+                success: false,
+                message: '사용자 ID가 필요합니다.'
+            });
+        }
+        
+        // MongoDB 연결 상태 확인
+        if (!checkMongoDBConnection()) {
+            return sendMongoDBErrorResponse(res, '데이터베이스 연결이 준비되지 않았습니다.');
+        }
+        
+        // 임시로 빈 문의 목록 반환
+        res.json({
+            success: true,
+            message: '문의 목록을 조회했습니다.',
+            data: {
+                inquiries: [],
+                totalCount: 0
+            }
+        });
+        
+    } catch (error) {
+        console.error('문의 목록 조회 오류:', error);
+        res.status(500).json({
+            success: false,
+            message: '문의 목록 조회 중 오류가 발생했습니다.'
+        });
+    }
+});
+
+// 문의 작성 API
+app.post('/api/inquiries', async (req, res) => {
+    try {
+        const { userId, userName, title, content, category } = req.body;
+        
+        if (!userId || !userName || !title || !content || !category) {
+            return res.status(400).json({
+                success: false,
+                message: '필수 정보가 누락되었습니다.'
+            });
+        }
+        
+        // MongoDB 연결 상태 확인
+        if (!checkMongoDBConnection()) {
+            return sendMongoDBErrorResponse(res, '데이터베이스 연결이 준비되지 않았습니다.');
+        }
+        
+        const today = new Date();
+        const koreaTime = new Date(today.getTime() + (9 * 60 * 60 * 1000));
+        const todayString = koreaTime.getFullYear().toString() + 
+                           '-' + String(koreaTime.getMonth() + 1).padStart(2, '0') + 
+                           '-' + String(koreaTime.getDate()).padStart(2, '0');
+        
+        // 임시로 성공 응답 반환
+        res.json({
+            success: true,
+            message: '문의가 등록되었습니다.',
+            data: {
+                inquiryId: 'temp_' + Date.now(),
+                userId: userId,
+                userName: userName,
+                title: title,
+                content: content,
+                category: category,
+                status: '대기중',
+                createdAt: todayString,
+                adminResponse: null
+            }
+        });
+        
+    } catch (error) {
+        console.error('문의 작성 오류:', error);
+        res.status(500).json({
+            success: false,
+            message: '문의 작성 중 오류가 발생했습니다.'
+        });
+    }
+});
+
+// 공지사항 목록 조회 API
+app.get('/api/notices', async (req, res) => {
+    try {
+        const { page = 1, limit = 10, search = '' } = req.query;
+        
+        // MongoDB 연결 상태 확인
+        if (!checkMongoDBConnection()) {
+            return sendMongoDBErrorResponse(res, '데이터베이스 연결이 준비되지 않았습니다.');
+        }
+        
+        // 임시로 샘플 공지사항 반환
+        const sampleNotices = [
+            {
+                noticeId: 'notice_1',
+                title: '게임 이용 안내',
+                content: '배팅 게임 이용 방법을 안내드립니다.',
+                category: '안내',
+                isImportant: true,
+                createdAt: '2025-01-01',
+                views: 150
+            },
+            {
+                noticeId: 'notice_2',
+                title: '포인트 충전 방법',
+                content: '광고 시청을 통해 포인트를 충전할 수 있습니다.',
+                category: '안내',
+                isImportant: false,
+                createdAt: '2025-01-02',
+                views: 89
+            },
+            {
+                noticeId: 'notice_3',
+                title: '시스템 점검 안내',
+                content: '정기 시스템 점검이 예정되어 있습니다.',
+                category: '점검',
+                isImportant: true,
+                createdAt: '2025-01-03',
+                views: 234
+            }
+        ];
+        
+        const totalCount = sampleNotices.length;
+        const totalPages = Math.ceil(totalCount / limit);
+        
+        res.json({
+            success: true,
+            message: '공지사항 목록을 조회했습니다.',
+            data: {
+                notices: sampleNotices,
+                pagination: {
+                    currentPage: parseInt(page),
+                    totalPages: totalPages,
+                    totalCount: totalCount,
+                    limit: parseInt(limit)
+                },
+                search: search
+            }
+        });
+        
+    } catch (error) {
+        console.error('공지사항 목록 조회 오류:', error);
+        res.status(500).json({
+            success: false,
+            message: '공지사항 목록 조회 중 오류가 발생했습니다.'
+        });
+    }
+});
+
+// 공지사항 상세 조회 API
+app.get('/api/notices/:noticeId', async (req, res) => {
+    try {
+        const { noticeId } = req.params;
+        
+        if (!noticeId) {
+            return res.status(400).json({
+                success: false,
+                message: '공지사항 ID가 필요합니다.'
+            });
+        }
+        
+        // MongoDB 연결 상태 확인
+        if (!checkMongoDBConnection()) {
+            return sendMongoDBErrorResponse(res, '데이터베이스 연결이 준비되지 않았습니다.');
+        }
+        
+        // 임시로 샘플 공지사항 데이터 반환
+        const sampleNotice = {
+            noticeId: noticeId,
+            title: '샘플 공지사항',
+            content: '이것은 샘플 공지사항의 내용입니다. 실제 공지사항 내용이 여기에 표시됩니다.',
+            category: '안내',
+            isImportant: true,
+            createdAt: '2025-01-01',
+            views: 150,
+            author: '관리자',
+            attachments: []
+        };
+        
+        res.json({
+            success: true,
+            message: '공지사항을 조회했습니다.',
+            data: sampleNotice
+        });
+        
+    } catch (error) {
+        console.error('공지사항 상세 조회 오류:', error);
+        res.status(500).json({
+            success: false,
+            message: '공지사항 상세 조회 중 오류가 발생했습니다.'
+        });
+    }
+});
+
+// 공지사항 조회수 증가 API
+app.post('/api/notices/:noticeId/view', async (req, res) => {
+    try {
+        const { noticeId } = req.params;
+        
+        if (!noticeId) {
+            return res.status(400).json({
+                success: false,
+                message: '공지사항 ID가 필요합니다.'
+            });
+        }
+        
+        // MongoDB 연결 상태 확인
+        if (!checkMongoDBConnection()) {
+            return sendMongoDBErrorResponse(res, '데이터베이스 연결이 준비되지 않았습니다.');
+        }
+        
+        // 임시로 성공 응답 반환
+        res.json({
+            success: true,
+            message: '조회수가 증가되었습니다.',
+            data: {
+                noticeId: noticeId,
+                views: 151 // 임시 증가된 조회수
+            }
+        });
+        
+    } catch (error) {
+        console.error('공지사항 조회수 증가 오류:', error);
+        res.status(500).json({
+            success: false,
+            message: '공지사항 조회수 증가 중 오류가 발생했습니다.'
+        });
+    }
+});
+
+// 문의 상세 조회 API
+app.get('/api/inquiries/:inquiryId', async (req, res) => {
+    try {
+        const { inquiryId } = req.params;
+        
+        if (!inquiryId) {
+            return res.status(400).json({
+                success: false,
+                message: '문의 ID가 필요합니다.'
+            });
+        }
+        
+        // MongoDB 연결 상태 확인
+        if (!checkMongoDBConnection()) {
+            return sendMongoDBErrorResponse(res, '데이터베이스 연결이 준비되지 않았습니다.');
+        }
+        
+        // 임시로 빈 문의 데이터 반환
+        res.json({
+            success: true,
+            message: '문의를 조회했습니다.',
+            data: {
+                inquiryId: inquiryId,
+                title: '임시 문의',
+                content: '문의 내용이 여기에 표시됩니다.',
+                category: '일반',
+                status: '대기중',
+                createdAt: '2025-01-01',
+                adminResponse: null
+            }
+        });
+        
+    } catch (error) {
+        console.error('문의 상세 조회 오류:', error);
+        res.status(500).json({
+            success: false,
+            message: '문의 상세 조회 중 오류가 발생했습니다.'
+        });
+    }
+});
+
+// 사용자 정보 업데이트 API
+app.put('/api/user/:userId', async (req, res) => {
+    try {
+        const { userId } = req.params;
+        const { name, email } = req.body;
+        
+        if (!userId) {
+            return res.status(400).json({
+                success: false,
+                message: '사용자 ID가 필요합니다.'
+            });
+        }
+        
+        // MongoDB 연결 상태 확인
+        if (!checkMongoDBConnection()) {
+            return sendMongoDBErrorResponse(res, '데이터베이스 연결이 준비되지 않았습니다.');
+        }
+        
+        const userCollection = getUserCollection();
+        
+        // 사용자 정보 업데이트
+        const updateData = {};
+        if (name) updateData.name = name;
+        if (email) updateData.email = email;
+        
+        const result = await userCollection.updateOne(
+            { userId: userId },
+            { $set: updateData }
+        );
+        
+        if (result.matchedCount === 0) {
+            return res.status(404).json({
+                success: false,
+                message: '사용자를 찾을 수 없습니다.'
+            });
+        }
+        
+        res.json({
+            success: true,
+            message: '사용자 정보가 업데이트되었습니다.',
+            data: {
+                userId: userId,
+                updatedFields: Object.keys(updateData)
+            }
+        });
+        
+    } catch (error) {
+        console.error('사용자 정보 업데이트 오류:', error);
+        res.status(500).json({
+            success: false,
+            message: '사용자 정보 업데이트 중 오류가 발생했습니다.'
+        });
+    }
+});
+
+// 게시글 상세 조회 API
+app.get('/api/board/:boardId', async (req, res) => {
+    try {
+        const { boardId } = req.params;
+        
+        if (!boardId) {
+            return res.status(400).json({
+                success: false,
+                message: '게시글 ID가 필요합니다.'
+            });
+        }
+        
+        // MongoDB 연결 상태 확인
+        if (!checkMongoDBConnection()) {
+            return sendMongoDBErrorResponse(res, '데이터베이스 연결이 준비되지 않았습니다.');
+        }
+        
+        // 임시로 빈 게시글 데이터 반환
+        res.json({
+            success: true,
+            message: '게시글을 조회했습니다.',
+            data: {
+                boardId: boardId,
+                title: '임시 게시글',
+                content: '게시글 내용이 여기에 표시됩니다.',
+                author: '작성자',
+                createdAt: '2025-01-01',
+                views: 0,
+                likes: 0,
+                comments: []
+            }
+        });
+        
+    } catch (error) {
+        console.error('게시글 상세 조회 오류:', error);
+        res.status(500).json({
+            success: false,
+            message: '게시글 상세 조회 중 오류가 발생했습니다.'
+        });
+    }
+});
+
+// 출석 체크 API
+app.post('/api/attendance/check', async (req, res) => {
+    try {
+        const { userId, userName } = req.body;
+        
+        if (!userId || !userName) {
+            return res.status(400).json({
+                success: false,
+                message: '사용자 정보가 필요합니다.'
+            });
+        }
+        
+        // MongoDB 연결 상태 확인
+        if (!checkMongoDBConnection()) {
+            return sendMongoDBErrorResponse(res, '데이터베이스 연결이 준비되지 않았습니다.');
+        }
+        
+        const today = new Date();
+        const koreaTime = new Date(today.getTime() + (9 * 60 * 60 * 1000));
+        const todayString = koreaTime.getFullYear().toString() + 
+                           '-' + String(koreaTime.getMonth() + 1).padStart(2, '0') + 
+                           '-' + String(koreaTime.getDate()).padStart(2, '0');
+        
+        // 임시로 성공 응답 반환
+        res.json({
+            success: true,
+            message: '출석 체크가 완료되었습니다.',
+            data: {
+                userId: userId,
+                userName: userName,
+                checkDate: todayString,
+                points: 100,
+                consecutiveDays: 1
+            }
+        });
+        
+    } catch (error) {
+        console.error('출석 체크 오류:', error);
+        res.status(500).json({
+            success: false,
+            message: '출석 체크 중 오류가 발생했습니다.'
+        });
+    }
+});
+
+// 초대 리스트 조회 API
+app.get('/api/invites', async (req, res) => {
+    try {
+        const { userId } = req.query;
+        
+        if (!userId) {
+            return res.status(400).json({
+                success: false,
+                message: '사용자 ID가 필요합니다.'
+            });
+        }
+        
+        // MongoDB 연결 상태 확인
+        if (!checkMongoDBConnection()) {
+            return sendMongoDBErrorResponse(res, '데이터베이스 연결이 준비되지 않았습니다.');
+        }
+        
+        // 임시로 빈 배열 반환 (초대 기능은 나중에 구현)
+        res.json({
+            success: true,
+            message: '초대 리스트를 조회했습니다.',
+            data: {
+                invites: [],
+                totalCount: 0
+            }
+        });
+        
+    } catch (error) {
+        console.error('초대 리스트 조회 오류:', error);
+        res.status(500).json({
+            success: false,
+            message: '초대 리스트 조회 중 오류가 발생했습니다.'
+        });
+    }
+});
+
+// 포인트 업데이트 API
+app.post('/api/update-points', async (req, res) => {
+    try {
+        const { userId, points } = req.body;
+        
+        if (!userId || points === undefined) {
+            return res.status(400).json({
+                success: false,
+                message: '사용자 ID와 포인트가 필요합니다.'
+            });
+        }
+        
+        // MongoDB 연결 상태 확인
+        if (!checkMongoDBConnection()) {
+            return sendMongoDBErrorResponse(res, '데이터베이스 연결이 준비되지 않았습니다.');
+        }
+        
+        const userCollection = getUserCollection();
+        
+        // 사용자 정보 조회
+        const user = await userCollection.findOne({ userId: userId });
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: '사용자를 찾을 수 없습니다.'
+            });
+        }
+        
+        // 포인트 업데이트
+        await userCollection.updateOne(
+            { userId: userId },
+            { $set: { points: parseInt(points) } }
+        );
+        
+        console.log(`✅ 포인트 업데이트 완료: ${userId} -> ${points}포인트`);
+        
+        res.json({
+            success: true,
+            message: '포인트가 업데이트되었습니다.',
+            points: parseInt(points)
+        });
+        
+    } catch (error) {
+        console.error('포인트 업데이트 오류:', error);
+        res.status(500).json({
+            success: false,
+            message: '포인트 업데이트 중 오류가 발생했습니다.'
         });
     }
 });

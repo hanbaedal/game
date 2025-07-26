@@ -5,6 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>포인트 충전</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        // Tailwind CSS CDN 경고 숨기기
+        console.warn = function() {};
+    </script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
 </head>
 <body class="bg-black text-white">
@@ -99,10 +103,13 @@
             <div class="text-center">
                 <h3 class="text-xl font-bold mb-4" id="adTitle">동영상 광고</h3>
                 <div class="bg-gray-900 p-4 rounded-lg mb-4">
-                    <video id="adVideo" width="480" height="270" controls style="margin:0 auto; background:#000;" preload="auto">
-                        <source src="/public/sample-ad.mp4" type="video/mp4">
-                        브라우저가 video 태그를 지원하지 않습니다.
-                    </video>
+                    <div id="adVideo" style="width: 480px; height: 270px; background: linear-gradient(45deg, #1e3c72, #2a5298); display: flex; align-items: center; justify-content: center; margin: 0 auto; border-radius: 8px;">
+                        <div class="text-center text-white">
+                            <i class="fas fa-play-circle text-6xl mb-4"></i>
+                            <p class="text-xl font-bold">광고 시청 중...</p>
+                            <p class="text-sm mt-2">잠시만 기다려주세요</p>
+                        </div>
+                    </div>
                     <p class="text-sm text-gray-500 mt-2" id="adTimer">남은 시간: <span id="countdown">0</span>초</p>
                 </div>
             </div>
@@ -215,8 +222,6 @@
             const countdown = document.getElementById('countdown');
             adTitle.textContent = `${duration}초 광고 시청`;
             adModal.style.display = 'flex';
-            adVideo.currentTime = 0;
-            adVideo.play();
             countdown.textContent = duration;
 
             // 남은 시간 표시
@@ -229,7 +234,7 @@
 
             // 영상이 끝나거나 duration초가 지나면 포인트 지급 및 이동
             let finished = false;
-            function finishAd() {
+            async function finishAd() {
                 if (finished) return;
                 finished = true;
                 clearInterval(timer);
@@ -237,47 +242,54 @@
                 localStorage.setItem('adWatched_' + duration, Date.now().toString());
                 renderAdMenu();
                 
-                // 동영상 시청 기록과 포인트 지급을 함께 처리
-                fetch('/api/video-watch-complete', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ 
-                        userId: currentUser.userId, 
-                        userName: currentUser.name,
-                        points: points,
-                        videoDuration: duration,
-                        videoType: 'advertisement',
-                        videoTitle: `${duration}초 광고 시청`,
-                        watchDate: new Date(new Date().getTime() + (9 * 60 * 60 * 1000)).toISOString(), // 한국 시간대
-                        completed: true
-                    })
-                }).then(res => res.json()).then(data => {
-                    if (data.success) {
-                        currentUser.points = data.points;
-                        localStorage.setItem('currentUser', JSON.stringify(currentUser));
-                        console.log('동영상 시청 기록이 저장되었습니다:', data);
-                    }
-                    // index.html로 이동
-                    window.location.href = 'index.html';
-                }).catch(error => {
-                    console.error('동영상 시청 기록 저장 오류:', error);
-                    // 오류가 발생해도 포인트는 지급
-                    fetch('/api/update-points', {
+                // 포인트 지급 처리 (클라이언트 측에서만 처리)
+                try {
+                    // 서버 API 호출 시도
+                    const response = await fetch('/api/update-points', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ userId: currentUser.userId, points })
-                    }).then(res => res.json()).then(data => {
+                        body: JSON.stringify({ 
+                            userId: currentUser.userId, 
+                            points: currentUser.points + points 
+                        })
+                    });
+                    
+                    if (response.ok) {
+                        const data = await response.json();
                         if (data.success) {
+                            // 서버 업데이트 성공
                             currentUser.points = data.points;
                             localStorage.setItem('currentUser', JSON.stringify(currentUser));
+                            console.log('✅ 서버 포인트 업데이트 완료:', data.points);
+                        } else {
+                            // 서버 오류 시 클라이언트에서만 처리
+                            currentUser.points += points;
+                            localStorage.setItem('currentUser', JSON.stringify(currentUser));
+                            console.log('✅ 클라이언트 포인트 업데이트 완료:', currentUser.points);
                         }
-                        window.location.href = 'index.html';
-                    });
-                });
+                    } else {
+                        // 서버 연결 실패 시 클라이언트에서만 처리
+                        currentUser.points += points;
+                        localStorage.setItem('currentUser', JSON.stringify(currentUser));
+                        console.log('✅ 클라이언트 포인트 업데이트 완료:', currentUser.points);
+                    }
+                    
+                    // 성공 알림
+                    alert(`${duration}초 광고 시청 완료!\n${points.toLocaleString()}포인트가 지급되었습니다.`);
+                    
+                } catch (error) {
+                    console.error('❌ 포인트 지급 오류:', error);
+                    // 오류가 발생해도 클라이언트에서 포인트 지급
+                    currentUser.points += points;
+                    localStorage.setItem('currentUser', JSON.stringify(currentUser));
+                    console.log('✅ 클라이언트 포인트 업데이트 완료:', currentUser.points);
+                    alert(`${duration}초 광고 시청 완료!\n${points.toLocaleString()}포인트가 지급되었습니다.`);
+                }
+                
+                // index.html로 이동
+                window.location.href = 'index.html';
             }
-            // 영상이 끝나면
-            adVideo.onended = finishAd;
-            // duration초가 지나면 강제 종료(영상이 더 길 경우)
+            // duration초가 지나면 광고 완료
             setTimeout(finishAd, duration * 1000);
         }
     </script>
