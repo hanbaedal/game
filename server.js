@@ -2783,6 +2783,36 @@ app.post('/api/betting/submit', async (req, res) => {
         
         // betting-game-X 컬렉션에도 저장 (관리자 모니터링용)
         const gameCollection = getBettingGameCollection(gameNumber);
+        
+        // 기존 게임 데이터 조회 또는 생성
+        const existingGame = await gameCollection.findOne({ 
+            date: date,
+            gameNumber: parseInt(gameNumber)
+        });
+        
+        if (!existingGame) {
+            // 새로운 게임 데이터 생성
+            await gameCollection.insertOne({
+                date: date,
+                gameNumber: parseInt(gameNumber),
+                matchup: selectedGame.matchup,
+                status: 'active',
+                bettingStart: '시작',
+                bettingStop: '진행',
+                totalBets: 0,
+                betCounts: {
+                    '1루': 0,
+                    '2루': 0,
+                    '3루': 0,
+                    '홈런': 0,
+                    '삼진': 0,
+                    '아웃': 0
+                },
+                bets: []
+            });
+        }
+        
+        // 배팅 데이터 추가 및 집계 업데이트
         await gameCollection.updateOne(
             { 
                 date: date,
@@ -2798,9 +2828,12 @@ app.post('/api/betting/submit', async (req, res) => {
                         betAt: new Date(),
                         result: null
                     }
+                },
+                $inc: {
+                    totalBets: 1,
+                    [`betCounts.${prediction}`]: 1
                 }
-            },
-            { upsert: true }
+            }
         );
         
         console.log(`게임 배팅 제출: ${userId} - ${prediction} ${points}포인트`);
@@ -3356,6 +3389,34 @@ app.put('/api/admin/game/:gameNumber/end-game', async (req, res) => {
                 } 
             }
         );
+        
+        // 모든 경기별 배팅 집계 초기화 (다음 타자 준비)
+        for (let i = 1; i <= 5; i++) {
+            const gameCollection = getBettingGameCollection(i);
+            await gameCollection.updateOne(
+                { 
+                    date: todayString,
+                    gameNumber: i
+                },
+                {
+                    $set: {
+                        totalBets: 0,
+                        betCounts: {
+                            '1루': 0,
+                            '2루': 0,
+                            '3루': 0,
+                            '홈런': 0,
+                            '삼진': 0,
+                            '아웃': 0
+                        },
+                        bets: []
+                    }
+                },
+                { upsert: true }
+            );
+        }
+        
+        console.log(`✅ 모든 경기별 배팅 집계 초기화 완료`);
         
         console.log(`✅ 게임 종료: 경기 ${gameNumber} (${game.matchup})`);
         
@@ -4461,3 +4522,93 @@ app.get('/api/admin/betting-participants', async (req, res) => {
         });
     }
 });
+
+// 경기별 배팅 집계 조회 API
+app.get('/api/admin/betting-aggregation', async (req, res) => {
+    try {
+        const { date } = req.query;
+        const targetDate = date || getKoreaDateString();
+        
+        // MongoDB 연결 상태 확인
+        if (!checkMongoDBConnection()) {
+            return sendMongoDBErrorResponse(res, '데이터베이스 연결이 준비되지 않았습니다.');
+        }
+        
+        const aggregationData = [];
+        
+        // 1~5경기 배팅 집계 조회
+        for (let gameNumber = 1; gameNumber <= 5; gameNumber++) {
+            const gameCollection = getBettingGameCollection(gameNumber);
+            const gameData = await gameCollection.findOne({ 
+                date: targetDate,
+                gameNumber: gameNumber 
+            });
+            
+            if (gameData) {
+                // 성공률 계산
+                const totalBets = gameData.totalBets || 0;
+                const betCounts = gameData.betCounts || {
+                    '1루': 0, '2루': 0, '3루': 0, '홈런': 0, '삼진': 0, '아웃': 0
+                };
+                
+                // 각 선택별 성공률 계산 (실제 결과가 있을 때만)
+                const successRates = {};
+                if (gameData.predictionResult) {
+                    Object.keys(betCounts).forEach(choice => {
+                        const choiceCount = betCounts[choice] || 0;
+                        const successRate = totalBets > 0 ? (choiceCount / totalBets * 100).toFixed(1) : 0;
+                        successRates[choice] = parseFloat(successRate);
+                    });
+                }
+                
+                aggregationData.push({
+                    gameNumber: gameNumber,
+                    matchup: gameData.matchup || '',
+                    totalBets: totalBets,
+                    betCounts: betCounts,
+                    successRates: successRates,
+                    predictionResult: gameData.predictionResult || '',
+                    status: gameData.status || 'pending'
+                });
+            } else {
+                // 데이터가 없는 경우 기본값
+                aggregationData.push({
+                    gameNumber: gameNumber,
+                    matchup: '',
+                    totalBets: 0,
+                    betCounts: {
+                        '1루': 0, '2루': 0, '3루': 0, '홈런': 0, '삼진': 0, '아웃': 0
+                    },
+                    successRates: {
+                        '1루': 0, '2루': 0, '3루': 0, '홈런': 0, '삼진': 0, '아웃': 0
+                    },
+                    predictionResult: '',
+                    status: 'pending'
+                });
+            }
+        }
+        
+        res.json({
+            success: true,
+            data: {
+                date: targetDate,
+                games: aggregationData
+            }
+        });
+        
+    } catch (error) {
+        console.error('경기별 배팅 집계 조회 오류:', error);
+        res.status(500).json({
+            success: false,
+            message: '경기별 배팅 집계 조회 중 오류가 발생했습니다.'
+        });
+    }
+});
+
+// 404 핸들링은 맨 마지막에 처리
+app.use((req, res) => {
+    res.status(404).json({ error: '요청한 리소스를 찾을 수 없습니다.' });
+});
+
+// 서버 시작
+startServer();
