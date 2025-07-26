@@ -87,6 +87,11 @@ function getInviteCollection() {
     return mongoose.connection.db.collection('game-invite');
 }
 
+// game-board 컬렉션 가져오기 함수
+function getBoardCollection() {
+    return mongoose.connection.db.collection('game-board');
+}
+
 // 데이터 마이그레이션 API (영문 키를 한글 키로 변환)
 app.post('/api/migrate-betting-data', async (req, res) => {
     try {
@@ -1137,15 +1142,39 @@ app.get('/api/board', async (req, res) => {
             return sendMongoDBErrorResponse(res, '데이터베이스 연결이 준비되지 않았습니다.');
         }
         
-        // 임시로 빈 게시글 목록 반환
-        const totalCount = 0;
+        const boardCollection = getBoardCollection();
+        
+        // 검색 조건 설정
+        let query = {};
+        if (search) {
+            query = {
+                $or: [
+                    { title: { $regex: search, $options: 'i' } },
+                    { content: { $regex: search, $options: 'i' } },
+                    { authorName: { $regex: search, $options: 'i' } }
+                ]
+            };
+        }
+        
+        // 전체 게시글 수 조회
+        const totalCount = await boardCollection.countDocuments(query);
         const totalPages = Math.ceil(totalCount / limit);
+        const skip = (parseInt(page) - 1) * parseInt(limit);
+        
+        // 게시글 목록 조회 (최신순)
+        const boards = await boardCollection.find(query)
+            .sort({ createdAt: -1 })
+            .skip(skip)
+            .limit(parseInt(limit))
+            .toArray();
+        
+        console.log(`✅ 게시글 목록 조회 완료: ${boards.length}건 (총 ${totalCount}건)`);
         
         res.json({
             success: true,
             message: '게시글 목록을 조회했습니다.',
             data: {
-                boards: [],
+                boards: boards,
                 pagination: {
                     currentPage: parseInt(page),
                     totalPages: totalPages,
@@ -1182,18 +1211,37 @@ app.post('/api/board', async (req, res) => {
             return sendMongoDBErrorResponse(res, '데이터베이스 연결이 준비되지 않았습니다.');
         }
         
+        const boardCollection = getBoardCollection();
+        
         const today = new Date();
         const koreaTime = new Date(today.getTime() + (9 * 60 * 60 * 1000));
         const todayString = koreaTime.getFullYear().toString() + 
                            '-' + String(koreaTime.getMonth() + 1).padStart(2, '0') + 
                            '-' + String(koreaTime.getDate()).padStart(2, '0');
         
-        // 임시로 성공 응답 반환
+        // 게시글 데이터 생성
+        const boardData = {
+            userId: userId,
+            authorName: userName,
+            title: title,
+            content: content,
+            createdAt: todayString,
+            updatedAt: todayString,
+            views: 0,
+            likes: 0,
+            commentCount: 0
+        };
+        
+        // 게시글 저장
+        const result = await boardCollection.insertOne(boardData);
+        
+        console.log(`✅ 게시글 작성 완료: ${userId} -> ${title}`);
+        
         res.json({
             success: true,
             message: '게시글이 작성되었습니다.',
             data: {
-                boardId: 'temp_' + Date.now(),
+                boardId: result.insertedId,
                 userId: userId,
                 userName: userName,
                 title: title,
@@ -1770,26 +1818,57 @@ app.get('/api/board/:boardId', async (req, res) => {
             return sendMongoDBErrorResponse(res, '데이터베이스 연결이 준비되지 않았습니다.');
         }
         
-        // 임시로 빈 게시글 데이터 반환
+        const boardCollection = getBoardCollection();
+        
+        // ObjectId로 변환 (MongoDB ObjectId 형식인 경우)
+        let query = { _id: boardId };
+        if (boardId.match(/^[0-9a-fA-F]{24}$/)) {
+            const { ObjectId } = require('mongodb');
+            query = { _id: new ObjectId(boardId) };
+        }
+        
+        // 게시글 조회
+        const board = await boardCollection.findOne(query);
+        
+        if (!board) {
+            return res.status(404).json({
+                success: false,
+                message: '게시글을 찾을 수 없습니다.'
+            });
+        }
+        
+        // 조회수 증가
+        await boardCollection.updateOne(
+            { _id: board._id },
+            { $inc: { views: 1 } }
+        );
+        
+        console.log(`✅ 게시글 상세 조회 완료: ${boardId} -> ${board.title}`);
+        
         res.json({
             success: true,
             message: '게시글을 조회했습니다.',
             data: {
-                boardId: boardId,
-                title: '임시 게시글',
-                content: '게시글 내용이 여기에 표시됩니다.',
-                author: '작성자',
-                createdAt: '2025-01-01',
-                views: 0,
-                likes: 0,
-                comments: []
+                board: {
+                    _id: board._id,
+                    boardId: board._id,
+                    title: board.title,
+                    content: board.content,
+                    authorName: board.authorName,
+                    authorId: board.userId,
+                    createdAt: board.createdAt,
+                    updatedAt: board.updatedAt,
+                    views: board.views + 1,
+                    likes: board.likes,
+                    commentCount: board.commentCount
+                }
             }
         });
         
     } catch (error) {
         console.error('게시글 상세 조회 오류:', error);
         res.status(500).json({
-                success: false,
+            success: false,
             message: '게시글 상세 조회 중 오류가 발생했습니다.'
         });
     }
@@ -2239,9 +2318,21 @@ app.get('/', (req, res) => {
         app.get('/api/comments/:boardId', async (req, res) => {
             try {
                 const { boardId } = req.params;
-                if (!boardId) { return res.status(400).json({ success: false, message: '게시글 ID가 필요합니다.' }); }
-                // MongoDB 연결 확인 제거 - 임시 데이터로 작동
-                res.json({ success: true, message: '댓글을 조회했습니다.', comments: [] });
+                if (!boardId) { 
+                    return res.status(400).json({ success: false, message: '게시글 ID가 필요합니다.' }); 
+                }
+                
+                // MongoDB 연결 상태 확인
+                if (!checkMongoDBConnection()) {
+                    return sendMongoDBErrorResponse(res, '데이터베이스 연결이 준비되지 않았습니다.');
+                }
+                
+                // 임시로 빈 댓글 배열 반환 (댓글 기능은 나중에 구현)
+                res.json({ 
+                    success: true, 
+                    message: '댓글을 조회했습니다.', 
+                    comments: [] 
+                });
             } catch (error) {
                 console.error('댓글 조회 오류:', error);
                 res.status(500).json({ success: false, message: '댓글 조회 중 오류가 발생했습니다.' });

@@ -353,19 +353,19 @@
                 const response = await fetch(`/api/board/${boardId}`);
                 const data = await response.json();
                 
-                if (response.ok) {
-                    currentBoard = data.board;
-                    document.getElementById('viewTitle').textContent = data.board.title;
-                    document.getElementById('viewAuthor').textContent = `작성자: ${data.board.authorName}`;
-                    document.getElementById('viewDate').textContent = formatDate(data.board.createdAt);
-                    document.getElementById('viewContent').textContent = data.board.content;
-                    document.getElementById('viewViews').textContent = data.board.views || 0;
+                if (response.ok && data.success) {
+                    currentBoard = data.data.board;
+                    document.getElementById('viewTitle').textContent = data.data.board.title;
+                    document.getElementById('viewAuthor').textContent = `작성자: ${data.data.board.authorName}`;
+                    document.getElementById('viewDate').textContent = formatDate(data.data.board.createdAt);
+                    document.getElementById('viewContent').textContent = data.data.board.content;
+                    document.getElementById('viewViews').textContent = data.data.board.views || 0;
                     
                     // 수정/삭제 버튼 표시 (작성자만)
                     const boardActions = document.getElementById('boardActions');
                     boardActions.innerHTML = '';
                     
-                    if (currentUser && data.board.authorId === currentUser.userId) {
+                    if (currentUser && data.data.board.authorId === currentUser.userId) {
                         boardActions.innerHTML = `
                             <button onclick="editBoard()" class="bg-yellow-500 px-3 py-1 rounded text-sm hover:bg-yellow-600">
                                 <i class="fas fa-edit mr-1"></i>수정
@@ -380,9 +380,12 @@
                     loadComments(boardId);
                     
                     document.getElementById('viewModal').style.display = 'flex';
+                } else {
+                    alert(data.message || '게시글을 불러올 수 없습니다.');
                 }
             } catch (error) {
                 console.error('게시글 상세 조회 오류:', error);
+                alert('게시글을 불러오는 중 오류가 발생했습니다.');
             }
         }
 
