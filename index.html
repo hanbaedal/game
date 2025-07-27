@@ -537,9 +537,37 @@
             }
         }
 
+        // 음성 합성 함수
+        function speakText(text, rate = 0.9) {
+            if ('speechSynthesis' in window) {
+                // 이전 음성 중지
+                speechSynthesis.cancel();
+                
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.lang = 'ko-KR';
+                utterance.rate = rate;
+                utterance.pitch = 1.1;
+                utterance.volume = 0.9;
+                
+                // 음성 완료 이벤트
+                utterance.onend = () => {
+                    console.log('🎤 음성 재생 완료:', text);
+                };
+                
+                utterance.onerror = (event) => {
+                    console.log('🎤 음성 재생 오류:', event.error);
+                };
+                
+                speechSynthesis.speak(utterance);
+            }
+        }
+
         // DB 데이터를 사용한 경기 선택 함수
         async function selectSimpleGame(gameId, gameNumber, matchup) {
             console.log(`🎯 경기 선택: ${gameNumber}경기 ${matchup}`);
+            
+            // 경기 선택 음성 안내
+            speakText(`${matchup} 선택했습니다.`);
             
             // 경기 선택 시 모든 배팅 데이터 강제 초기화
             try {
@@ -753,6 +781,9 @@
                     btn.classList.add('opacity-50', 'cursor-not-allowed');
                     btn.classList.remove('cursor-pointer');
                     window.selectedAmount = 100;
+                    
+                    // 포인트 선택 음성 안내
+                    speakText('100포인트가 자동으로 선택되었습니다.');
                 } else {
                     btn.disabled = true;
                     btn.classList.add('opacity-50', 'cursor-not-allowed');
@@ -810,6 +841,10 @@
                     btn.classList.add('bg-blue-800', 'border-blue-600', 'text-black', 'font-bold');
                     window.selectedChoice = btn.dataset.choice;
                     console.log('🎯 선택된 배팅(위임):', window.selectedChoice);
+                    
+                    // 배팅 선택 음성 안내
+                    speakText(`${window.selectedChoice} 선택했습니다.`);
+                    
                     // 안내 문구 숨김
                     const guide = document.getElementById('bettingTypeGuide');
                     if (guide) guide.style.display = 'none';
@@ -824,6 +859,10 @@
                     this.classList.add('bg-blue-800', 'border-blue-600', 'text-black', 'font-bold');
                     window.selectedChoice = this.dataset.choice;
                     console.log('🎯 선택된 배팅:', window.selectedChoice);
+                    
+                    // 배팅 선택 음성 안내
+                    speakText(`${window.selectedChoice} 선택했습니다.`);
+                    
                     // 안내 문구 숨김
                     const guide = document.getElementById('bettingTypeGuide');
                     if (guide) guide.style.display = 'none';
@@ -2398,6 +2437,9 @@
                     console.log('✅ 배팅 성공 - game-member 컬렉션에 저장됨');
                     console.log('📊 저장된 배팅 데이터:', requestData);
                     
+                    // 배팅 성공 음성 안내
+                    speakText(`${window.selectedChoice}에 100포인트 배팅이 완료되었습니다.`);
+                    
                     // 배팅 성공 처리 완료
                     console.log('📈 배팅 완료');
                     
@@ -2414,6 +2456,10 @@
                     setTimeout(() => processBetting(true), 1000); // 1초 딜레이 후 재시도
                 } else {
                     console.log('❌ 배팅 실패:', data.message);
+                    
+                    // 배팅 실패 음성 안내
+                    speakText(`배팅에 실패했습니다. ${data.message}`);
+                    
                     alert('배팅 실패: ' + data.message);
                 }
             } catch (error) {
