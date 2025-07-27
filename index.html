@@ -548,12 +548,12 @@
             }
             
             isSpeaking = true;
-            const { text, rate } = speechQueue.shift();
+            const { text, rate, pitch } = speechQueue.shift();
             
             const utterance = new SpeechSynthesisUtterance(text);
             utterance.lang = 'ko-KR';
             utterance.rate = rate || 0.9;
-            utterance.pitch = 1.1;
+            utterance.pitch = pitch || 1.1;
             utterance.volume = 0.9;
             
             // 음성 시작 이벤트
@@ -585,9 +585,37 @@
             console.log('🎤 음성 재생 시도:', text);
             
             if ('speechSynthesis' in window) {
-                // 음성을 큐에 추가
-                speechQueue.push({ text, rate });
-                console.log('🎤 음성 큐에 추가됨:', text);
+                // 축하하는 음성인지 확인
+                const isCelebration = text.includes('축하합니다') || text.includes('와!');
+                const isFailure = text.includes('아쉽네요') || text.includes('실패했습니다');
+                const isUrgent = text.includes('배팅선택을 할 수 있습니다');
+                const isStrict = text.includes('배팅을 할 수 없습니다');
+                
+                let finalRate = rate;
+                let finalPitch = 1.1;
+                
+                if (isCelebration) {
+                    finalRate = 1.1;
+                    finalPitch = 1.3; // 축하할 때는 더 높은 음조
+                } else if (isFailure) {
+                    finalRate = 0.7;
+                    finalPitch = 0.8; // 실패할 때는 더 낮은 음조
+                } else if (isUrgent) {
+                    finalRate = 1.3;
+                    finalPitch = 1.2; // 급한 목소리는 빠른 속도, 약간 높은 음조
+                } else if (isStrict) {
+                    finalRate = 0.8;
+                    finalPitch = 0.9; // 엄격한 목소리는 느린 속도, 낮은 음조
+                }
+                
+                // 음성을 큐에 추가 (특별 처리)
+                speechQueue.push({ text, rate: finalRate, pitch: finalPitch });
+                let logSuffix = '';
+                if (isCelebration) logSuffix = '(축하 음성)';
+                else if (isFailure) logSuffix = '(실패 음성)';
+                else if (isUrgent) logSuffix = '(급한 음성)';
+                else if (isStrict) logSuffix = '(엄격한 음성)';
+                console.log('🎤 음성 큐에 추가됨:', text, logSuffix);
                 
                 // 큐 처리 시작
                 processSpeechQueue();
@@ -1359,6 +1387,8 @@
         }
 
         // 배팅 상태 확인 및 표시 함수 (수정)
+        let previousBettingStart = null; // 이전 배팅 상태 저장
+        
         async function checkBettingStatus() {
             if (!selectedGame) return;
             
@@ -1380,6 +1410,32 @@
                         console.log('🎯 현재 게임:', currentGame);
                         
                         if (currentGame) {
+                            // 배팅 시작 상태 변경 감지
+                            if (previousBettingStart !== '시작' && currentGame.bettingStart === '시작') {
+                                console.log('🎤 배팅 시작 감지!');
+                                // 급한 목소리로 두 번 반복
+                                speakText('이제부터 배팅선택을 할 수 있습니다.', 1.3);
+                                setTimeout(() => {
+                                    speakText('이제부터 배팅선택을 할 수 있습니다.', 1.3);
+                                }, 2000);
+                            }
+                            
+                            // 배팅 중지 상태 변경 감지
+                            if (previousBettingStart !== '중지' && currentGame.bettingStart === '중지') {
+                                console.log('🎤 배팅 중지 감지!');
+                                // 엄격한 목소리로 세 번 반복
+                                speakText('이제부터 배팅을 할 수 없습니다.', 0.8);
+                                setTimeout(() => {
+                                    speakText('이제부터 배팅을 할 수 없습니다.', 0.8);
+                                }, 2000);
+                                setTimeout(() => {
+                                    speakText('이제부터 배팅을 할 수 없습니다.', 0.8);
+                                }, 4000);
+                            }
+                            
+                            // 이전 상태 업데이트
+                            previousBettingStart = currentGame.bettingStart;
+                            
                             // 선택된 게임 정보 업데이트
                             selectedGame.bettingStart = currentGame.bettingStart;
                             selectedGame.bettingStop = currentGame.bettingStop;
@@ -2720,8 +2776,9 @@
 
         // 승리 모달 (클릭 시 기부 모달로 전환)
         function showSuccessModal(winAmount) {
-            // 승리 음성 안내
-            speakText(`축하합니다! ${winAmount}포인트를 획득했습니다.`);
+            // 승리 음성 안내 (축하하는 톤)
+            const celebrationText = `와! 축하합니다! ${winAmount}포인트를 획득하셨습니다!`;
+            speakText(celebrationText, 1.1); // 속도를 약간 빠르게, 더 기쁜 톤
             
             const oldModal = document.getElementById('successModal');
             if (oldModal) oldModal.remove();
@@ -2761,8 +2818,9 @@
 
         // 실패 모달 (클릭 시 게임으로 돌아감)
         function showFailureModal() {
-            // 실패 음성 안내
-            speakText('아쉽습니다. 예측에 실패했습니다. 다시 도전해보세요.');
+            // 실패 음성 안내 (안타까운 톤)
+            const failureText = '아쉽네요... 예측에 실패했습니다. 다시 도전해보세요.';
+            speakText(failureText, 0.7); // 속도를 늦춰서 안타까운 톤
             
             const oldModal = document.getElementById('failureModal');
             if (oldModal) oldModal.remove();
