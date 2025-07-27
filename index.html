@@ -539,6 +539,8 @@
 
         // 음성 합성 함수
         function speakText(text, rate = 0.9) {
+            console.log('🎤 음성 재생 시도:', text);
+            
             if ('speechSynthesis' in window) {
                 // 이전 음성 중지
                 speechSynthesis.cancel();
@@ -548,6 +550,11 @@
                 utterance.rate = rate;
                 utterance.pitch = 1.1;
                 utterance.volume = 0.9;
+                
+                // 음성 시작 이벤트
+                utterance.onstart = () => {
+                    console.log('🎤 음성 재생 시작:', text);
+                };
                 
                 // 음성 완료 이벤트
                 utterance.onend = () => {
@@ -559,6 +566,9 @@
                 };
                 
                 speechSynthesis.speak(utterance);
+                console.log('🎤 음성 재생 요청 완료');
+            } else {
+                console.log('🎤 음성 합성 API를 지원하지 않습니다.');
             }
         }
 
@@ -919,14 +929,17 @@
             const betBtn = document.getElementById('betBtn');
             if (betBtn.disabled) return;
             if (!window.selectedChoice) {
+                speakText('배팅 유형을 선택해주세요.');
                 alert('배팅 유형을 선택해주세요.');
                 return;
             }
             if (!currentUser || currentUser.isGuest) {
+                speakText('로그인이 필요합니다.');
                 alert('로그인이 필요합니다.');
                 return;
             }
             if (!selectedGame) {
+                speakText('경기를 선택해주세요.');
                 alert('경기를 선택해주세요.');
                 return;
             }
@@ -1012,6 +1025,9 @@
             `;
             document.body.appendChild(modal);
             document.getElementById('confirmBetBtn').onclick = function() {
+                // 배팅 확인 음성 안내
+                speakText('배팅을 진행합니다.');
+                
                 if (typeof confirmBet === 'function') {
                     confirmBet();
                 } else {
@@ -1613,6 +1629,9 @@
         }
 
         function showDonationModal(winPoints = 0) {
+            // 기부 모달 표시 음성 안내
+            speakText('기부 모달이 표시되었습니다. 원하는 기부 비율을 선택해주세요.');
+            
             const modal = document.getElementById('donationModal');
             if (modal) {
                 modal.classList.remove('hidden');
@@ -2371,6 +2390,9 @@
                 const donationAmount = Math.floor(totalWinAmount * (percent / 100)); // 기부할 포인트
                 const remainingAmount = totalWinAmount - donationAmount; // 남은 포인트
             
+                // 기부 완료 음성 안내
+                speakText(`${percent}퍼센트 기부가 완료되었습니다. ${remainingAmount}포인트를 받으셨습니다.`);
+                
                 // 실제 기부 처리 로직 필요
                 alert(`${percent}% 기부가 처리되었습니다!\n기부 금액: ${donationAmount}포인트\n받을 포인트: ${remainingAmount}포인트`);
                 
@@ -2386,6 +2408,10 @@
                 enableBettingPoints();
             } catch (error) {
                 console.error('기부 처리 중 오류:', error);
+                
+                // 기부 처리 오류 음성 안내
+                speakText('기부 처리 중 오류가 발생했습니다. 다시 시도해주세요.');
+                
                 alert('기부 처리 중 오류가 발생했습니다.');
             }
         }
@@ -2399,18 +2425,22 @@
             try {
                 // 필수 필드들이 올바르게 설정되었는지 확인
             if (!currentUser || !currentUser.userId) {
+                    speakText('사용자 정보가 없습니다. 다시 로그인해주세요.');
                     alert('사용자 정보가 없습니다. 다시 로그인해주세요.');
                 return;
             }
                 if (!window.selectedChoice) {
+                    speakText('배팅 선택이 되지 않았습니다.');
                     alert('배팅 선택이 되지 않았습니다.');
                 return;
             }
                 if (!selectedAmount) {
+                    speakText('배팅 금액이 설정되지 않았습니다.');
                     alert('배팅 금액이 설정되지 않았습니다.');
                     return;
                 }
                 if (!selectedGame || !selectedGame.date || !selectedGame.gameNumber) {
+                    speakText('게임 정보가 올바르지 않습니다. 게임을 다시 선택해주세요.');
                     alert('게임 정보가 올바르지 않습니다. 게임을 다시 선택해주세요.');
                     return;
                 }
@@ -2437,8 +2467,10 @@
                     console.log('✅ 배팅 성공 - game-member 컬렉션에 저장됨');
                     console.log('📊 저장된 배팅 데이터:', requestData);
                     
-                    // 배팅 성공 음성 안내
-                    speakText(`${window.selectedChoice}에 100포인트 배팅이 완료되었습니다.`);
+                    // 배팅 성공 음성 안내 (더 명확하게)
+                    const successMessage = `${window.selectedChoice}에 100포인트 배팅이 완료되었습니다.`;
+                    console.log('🎤 성공 음성 재생:', successMessage);
+                    speakText(successMessage);
                     
                     // 배팅 성공 처리 완료
                     console.log('📈 배팅 완료');
@@ -2457,13 +2489,18 @@
                 } else {
                     console.log('❌ 배팅 실패:', data.message);
                     
-                    // 배팅 실패 음성 안내
-                    speakText(`배팅에 실패했습니다. ${data.message}`);
+                    // 배팅 실패 음성 안내 (더 명확하게)
+                    const errorMessage = data.message || '알 수 없는 오류';
+                    speakText(`배팅에 실패했습니다. ${errorMessage}`);
                     
                     alert('배팅 실패: ' + data.message);
                 }
             } catch (error) {
                 console.error('배팅 처리 오류:', error);
+                
+                // 네트워크 오류 등 예외 상황 음성 안내
+                speakText('배팅 처리 중 오류가 발생했습니다. 다시 시도해주세요.');
+                
                 alert('배팅 처리 중 오류가 발생했습니다.');
             }
         }
@@ -2624,6 +2661,9 @@
 
         // 승리 모달 (클릭 시 기부 모달로 전환)
         function showSuccessModal(winAmount) {
+            // 승리 음성 안내
+            speakText(`축하합니다! ${winAmount}포인트를 획득했습니다.`);
+            
             const oldModal = document.getElementById('successModal');
             if (oldModal) oldModal.remove();
             const modal = document.createElement('div');
@@ -2662,6 +2702,9 @@
 
         // 실패 모달 (클릭 시 게임으로 돌아감)
         function showFailureModal() {
+            // 실패 음성 안내
+            speakText('아쉽습니다. 예측에 실패했습니다. 다시 도전해보세요.');
+            
             const oldModal = document.getElementById('failureModal');
             if (oldModal) oldModal.remove();
             const modal = document.createElement('div');
