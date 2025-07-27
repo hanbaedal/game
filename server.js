@@ -2599,15 +2599,8 @@ app.post('/api/update-points', async (req, res) => {
         // MongoDB 연결 상태 확인
         console.log(`🔍 MongoDB 연결 상태 확인: checkMongoDBConnection()=${checkMongoDBConnection()}, mongoose.connection=${!!mongoose.connection}, mongoose.connection.db=${!!mongoose.connection?.db}`);
         
-        if (!checkMongoDBConnection() || !mongoose.connection || !mongoose.connection.db) {
-            console.log(`⚠️ MongoDB 연결 없음 - 임시 포인트 업데이트: ${userId}`);
-            const tempPoints = addPoints !== undefined ? 1000 + parseInt(addPoints) : parseInt(points);
-            return res.json({
-                success: true,
-                message: '포인트가 업데이트되었습니다. (임시)',
-                points: tempPoints
-            });
-        }
+        // MongoDB 연결이 없어도 실제 DB 업데이트 시도
+        console.log(`🔧 포인트 업데이트 시도: ${userId} - addPoints: ${addPoints}, points: ${points}`);
         
         const userCollection = getUserCollection();
         
