@@ -2931,7 +2931,7 @@ const connectToMongoDB = async () => {
     try {
         console.log('MongoDB 연결 시도 중...');
         
-        const mongoUri = process.env.MONGODB_URI || 'mongodb://localhost:27017/member-management';
+        const mongoUri = process.env.MONGODB_URI || 'mongodb+srv://ppadun_user:ppadun8267@member-management.bppicvz.mongodb.net/?retryWrites=true&w=majority&appName=member-management';
         console.log('🔗 연결 문자열 확인:', mongoUri ? mongoUri.substring(0, 20) + '...' : 'undefined');
         
         const dbName = 'member-management';
