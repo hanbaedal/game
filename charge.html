@@ -88,14 +88,7 @@
         </div>
     </div>
 
-    <!-- 포인트 초과 알림 모달 -->
-    <div id="pointsExceedModal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center z-50">
-        <div class="bg-gray-800 p-6 rounded-lg max-w-sm w-full mx-4">
-            <div class="text-center">
-                <p class="text-lg font-bold mb-4 text-red-500">포인트 충전을 다음에 해주세요!</p>
-            </div>
-        </div>
-    </div>
+
 
     <!-- 동영상 광고 모달 -->
     <div id="adModal" class="fixed inset-0 bg-black bg-opacity-90 hidden flex items-center justify-center z-50">
@@ -142,11 +135,16 @@
         function renderAdMenu() {
             const adMenuList = document.getElementById('adMenuList');
             adMenuList.innerHTML = '';
+            
+            // 포인트가 500 이하인지 확인
+            const userPoints = currentUser ? currentUser.points : 0;
+            const canCharge = userPoints <= 500;
+            
             adOptions.forEach(opt => {
                 const watchedTime = localStorage.getItem('adWatched_' + opt.duration);
                 const now = Date.now();
                 const tenMinutes = 10 * 60 * 1000; // 10분을 밀리초로
-                const canWatch = !watchedTime || (now - parseInt(watchedTime)) > tenMinutes;
+                const canWatch = canCharge && (!watchedTime || (now - parseInt(watchedTime)) > tenMinutes);
                 
                 const div = document.createElement('div');
                 div.className = 'bg-gray-700 p-4 rounded-lg text-center mb-2' + (canWatch ? ' cursor-pointer hover:bg-gray-600' : ' opacity-50 cursor-not-allowed');
@@ -154,6 +152,7 @@
                     <p class="text-lg font-bold">${opt.title}</p>
                     <p class="text-sm text-blue-400">${opt.points.toLocaleString()}P 획득</p>
                     <p class="text-xs text-gray-400">${opt.duration}초</p>
+                    ${!canCharge ? '<p class="text-xs text-red-400 mt-1">포인트 500 이하일 때만 충전 가능</p>' : ''}
                 `;
                 if (canWatch) {
                     div.onclick = () => watchAd(opt.duration, opt.points, opt.videoUrl, opt.title);
@@ -175,9 +174,9 @@
                     document.getElementById('homeButton').style.display = 'block';
                     document.getElementById('currentPoints').textContent = `${currentUser.points}P`;
 
-                    // 보유 포인트가 500을 초과하는 경우 경고 모달 표시
+                    // 보유 포인트가 500을 초과하는 경우 안내 메시지 표시
                     if (currentUser.points > 500) {
-                        showPointsExceedModal();
+                        showPointsExceedMessage();
                     }
                 } else {
                     // 로그인하지 않은 사용자도 포인트 충전 페이지 접근 가능
@@ -204,17 +203,24 @@
             window.location.href = '/login.html';
         }
 
-
-
-
-
-        // 포인트 초과 모달 표시
-        function showPointsExceedModal() {
-            document.getElementById('pointsExceedModal').style.display = 'flex';
+        // 포인트 초과 안내 메시지 표시
+        function showPointsExceedMessage() {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'fixed top-4 right-4 bg-yellow-500 text-black px-4 py-2 rounded-lg shadow-lg z-50';
+            messageDiv.innerHTML = `
+                <div class="flex items-center">
+                    <span class="mr-2">⚠️</span>
+                    <span>포인트가 500을 초과하여 충전이 제한됩니다.</span>
+                </div>
+            `;
+            document.body.appendChild(messageDiv);
+            
+            // 3초 후 메시지 제거
             setTimeout(() => {
-                document.getElementById('pointsExceedModal').style.display = 'none';
-                window.location.href = 'index.html';
-            }, 2000);
+                if (messageDiv.parentNode) {
+                    messageDiv.parentNode.removeChild(messageDiv);
+                }
+            }, 3000);
         }
 
         // 광고 시청
@@ -226,6 +232,7 @@
                 window.location.href = '/login.html';
                 return;
             }
+            
             // 이미 시청한 광고는 재생 불가 (10분 이내)
             const watchedTime = localStorage.getItem('adWatched_' + duration);
             const now = Date.now();
@@ -305,21 +312,30 @@
                         localStorage.setItem('currentUser', JSON.stringify(currentUser));
                         console.log('✅ 클라이언트 포인트 업데이트 완료:', currentUser.points);
                     }
-                    
-                    // 성공 알림
-                    alert(`${duration}초 광고 시청 완료!\n${points.toLocaleString()}포인트가 지급되었습니다.`);
-                    
                 } catch (error) {
                     console.error('❌ 포인트 지급 오류:', error);
                     // 오류가 발생해도 클라이언트에서 포인트 지급
                     currentUser.points += points;
                     localStorage.setItem('currentUser', JSON.stringify(currentUser));
                     console.log('✅ 클라이언트 포인트 업데이트 완료:', currentUser.points);
-                    alert(`${duration}초 광고 시청 완료!\n${points.toLocaleString()}포인트가 지급되었습니다.`);
                 }
                 
-                // index.html로 이동
-                window.location.href = 'index.html';
+                // 성공 알림
+                alert(`${duration}초 광고 시청 완료!\n${points.toLocaleString()}포인트가 지급되었습니다.`);
+                
+                // 포인트 업데이트 후 광고 메뉴 다시 렌더링
+                document.getElementById('currentPoints').textContent = `${currentUser.points}P`;
+                renderAdMenu();
+                
+                // 포인트가 500을 초과하면 안내 메시지 표시
+                if (currentUser.points > 500) {
+                    showPointsExceedMessage();
+                }
+                
+                // 3초 후 index.html로 이동
+                setTimeout(() => {
+                    window.location.href = 'index.html';
+                }, 3000);
             }
             // 동영상 종료 이벤트
             videoElement.onended = function() {
