@@ -255,6 +255,11 @@
 
             // 애니메이션 시작
             startAdAnimation(ctx, duration);
+            
+            // 광고 시작 음성
+            setTimeout(() => {
+                speakText("빠던나인 야구게임 광고를 시청해주셔서 감사합니다. 잠시만 기다려주세요.");
+            }, 500);
 
             // 카운트다운
             let timeLeft = duration;
@@ -296,6 +301,9 @@
                             localStorage.setItem('currentUser', JSON.stringify(currentUser));
                             document.getElementById('currentPoints').textContent = `${currentUser.points}P`;
                             
+                            // 광고 완료 음성
+                            speakText(`광고 시청이 완료되었습니다. ${points.toLocaleString()}포인트가 지급되었습니다.`);
+                            
                             alert(`${duration}초 광고 시청 완료!\n${points.toLocaleString()}포인트가 지급되었습니다.`);
                             
                             // 포인트 충전 후에는 경고 모달 대신 성공 메시지만 표시
@@ -320,6 +328,31 @@
             setTimeout(finishAd, duration * 1000);
         }
 
+        // 음성 합성 함수
+        function speakText(text, rate = 0.9) {
+            if ('speechSynthesis' in window) {
+                // 이전 음성 중지
+                speechSynthesis.cancel();
+                
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.lang = 'ko-KR';
+                utterance.rate = rate;
+                utterance.pitch = 1.1;
+                utterance.volume = 0.9;
+                
+                // 음성 완료 이벤트
+                utterance.onend = () => {
+                    console.log('🎤 음성 재생 완료:', text);
+                };
+                
+                utterance.onerror = (event) => {
+                    console.log('🎤 음성 재생 오류:', event.error);
+                };
+                
+                speechSynthesis.speak(utterance);
+            }
+        }
+
         // 광고 애니메이션 함수
         function startAdAnimation(ctx, duration) {
             const canvas = ctx.canvas;
@@ -328,15 +361,17 @@
             
             let startTime = Date.now();
             let animationId;
+            let speechIndex = 0;
+            let lastSpeechTime = 0;
             
-            // 야구 관련 텍스트들
+            // 야구 관련 텍스트들과 음성 내용
             const texts = [
-                { text: "빠던나인 야구게임", x: width/2, y: 80, size: 32, color: "#fbbf24" },
-                { text: "실시간 배팅 게임", x: width/2, y: 120, size: 24, color: "#60a5fa" },
-                { text: "타자 예측하기", x: width/2, y: 160, size: 20, color: "#34d399" },
-                { text: "포인트로 배팅", x: width/2, y: 200, size: 20, color: "#f87171" },
-                { text: "승리 포인트 획득", x: width/2, y: 240, size: 20, color: "#a78bfa" },
-                { text: "실시간 결과 확인", x: width/2, y: 280, size: 20, color: "#fbbf24" }
+                { text: "빠던나인 야구게임", x: width/2, y: 80, size: 32, color: "#fbbf24", speech: "빠던나인 야구게임에 오신 것을 환영합니다" },
+                { text: "실시간 배팅 게임", x: width/2, y: 120, size: 24, color: "#60a5fa", speech: "실시간으로 진행되는 스릴 넘치는 배팅 게임입니다" },
+                { text: "타자 예측하기", x: width/2, y: 160, size: 20, color: "#34d399", speech: "타자가 어떤 결과를 낼지 예측해보세요" },
+                { text: "포인트로 배팅", x: width/2, y: 200, size: 20, color: "#f87171", speech: "포인트를 사용해서 원하는 결과에 배팅하세요" },
+                { text: "승리 포인트 획득", x: width/2, y: 240, size: 20, color: "#a78bfa", speech: "예측이 맞으면 승리 포인트를 획득할 수 있습니다" },
+                { text: "실시간 결과 확인", x: width/2, y: 280, size: 20, color: "#fbbf24", speech: "실시간으로 결과를 확인하고 포인트를 받아보세요" }
             ];
             
             // 야구공 애니메이션
@@ -401,7 +436,7 @@
                 ctx.fillRect(-5, -40, 10, 80);
                 ctx.restore();
                 
-                // 텍스트 애니메이션
+                // 텍스트 애니메이션과 음성 재생
                 texts.forEach((item, index) => {
                     const alpha = Math.sin(elapsed * 2 + index * 0.5) * 0.5 + 0.5;
                     ctx.fillStyle = item.color;
@@ -409,6 +444,17 @@
                     ctx.font = `bold ${item.size}px Arial`;
                     ctx.textAlign = 'center';
                     ctx.fillText(item.text, item.x, item.y);
+                    
+                    // 음성 재생 (각 텍스트가 강조될 때)
+                    const textStartTime = (duration / texts.length) * index;
+                    const textEndTime = (duration / texts.length) * (index + 1);
+                    
+                    if (elapsed >= textStartTime && elapsed <= textEndTime && 
+                        elapsed - lastSpeechTime > 3 && speechIndex === index) {
+                        speakText(item.speech);
+                        lastSpeechTime = elapsed;
+                        speechIndex = (speechIndex + 1) % texts.length;
+                    }
                 });
                 
                 // 진행률 표시
