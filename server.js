@@ -2596,8 +2596,10 @@ app.post('/api/update-points', async (req, res) => {
         //     return sendMongoDBErrorResponse(res, '데이터베이스 연결이 준비되지 않았습니다.');
         // }
         
-        // MongoDB 연결이 없으면 임시 응답 (로컬 테스트용)
-        if (!checkMongoDBConnection()) {
+        // MongoDB 연결 상태 확인
+        console.log(`🔍 MongoDB 연결 상태 확인: checkMongoDBConnection()=${checkMongoDBConnection()}, mongoose.connection=${!!mongoose.connection}, mongoose.connection.db=${!!mongoose.connection?.db}`);
+        
+        if (!checkMongoDBConnection() || !mongoose.connection || !mongoose.connection.db) {
             console.log(`⚠️ MongoDB 연결 없음 - 임시 포인트 업데이트: ${userId}`);
             const tempPoints = addPoints !== undefined ? 1000 + parseInt(addPoints) : parseInt(points);
             return res.json({
@@ -2610,8 +2612,12 @@ app.post('/api/update-points', async (req, res) => {
         const userCollection = getUserCollection();
         
         // 사용자 정보 조회
+        console.log(`🔍 사용자 조회 시도: userId = ${userId}`);
         const user = await userCollection.findOne({ userId: userId });
+        console.log(`🔍 사용자 조회 결과:`, user ? `사용자 발견 (기존 포인트: ${user.points || 0})` : '사용자 없음');
+        
         if (!user) {
+            console.log(`❌ 사용자를 찾을 수 없음: ${userId}`);
             return res.status(404).json({
                 success: false,
                 message: '사용자를 찾을 수 없습니다.'
@@ -2623,17 +2629,21 @@ app.post('/api/update-points', async (req, res) => {
         if (addPoints !== undefined) {
             // 포인트 추가 방식
             newPoints = (user.points || 0) + parseInt(addPoints);
+            console.log(`💰 포인트 추가: ${userId} - 기존: ${user.points || 0}, 추가: ${addPoints}, 새로운 총액: ${newPoints}`);
             await userCollection.updateOne(
                 { userId: userId },
                 { $inc: { points: parseInt(addPoints) } }
             );
+            console.log(`✅ game-member 디비 업데이트 완료: ${userId} -> ${newPoints}포인트`);
         } else {
             // 포인트 설정 방식
             newPoints = parseInt(points);
+            console.log(`💰 포인트 설정: ${userId} -> ${newPoints}포인트`);
             await userCollection.updateOne(
                 { userId: userId },
                 { $set: { points: newPoints } }
             );
+            console.log(`✅ game-member 디비 업데이트 완료: ${userId} -> ${newPoints}포인트`);
         }
         
         console.log(`✅ 포인트 업데이트 완료: ${userId} -> ${newPoints}포인트`);
