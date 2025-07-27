@@ -98,9 +98,9 @@ function getNoticeCollection() {
     return mongoose.connection.db.collection('notices');
 }
 
-// game-inquiries 컬렉션 가져오기 함수
+// customer-inquiries 컬렉션 가져오기 함수
 function getInquiryCollection() {
-    return mongoose.connection.db.collection('game-inquiries');
+    return mongoose.connection.db.collection('customer-inquiries');
 }
 
 // 데이터 마이그레이션 API (영문 키를 한글 키로 변환)
