@@ -988,19 +988,16 @@
         // 배팅 처리
         async function processBetting() {
             try {
-                const response = await fetch('/api/betting/place', {
+                const response = await fetch('/api/betting/submit', {
                 method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
                     },
                 body: JSON.stringify({
                         userId: currentUser.userId,
-                        userName: currentUser.name,
-                        gameDate: selectedGame.date,
-                    gameNumber: selectedGame.gameNumber,
-                        gameType: selectedGameType,
-                        choice: selectedChoice,
-                        amount: selectedAmount
+                        gameNumber: selectedGame.gameNumber,
+                        prediction: selectedChoice,
+                        points: selectedAmount
                     })
                 });
                 
@@ -2382,11 +2379,9 @@
                 
                 const requestData = {
                     userId: currentUser.userId,
-                    gameType: '타자',
+                    gameNumber: selectedGame.gameNumber,
                     prediction: window.selectedChoice,
-                    points: 100,
-                    date: selectedGame.date,
-                    gameNumber: selectedGame.gameNumber
+                    points: 100
                 };
                 console.log('배팅 요청 데이터:', requestData);
                 const response = await fetch('/api/betting/submit', {
