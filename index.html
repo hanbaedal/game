@@ -996,7 +996,7 @@
                 body: JSON.stringify({
                         userId: currentUser.userId,
                         userName: currentUser.name || currentUser.userName || '사용자',
-                        gameNumber: selectedGame.gameNumber,
+                    gameNumber: selectedGame.gameNumber,
                         prediction: selectedChoice,
                         points: selectedAmount
                     })
@@ -1009,7 +1009,7 @@
                     // 서버 기준 포인트 업데이트
                     currentUser.points -= selectedAmount;
                     document.getElementById('userPoints').textContent = `${currentUser.points}포인트`;
-                    localStorage.setItem('currentUser', JSON.stringify(currentUser));
+            localStorage.setItem('currentUser', JSON.stringify(currentUser));
                     // 서버에 즉시 동기화
                     await updateServerPoints(currentUser.points);
                     

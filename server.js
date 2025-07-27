@@ -39,7 +39,7 @@ function checkMongoDBConnection() {
     // Render 환경에서는 엄격하게 체크, 로컬에서는 유연하게
     if (process.env.NODE_ENV === 'production' || process.env.RENDER) {
         return mongoose.connection && mongoose.connection.readyState === 1;
-    } else {
+        } else {
         // 로컬 개발 환경에서는 유연하게 처리
         return true;
     }
@@ -316,7 +316,7 @@ app.post('/api/clear-all-betting-data', async (req, res) => {
         
         console.log(`✅ 모든 배팅 데이터 완전 초기화 완료: ${clearedCount}개 경기`);
         
-        res.json({
+        res.json({ 
                 success: true, 
             message: `모든 배팅 데이터 초기화 완료: ${clearedCount}개 경기`,
             clearedCount: clearedCount
@@ -474,7 +474,7 @@ app.post('/api/fix-betcounts', async (req, res) => {
         console.log(`✅ 총 ${fixedCount}개 경기 betCounts 수정 완료`);
         
         res.json({
-            success: true,
+                success: true, 
             message: `betCounts 수정 완료: ${fixedCount}개 경기`,
             fixedCount: fixedCount
         });
@@ -482,7 +482,7 @@ app.post('/api/fix-betcounts', async (req, res) => {
     } catch (error) {
         console.error('❌ betCounts 수정 오류:', error);
         res.status(500).json({ 
-            success: false,
+            success: false, 
             message: 'betCounts 수정 중 오류가 발생했습니다.'
         });
     }
@@ -551,20 +551,7 @@ app.post('/api/betting/submit', async (req, res) => {
                                 '-' + String(checkToday.getMonth() + 1).padStart(2, '0') + 
                                 '-' + String(checkToday.getDate()).padStart(2, '0');
         
-        // 해당 게임에서 오늘 배팅했는지 확인
-        const checkCollection = getBettingGameCollection(gameNumber);
-        const existingBet = await checkCollection.findOne({
-            date: checkTodayString,
-            gameNumber: parseInt(gameNumber),
-            'bets.userId': userId
-        });
         
-        if (existingBet) {
-            return res.status(400).json({
-                success: false,
-                message: '이 게임에서 이미 배팅하셨습니다. 다음 타자까지 기다려주세요.'
-            });
-        }
         
         // 한국 시간대로 오늘 날짜 계산
         const today = new Date();
@@ -642,14 +629,14 @@ app.post('/api/betting/submit', async (req, res) => {
         console.log(`게임 배팅 제출: ${userId} - ${prediction} ${points}포인트`);
         console.log(`게임 번호: ${gameNumber}, 날짜: ${date}`);
         
-        res.json({ 
-            success: true, 
+        res.json({
+            success: true,
             message: '배팅이 완료되었습니다.',
             remainingPoints: user.points - parseInt(points)
         });
     } catch (error) {
         console.error('배팅 제출 오류:', error);
-        res.status(500).json({
+        res.status(500).json({ 
             success: false,
             message: '배팅 제출 중 오류가 발생했습니다.'
         });
@@ -670,7 +657,7 @@ app.get('/api/games/status', async (req, res) => {
         const teamGamesCollection = getTeamGamesCollection();
         const todayGames = await teamGamesCollection.find({ date: todayString }).sort({ gameNumber: 1 }).toArray();
         
-        res.json({
+        res.json({ 
             success: true,
             date: todayString,
             games: todayGames.map(game => ({
@@ -687,8 +674,8 @@ app.get('/api/games/status', async (req, res) => {
         });
     } catch (error) {
         console.error('게임 상태 조회 오류:', error);
-        res.status(500).json({
-            success: false,
+        res.status(500).json({ 
+            success: false, 
             message: '게임 상태 조회 중 오류가 발생했습니다.'
         });
     }
@@ -734,7 +721,7 @@ app.put('/api/admin/game/:gameNumber/start-betting', async (req, res) => {
         
         console.log(`✅ 배팅 시작: 경기 ${gameNumber} (${game.matchup})`);
         
-        res.json({
+        res.json({ 
             success: true,
             message: '배팅이 시작되었습니다.',
             game: {
@@ -746,8 +733,8 @@ app.put('/api/admin/game/:gameNumber/start-betting', async (req, res) => {
         });
     } catch (error) {
         console.error('배팅 시작 오류:', error);
-        res.status(500).json({
-            success: false,
+        res.status(500).json({ 
+            success: false, 
             message: '배팅 시작 중 오류가 발생했습니다.'
         });
     }
@@ -792,8 +779,8 @@ app.put('/api/admin/game/:gameNumber/stop-betting', async (req, res) => {
         
         console.log(`✅ 배팅 중지: 경기 ${gameNumber} (${game.matchup})`);
         
-        res.json({
-            success: true,
+        res.json({ 
+            success: true, 
             message: '배팅이 중지되었습니다.',
             game: {
                 gameNumber: game.gameNumber,
@@ -831,7 +818,7 @@ app.put('/api/admin/game/:gameNumber/end-game', async (req, res) => {
         
         if (!game) {
             return res.status(404).json({ 
-                success: false, 
+                success: false,
                 message: '경기를 찾을 수 없습니다.' 
             });
         }
@@ -839,13 +826,13 @@ app.put('/api/admin/game/:gameNumber/end-game', async (req, res) => {
         // 게임 종료 상태로 업데이트
         await teamGamesCollection.updateOne(
             { _id: game._id },
-            { 
-                $set: { 
+            {
+                $set: {
                     progressStatus: '경기종료',
                     bettingStart: '종료',
                     bettingStop: '종료',
                     updatedAt: new Date()
-                } 
+                }
             }
         );
         
@@ -881,7 +868,7 @@ app.put('/api/admin/game/:gameNumber/end-game', async (req, res) => {
         
         console.log(`✅ 게임 종료: 경기 ${gameNumber} (${game.matchup})`);
         
-        res.json({ 
+        res.json({
             success: true,
             message: '게임이 종료되었습니다.',
             game: {
@@ -1109,7 +1096,7 @@ app.get('/api/attendance/:userId', async (req, res) => {
         
         console.log(`✅ 출석 현황 조회 완료: ${userId} -> 이번달: ${monthAttendance.length}일, 전체: ${attendanceRecords.length}일`);
         
-        res.json({
+        res.json({ 
             success: true,
             message: '출석 현황을 조회했습니다.',
             data: {
@@ -1149,9 +1136,9 @@ app.get('/api/board', async (req, res) => {
         if (search) {
             query = {
                 $or: [
-                    { title: { $regex: search, $options: 'i' } },
-                    { content: { $regex: search, $options: 'i' } },
-                    { authorName: { $regex: search, $options: 'i' } }
+                { title: { $regex: search, $options: 'i' } },
+                { content: { $regex: search, $options: 'i' } },
+                { authorName: { $regex: search, $options: 'i' } }
                 ]
             };
         }
@@ -1317,8 +1304,8 @@ app.get('/api/user/:userId', async (req, res) => {
             userId: user.userId,
                 name: user.name || user.username,
             email: user.email,
-                phone: user.phone,
-                favoriteTeam: user.favoriteTeam,
+            phone: user.phone,
+            favoriteTeam: user.favoriteTeam,
                 points: user.points || 0,
                 joinDate: user.createdAt || user.joinDate,
                 lastLogin: user.lastLogin,
@@ -1610,7 +1597,7 @@ app.get('/api/notices/:noticeId', async (req, res) => {
             };
             
             return res.json({
-                success: true,
+            success: true,
                 message: '공지사항을 조회했습니다. (임시 데이터)',
                 data: { notice: tempNotice }
             });
@@ -1789,7 +1776,7 @@ app.post('/api/register', async (req, res) => {
         
     } catch (error) {
         console.error('회원가입 오류:', error);
-        res.status(500).json({
+        res.status(500).json({ 
             success: false,
             message: '회원가입 중 오류가 발생했습니다.'
         });
@@ -1887,7 +1874,7 @@ app.post('/api/find-password', async (req, res) => {
         
         console.log(`✅ 비밀번호 찾기 완료: ${userId}`);
         
-        res.json({
+        res.json({ 
             success: true,
             message: '비밀번호를 찾았습니다.',
             maskedPassword: maskedPassword,
@@ -1951,7 +1938,7 @@ app.post('/api/login', async (req, res) => {
         
         console.log(`✅ 로그인 성공: ${userId}`);
         
-        res.json({
+        res.json({ 
             success: true,
             message: '로그인이 완료되었습니다.',
             user: userInfo
@@ -2118,8 +2105,8 @@ app.post('/api/invite/send-code', async (req, res) => {
         const { phoneNumber } = req.body;
         
         if (!phoneNumber) {
-            return res.status(400).json({
-                success: false,
+            return res.status(400).json({ 
+                success: false, 
                 message: '전화번호가 필요합니다.'
             });
         }
@@ -2133,7 +2120,7 @@ app.post('/api/invite/send-code', async (req, res) => {
         const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
         
         // 임시로 성공 응답 반환 (실제로는 SMS 발송)
-        res.json({ 
+        res.json({
             success: true,
             verificationCode: verificationCode,
             message: '인증번호가 전송되었습니다.'
@@ -2154,8 +2141,8 @@ app.post('/api/invite/verify-code', async (req, res) => {
         const { phoneNumber, code } = req.body;
         
         if (!phoneNumber || !code) {
-            return res.status(400).json({
-                success: false,
+            return res.status(400).json({ 
+                success: false, 
                 message: '전화번호와 인증번호가 필요합니다.'
             });
         }
@@ -2169,7 +2156,7 @@ app.post('/api/invite/verify-code', async (req, res) => {
         const { userId } = req.body;
         if (!userId) {
             return res.status(400).json({
-                success: false,
+                success: false, 
                 message: '사용자 ID가 필요합니다.'
             });
         }
@@ -2228,7 +2215,7 @@ app.post('/api/invite/verify-code', async (req, res) => {
     } catch (error) {
         console.error('인증번호 확인 오류:', error);
         res.status(500).json({ 
-            success: false,
+                success: false,
             message: '인증번호 확인 중 오류가 발생했습니다.'
         });
     }
@@ -2252,7 +2239,7 @@ app.post('/api/notices/:noticeId/view', async (req, res) => {
         }
         
         // 임시로 성공 응답 반환
-        res.json({ 
+        res.json({
             success: true,
             message: '조회수가 증가되었습니다.',
             data: {
@@ -2276,8 +2263,8 @@ app.get('/api/inquiries/:inquiryId', async (req, res) => {
         const { inquiryId } = req.params;
         
         if (!inquiryId) {
-            return res.status(400).json({
-                success: false,
+            return res.status(400).json({ 
+                success: false, 
                 message: '문의 ID가 필요합니다.'
             });
         }
@@ -2507,8 +2494,8 @@ app.post('/api/attendance/check', async (req, res) => {
         // 사용자 정보 업데이트
         await userCollection.updateOne(
             { userId: userId },
-            { 
-                $set: { 
+            {
+                $set: {
                     attendance: updatedAttendance,
                     points: newPoints
                 } 
@@ -2626,12 +2613,12 @@ app.post('/api/update-points', async (req, res) => {
             
             // 새 사용자 생성
             const newUser = {
-                userId: userId,
+            userId: userId,
                 name: '사용자',
                 points: 0,
-                createdAt: new Date()
-            };
-            
+            createdAt: new Date()
+        };
+        
             try {
                 await userCollection.insertOne(newUser);
                 console.log(`✅ 새 사용자 생성 완료: ${userId}`);
@@ -2654,7 +2641,7 @@ app.post('/api/update-points', async (req, res) => {
                 console.log(`💰 포인트 추가: ${userId} - 기존: ${user.points || 0}, 추가: ${addPoints}, 새로운 총액: ${newPoints}`);
                 
                 const updateResult = await userCollection.updateOne(
-                    { userId: userId },
+            { userId: userId },
                     { $inc: { points: parseInt(addPoints) } }
                 );
                 
@@ -2732,7 +2719,7 @@ app.post('/api/admin/calculate-winnings', async (req, res) => {
         
         if (!gameData) {
             return res.status(404).json({
-                success: false,
+                success: false, 
                 message: '게임 데이터를 찾을 수 없습니다.'
             });
         }
@@ -2930,7 +2917,7 @@ const startServer = async () => {
                 
                 console.log(`✅ 자동 데이터 수정 완료: ${migratedCount}개 경기 마이그레이션, ${fixedCount}개 경기 betCounts 수정 (영문 키 완전 제거)`);
                 
-            } catch (error) {
+    } catch (error) {
                 console.error('❌ 자동 데이터 수정 오류:', error);
             }
         }, 3000); // 서버 시작 3초 후 실행
@@ -3007,7 +2994,7 @@ app.get('/', (req, res) => {
                     return res.status(400).json({ success: false, message: '게시글 ID가 필요합니다.' }); 
                 }
                 
-                // MongoDB 연결 상태 확인
+        // MongoDB 연결 상태 확인
                 if (!checkMongoDBConnection()) {
                     return sendMongoDBErrorResponse(res, '데이터베이스 연결이 준비되지 않았습니다.');
                 }
@@ -3099,7 +3086,7 @@ app.get('/', (req, res) => {
                 if (!boardId) { return res.status(400).json({ success: false, message: '게시글 ID가 필요합니다.' }); }
                 // MongoDB 연결 확인 제거 - 임시 데이터로 작동
                 res.json({ success: true, message: '조회수가 증가되었습니다.', data: { boardId: boardId, views: 25 } });
-            } catch (error) {
+    } catch (error) {
                 console.error('게시글 조회수 증가 오류:', error);
                 res.status(500).json({ success: false, message: '게시글 조회수 증가 중 오류가 발생했습니다.' });
             }
