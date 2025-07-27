@@ -576,8 +576,18 @@
         async function selectSimpleGame(gameId, gameNumber, matchup) {
             console.log(`🎯 경기 선택: ${gameNumber}경기 ${matchup}`);
             
-            // 경기 선택 음성 안내
-            speakText(`${matchup} 선택했습니다.`);
+            // 경기 선택 음성 안내 (순차적)
+            speakText(`${matchup}의 경기를 선택하셨습니다.`);
+            
+            // 2초 후 두 번째 음성
+            setTimeout(() => {
+                speakText('빠던나인 게임은 야구게임 예측 게임으로 1차 버전에선 타자의 배팅 예측 게임으로 만들었습니다.');
+            }, 2000);
+            
+            // 4초 후 세 번째 음성
+            setTimeout(() => {
+                speakText('배팅 포인트도 1차 버전에서는 100포인트 고정입니다.');
+            }, 4000);
             
             // 경기 선택 시 모든 배팅 데이터 강제 초기화
             try {
