@@ -91,14 +91,11 @@
 
     <!-- 광고 모달 -->
     <div id="adModal" class="fixed inset-0 bg-black bg-opacity-75 hidden items-center justify-center z-50">
-        <div class="bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4">
+        <div class="bg-gray-800 rounded-lg p-6 max-w-2xl w-full mx-4">
             <div class="text-center">
                 <h3 id="adTitle" class="text-xl font-bold mb-4">광고 시청</h3>
                 <div class="bg-gray-700 rounded-lg p-4 mb-4">
-                    <video id="adVideo" class="w-full rounded" controls>
-                        <source src="" type="video/mp4">
-                        브라우저가 비디오를 지원하지 않습니다.
-                    </video>
+                    <canvas id="adCanvas" width="640" height="360" class="w-full rounded border border-gray-600"></canvas>
                 </div>
                 <div class="text-center mb-4">
                     <p class="text-lg">남은 시간: <span id="countdown" class="font-bold text-yellow-400">0</span>초</p>
@@ -136,9 +133,9 @@
 
         // 광고 옵션 설정
         const adOptions = {
-            10: { points: 1000, videoUrl: 'https://sample-videos.com/zip/10/mp4/SampleVideo_1280x720_1mb.mp4', title: '10초 광고' },
-            20: { points: 2000, videoUrl: 'https://sample-videos.com/zip/20/mp4/SampleVideo_1280x720_2mb.mp4', title: '20초 광고' },
-            30: { points: 3000, videoUrl: 'https://sample-videos.com/zip/30/mp4/SampleVideo_1280x720_5mb.mp4', title: '30초 광고' }
+            10: { points: 1000, title: '10초 광고 - 빠던나인 소개' },
+            20: { points: 2000, title: '20초 광고 - 게임 플레이' },
+            30: { points: 3000, title: '30초 광고 - 게임 특징' }
         };
 
         // 페이지 로드 시 실행
@@ -239,29 +236,25 @@
 
             adPlaying = true;
             const points = adOptions[duration].points;
-            const videoUrl = adOptions[duration].videoUrl;
             const title = adOptions[duration].title;
 
             // 광고 모달 표시
             const modal = document.getElementById('adModal');
             const adTitle = document.getElementById('adTitle');
-            const adVideo = document.getElementById('adVideo');
+            const adCanvas = document.getElementById('adCanvas');
             const countdown = document.getElementById('countdown');
             
             adTitle.textContent = title;
             modal.style.display = 'flex';
             countdown.textContent = duration;
 
-            // 비디오 설정
-            adVideo.src = videoUrl;
-            adVideo.currentTime = 0;
-            
-            // 비디오 로드 후 재생
-            adVideo.onloadeddata = function() {
-                adVideo.play().catch(error => {
-                    console.log('자동 재생 실패:', error);
-                });
-            };
+            // Canvas 설정
+            const ctx = adCanvas.getContext('2d');
+            ctx.fillStyle = '#1f2937';
+            ctx.fillRect(0, 0, adCanvas.width, adCanvas.height);
+
+            // 애니메이션 시작
+            startAdAnimation(ctx, duration);
 
             // 카운트다운
             let timeLeft = duration;
@@ -278,8 +271,6 @@
                 finished = true;
                 
                 clearInterval(timer);
-                adVideo.pause();
-                adVideo.src = '';
                 modal.style.display = 'none';
                 adPlaying = false;
 
@@ -323,11 +314,122 @@
                 }
             }
 
-            // 비디오 종료 이벤트
-            adVideo.onended = finishAd;
+            // 애니메이션 완료는 타이머로 처리
             
             // 백업 타이머
             setTimeout(finishAd, duration * 1000);
+        }
+
+        // 광고 애니메이션 함수
+        function startAdAnimation(ctx, duration) {
+            const canvas = ctx.canvas;
+            const width = canvas.width;
+            const height = canvas.height;
+            
+            let startTime = Date.now();
+            let animationId;
+            
+            // 야구 관련 텍스트들
+            const texts = [
+                { text: "빠던나인 야구게임", x: width/2, y: 80, size: 32, color: "#fbbf24" },
+                { text: "실시간 배팅 게임", x: width/2, y: 120, size: 24, color: "#60a5fa" },
+                { text: "타자 예측하기", x: width/2, y: 160, size: 20, color: "#34d399" },
+                { text: "포인트로 배팅", x: width/2, y: 200, size: 20, color: "#f87171" },
+                { text: "승리 포인트 획득", x: width/2, y: 240, size: 20, color: "#a78bfa" },
+                { text: "실시간 결과 확인", x: width/2, y: 280, size: 20, color: "#fbbf24" }
+            ];
+            
+            // 야구공 애니메이션
+            let ballX = 50;
+            let ballY = height/2;
+            let ballSpeedX = 3;
+            let ballSpeedY = 2;
+            
+            // 배트 애니메이션
+            let batAngle = 0;
+            let batSpeed = 0.1;
+            
+            function animate() {
+                const currentTime = Date.now();
+                const elapsed = (currentTime - startTime) / 1000;
+                
+                if (elapsed >= duration) {
+                    cancelAnimationFrame(animationId);
+                    return;
+                }
+                
+                // 배경 그라데이션
+                const gradient = ctx.createLinearGradient(0, 0, width, height);
+                gradient.addColorStop(0, '#1e3a8a');
+                gradient.addColorStop(1, '#1f2937');
+                ctx.fillStyle = gradient;
+                ctx.fillRect(0, 0, width, height);
+                
+                // 야구공 움직임
+                ballX += ballSpeedX;
+                ballY += ballSpeedY;
+                
+                if (ballX > width - 20 || ballX < 20) ballSpeedX *= -1;
+                if (ballY > height - 20 || ballY < 20) ballSpeedY *= -1;
+                
+                // 야구공 그리기
+                ctx.beginPath();
+                ctx.arc(ballX, ballY, 15, 0, 2 * Math.PI);
+                ctx.fillStyle = '#ffffff';
+                ctx.fill();
+                ctx.strokeStyle = '#dc2626';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+                
+                // 야구공 스티치
+                ctx.beginPath();
+                ctx.moveTo(ballX - 15, ballY);
+                ctx.lineTo(ballX + 15, ballY);
+                ctx.strokeStyle = '#dc2626';
+                ctx.lineWidth = 1;
+                ctx.stroke();
+                
+                // 배트 애니메이션
+                batAngle += batSpeed;
+                const batX = width/2 + 100;
+                const batY = height/2;
+                
+                ctx.save();
+                ctx.translate(batX, batY);
+                ctx.rotate(batAngle);
+                ctx.fillStyle = '#8b4513';
+                ctx.fillRect(-5, -40, 10, 80);
+                ctx.restore();
+                
+                // 텍스트 애니메이션
+                texts.forEach((item, index) => {
+                    const alpha = Math.sin(elapsed * 2 + index * 0.5) * 0.5 + 0.5;
+                    ctx.fillStyle = item.color;
+                    ctx.globalAlpha = alpha;
+                    ctx.font = `bold ${item.size}px Arial`;
+                    ctx.textAlign = 'center';
+                    ctx.fillText(item.text, item.x, item.y);
+                });
+                
+                // 진행률 표시
+                const progress = elapsed / duration;
+                ctx.fillStyle = '#fbbf24';
+                ctx.fillRect(50, height - 30, (width - 100) * progress, 10);
+                ctx.strokeStyle = '#ffffff';
+                ctx.lineWidth = 2;
+                ctx.strokeRect(50, height - 30, width - 100, 10);
+                
+                // 진행률 텍스트
+                ctx.fillStyle = '#ffffff';
+                ctx.font = 'bold 16px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText(`${Math.round(progress * 100)}%`, width/2, height - 10);
+                
+                ctx.globalAlpha = 1;
+                animationId = requestAnimationFrame(animate);
+            }
+            
+            animate();
         }
     </script>
 </body>
