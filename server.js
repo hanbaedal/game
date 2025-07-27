@@ -36,8 +36,13 @@ function getKoreaDateString() {
 
 // MongoDB 연결 상태 확인 함수
 function checkMongoDBConnection() {
-    // 로컬 개발 환경에서는 항상 true 반환 (임시 데이터 사용)
-    return true;
+    // Render 환경에서는 엄격하게 체크, 로컬에서는 유연하게
+    if (process.env.NODE_ENV === 'production' || process.env.RENDER) {
+        return mongoose.connection && mongoose.connection.readyState === 1;
+    } else {
+        // 로컬 개발 환경에서는 유연하게 처리
+        return true;
+    }
 }
 
 // MongoDB 연결 오류 응답 함수
@@ -2824,7 +2829,12 @@ const startServer = async () => {
             console.log(`📍 포트: ${PORT}`);
             console.log(`🗄️ MongoDB 상태: ${mongoConnected ? '연결됨' : '연결 안됨'}`);
             if (!mongoConnected) {
-                console.log('⚠️ MongoDB 연결 없이 서버가 실행 중입니다. (일부 기능 제한)');
+                if (process.env.NODE_ENV === 'production' || process.env.RENDER) {
+                    console.error('❌ MongoDB 연결 실패로 서버를 시작할 수 없습니다.');
+                    process.exit(1);
+                } else {
+                    console.log('⚠️ 로컬 환경: MongoDB 없이 서버를 시작합니다. (일부 기능 제한)');
+                }
             }
         });
         
