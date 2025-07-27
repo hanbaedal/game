@@ -2398,13 +2398,8 @@
                     console.log('✅ 배팅 성공 - game-member 컬렉션에 저장됨');
                     console.log('📊 저장된 배팅 데이터:', requestData);
                     
-                    // 배팅 성공 후 통계 업데이트
-                    try {
-                        await updateGameStats(selectedGame.gameNumber, selectedGame.date);
-                        console.log('📈 통계 업데이트 완료');
-                    } catch (error) {
-                        console.error('통계 업데이트 오류:', error);
-                    }
+                    // 배팅 성공 처리 완료
+                    console.log('📈 배팅 완료');
                     
                     // 고정 배팅 포인트 100 차감
                     currentUser.points -= 100;
