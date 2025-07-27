@@ -322,6 +322,26 @@
                 try {
                     currentUser = JSON.parse(storedUser);
                     
+                    // 게스트가 아닌 경우 서버에서 최신 포인트 가져오기
+                    if (!currentUser.isGuest && currentUser.userId) {
+                        try {
+                            const response = await fetch(`/api/user/${currentUser.userId}`);
+                            const data = await response.json();
+                            
+                            if (data.success && data.data) {
+                                // 서버에서 받은 최신 포인트로 업데이트 (서버가 기준)
+                                currentUser.points = data.data.points || 0;
+                                localStorage.setItem('currentUser', JSON.stringify(currentUser));
+                                console.log('✅ 서버 기준 포인트로 업데이트:', currentUser.points);
+                            } else {
+                                console.error('서버 포인트 조회 실패:', data.message);
+                            }
+                        } catch (error) {
+                            console.error('서버 포인트 조회 오류:', error);
+                            // 서버 조회 실패 시 localStorage 포인트 사용 (임시)
+                        }
+                    }
+                    
                     // 사용자 이름 표시
                     const userNameDisplay = document.getElementById('userNameDisplay');
                     if (userNameDisplay) {
@@ -988,9 +1008,12 @@
                 
                 if (data.success) {
                     // 포인트 차감
+                    // 서버 기준 포인트 업데이트
                     currentUser.points -= selectedAmount;
                     document.getElementById('userPoints').textContent = `${currentUser.points}포인트`;
-            localStorage.setItem('currentUser', JSON.stringify(currentUser));
+                    localStorage.setItem('currentUser', JSON.stringify(currentUser));
+                    // 서버에 즉시 동기화
+                    await updateServerPoints(currentUser.points);
                     
                     alert('배팅이 완료되었습니다!');
                     
@@ -1109,9 +1132,12 @@
                     if (isWin) {
                         // 승리
                         const winAmount = calculateWinAmount();
+                        // 서버 기준 포인트 업데이트
                         currentUser.points += winAmount;
                         document.getElementById('userPoints').textContent = `${currentUser.points}포인트`;
-            localStorage.setItem('currentUser', JSON.stringify(currentUser));
+                        localStorage.setItem('currentUser', JSON.stringify(currentUser));
+                        // 서버에 즉시 동기화
+                        await updateServerPoints(currentUser.points);
 
                         showWinModal(winAmount);
                     } else {
@@ -1650,7 +1676,7 @@
             document.getElementById('guestWinModal').style.display = 'none';
         });
 
-        // 서버 포인트 업데이트 함수
+        // 서버 포인트 업데이트 함수 (서버가 기준)
         async function updateServerPoints(points) {
             try {
                 const response = await fetch('/api/update-points', {
@@ -1665,7 +1691,13 @@
                 });
 
                 const data = await response.json();
-                if (!data.success) {
+                if (data.success) {
+                    // 서버에서 업데이트된 포인트로 클라이언트 동기화
+                    currentUser.points = data.points;
+                    localStorage.setItem('currentUser', JSON.stringify(currentUser));
+                    document.getElementById('userPoints').textContent = `${currentUser.points}포인트`;
+                    console.log('✅ 서버 기준 포인트 동기화 완료:', currentUser.points);
+                } else {
                     console.error('포인트 업데이트 실패:', data.message);
                 }
             } catch (error) {
