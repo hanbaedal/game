@@ -307,9 +307,9 @@
                             
                             alert(`${duration}초 광고 시청 완료!\n${points.toLocaleString()}포인트가 지급되었습니다.`);
                             
-                            // 500포인트 초과 체크
+                            // 포인트 충전 후에는 경고 모달 대신 성공 메시지만 표시
                             if (currentUser.points > 500) {
-                                showWarningModal();
+                                console.log('✅ 포인트 충전 완료 - 500포인트 초과로 더 이상 충전 불가');
                             }
                         } else {
                             alert('포인트 지급에 실패했습니다. 다시 시도해주세요.');
