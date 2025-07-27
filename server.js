@@ -551,20 +551,19 @@ app.post('/api/betting/submit', async (req, res) => {
                                 '-' + String(checkToday.getMonth() + 1).padStart(2, '0') + 
                                 '-' + String(checkToday.getDate()).padStart(2, '0');
         
-        // 모든 게임에서 오늘 배팅했는지 확인
-        for (let i = 1; i <= 5; i++) {
-            const checkCollection = getBettingGameCollection(i);
-            const existingBet = await checkCollection.findOne({
-                date: checkTodayString,
-                'bets.userId': userId
+        // 해당 게임에서 오늘 배팅했는지 확인
+        const checkCollection = getBettingGameCollection(gameNumber);
+        const existingBet = await checkCollection.findOne({
+            date: checkTodayString,
+            gameNumber: parseInt(gameNumber),
+            'bets.userId': userId
+        });
+        
+        if (existingBet) {
+            return res.status(400).json({
+                success: false,
+                message: '이 게임에서 이미 배팅하셨습니다. 다음 타자까지 기다려주세요.'
             });
-            
-            if (existingBet) {
-                return res.status(400).json({
-                    success: false,
-                    message: '오늘 이미 배팅하셨습니다. 다음 타자까지 기다려주세요.'
-                });
-            }
         }
         
         // 한국 시간대로 오늘 날짜 계산
