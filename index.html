@@ -537,36 +537,60 @@
             }
         }
 
-        // 음성 합성 함수
+        // 음성 큐 시스템
+        let speechQueue = [];
+        let isSpeaking = false;
+
+        // 음성 큐 처리 함수
+        function processSpeechQueue() {
+            if (speechQueue.length === 0 || isSpeaking) {
+                return;
+            }
+            
+            isSpeaking = true;
+            const { text, rate } = speechQueue.shift();
+            
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.lang = 'ko-KR';
+            utterance.rate = rate || 0.9;
+            utterance.pitch = 1.1;
+            utterance.volume = 0.9;
+            
+            // 음성 시작 이벤트
+            utterance.onstart = () => {
+                console.log('🎤 음성 재생 시작:', text);
+            };
+            
+            // 음성 완료 이벤트
+            utterance.onend = () => {
+                console.log('🎤 음성 재생 완료:', text);
+                isSpeaking = false;
+                // 큐에 남은 음성이 있으면 다음 음성 재생
+                setTimeout(() => processSpeechQueue(), 100);
+            };
+            
+            utterance.onerror = (event) => {
+                console.log('🎤 음성 재생 오류:', event.error);
+                isSpeaking = false;
+                // 오류 발생 시에도 다음 음성 재생
+                setTimeout(() => processSpeechQueue(), 100);
+            };
+            
+            speechSynthesis.speak(utterance);
+            console.log('🎤 음성 재생 요청 완료:', text);
+        }
+
+        // 음성 합성 함수 (큐 시스템 사용)
         function speakText(text, rate = 0.9) {
             console.log('🎤 음성 재생 시도:', text);
             
             if ('speechSynthesis' in window) {
-                // 이전 음성 중지
-                speechSynthesis.cancel();
+                // 음성을 큐에 추가
+                speechQueue.push({ text, rate });
+                console.log('🎤 음성 큐에 추가됨:', text);
                 
-                const utterance = new SpeechSynthesisUtterance(text);
-                utterance.lang = 'ko-KR';
-                utterance.rate = rate;
-                utterance.pitch = 1.1;
-                utterance.volume = 0.9;
-                
-                // 음성 시작 이벤트
-                utterance.onstart = () => {
-                    console.log('🎤 음성 재생 시작:', text);
-                };
-                
-                // 음성 완료 이벤트
-                utterance.onend = () => {
-                    console.log('🎤 음성 재생 완료:', text);
-                };
-                
-                utterance.onerror = (event) => {
-                    console.log('🎤 음성 재생 오류:', event.error);
-                };
-                
-                speechSynthesis.speak(utterance);
-                console.log('🎤 음성 재생 요청 완료');
+                // 큐 처리 시작
+                processSpeechQueue();
             } else {
                 console.log('🎤 음성 합성 API를 지원하지 않습니다.');
             }
@@ -579,15 +603,15 @@
             // 경기 선택 음성 안내 (순차적)
             speakText(`${matchup}의 경기를 선택하셨습니다.`);
             
-            // 2초 후 두 번째 음성
+            // 첫 번째 음성 완료 후 두 번째 음성 (약 3초 후)
             setTimeout(() => {
                 speakText('빠던나인 게임은 야구게임 예측 게임으로 1차 버전에선 타자의 배팅 예측 게임으로 만들었습니다.');
-            }, 2000);
+            }, 3000);
             
-            // 4초 후 세 번째 음성
+            // 두 번째 음성 완료 후 세 번째 음성 (약 6초 후)
             setTimeout(() => {
                 speakText('배팅 포인트도 1차 버전에서는 100포인트 고정입니다.');
-            }, 4000);
+            }, 6000);
             
             // 경기 선택 시 모든 배팅 데이터 강제 초기화
             try {
@@ -802,8 +826,10 @@
                     btn.classList.remove('cursor-pointer');
                     window.selectedAmount = 100;
                     
-                    // 포인트 선택 음성 안내
-                    speakText('100포인트가 자동으로 선택되었습니다.');
+                    // 포인트 선택 음성 안내 (약간의 지연 후)
+                    setTimeout(() => {
+                        speakText('100포인트가 자동으로 선택되었습니다.');
+                    }, 500);
                 } else {
                     btn.disabled = true;
                     btn.classList.add('opacity-50', 'cursor-not-allowed');
