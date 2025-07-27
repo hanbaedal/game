@@ -203,8 +203,13 @@
             window.location.href = '/login.html';
         }
 
-        // 포인트 초과 안내 메시지 표시
+        // 포인트 초과 안내 메시지 표시 (중복 방지)
+        let messageShown = false;
         function showPointsExceedMessage() {
+            // 이미 메시지가 표시되어 있으면 중복 실행 방지
+            if (messageShown) return;
+            
+            messageShown = true;
             const messageDiv = document.createElement('div');
             messageDiv.className = 'fixed top-4 right-4 bg-yellow-500 text-black px-4 py-2 rounded-lg shadow-lg z-50';
             messageDiv.innerHTML = `
@@ -220,6 +225,7 @@
                 if (messageDiv.parentNode) {
                     messageDiv.parentNode.removeChild(messageDiv);
                 }
+                messageShown = false; // 메시지 제거 후 플래그 리셋
             }, 3000);
         }
 
@@ -296,28 +302,26 @@
                     if (response.ok) {
                         const data = await response.json();
                         if (data.success) {
-                            // 서버 업데이트 성공
+                            // 서버 업데이트 성공 - 서버에서 받은 포인트로 업데이트
                             currentUser.points = data.points;
                             localStorage.setItem('currentUser', JSON.stringify(currentUser));
                             console.log('✅ 서버 포인트 업데이트 완료:', data.points);
                         } else {
-                            // 서버 오류 시 클라이언트에서만 처리
-                            currentUser.points += points;
-                            localStorage.setItem('currentUser', JSON.stringify(currentUser));
-                            console.log('✅ 클라이언트 포인트 업데이트 완료:', currentUser.points);
+                            // 서버 오류 시 포인트 지급 실패
+                            console.error('❌ 서버 포인트 업데이트 실패:', data.message);
+                            alert('포인트 지급에 실패했습니다. 다시 시도해주세요.');
+                            return; // 포인트 지급 중단
                         }
                     } else {
-                        // 서버 연결 실패 시 클라이언트에서만 처리
-                        currentUser.points += points;
-                        localStorage.setItem('currentUser', JSON.stringify(currentUser));
-                        console.log('✅ 클라이언트 포인트 업데이트 완료:', currentUser.points);
+                        // 서버 연결 실패 시 포인트 지급 실패
+                        console.error('❌ 서버 연결 실패');
+                        alert('서버 연결에 실패했습니다. 다시 시도해주세요.');
+                        return; // 포인트 지급 중단
                     }
                 } catch (error) {
                     console.error('❌ 포인트 지급 오류:', error);
-                    // 오류가 발생해도 클라이언트에서 포인트 지급
-                    currentUser.points += points;
-                    localStorage.setItem('currentUser', JSON.stringify(currentUser));
-                    console.log('✅ 클라이언트 포인트 업데이트 완료:', currentUser.points);
+                    alert('포인트 지급 중 오류가 발생했습니다. 다시 시도해주세요.');
+                    return; // 포인트 지급 중단
                 }
                 
                 // 성공 알림

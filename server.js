@@ -2636,24 +2636,44 @@ app.post('/api/update-points', async (req, res) => {
         
         // 포인트 업데이트 (추가 또는 설정)
         let newPoints;
-        if (addPoints !== undefined) {
-            // 포인트 추가 방식
-            newPoints = (user.points || 0) + parseInt(addPoints);
-            console.log(`💰 포인트 추가: ${userId} - 기존: ${user.points || 0}, 추가: ${addPoints}, 새로운 총액: ${newPoints}`);
-            await userCollection.updateOne(
-                { userId: userId },
-                { $inc: { points: parseInt(addPoints) } }
-            );
-            console.log(`✅ game-member 디비 업데이트 완료: ${userId} -> ${newPoints}포인트`);
-        } else {
-            // 포인트 설정 방식
-            newPoints = parseInt(points);
-            console.log(`💰 포인트 설정: ${userId} -> ${newPoints}포인트`);
-            await userCollection.updateOne(
-                { userId: userId },
-                { $set: { points: newPoints } }
-            );
-            console.log(`✅ game-member 디비 업데이트 완료: ${userId} -> ${newPoints}포인트`);
+        try {
+            if (addPoints !== undefined) {
+                // 포인트 추가 방식
+                newPoints = (user.points || 0) + parseInt(addPoints);
+                console.log(`💰 포인트 추가: ${userId} - 기존: ${user.points || 0}, 추가: ${addPoints}, 새로운 총액: ${newPoints}`);
+                
+                const updateResult = await userCollection.updateOne(
+                    { userId: userId },
+                    { $inc: { points: parseInt(addPoints) } }
+                );
+                
+                if (updateResult.modifiedCount === 0) {
+                    throw new Error('DB 업데이트 실패: 수정된 문서가 없습니다.');
+                }
+                
+                console.log(`✅ game-member 디비 업데이트 완료: ${userId} -> ${newPoints}포인트`);
+            } else {
+                // 포인트 설정 방식
+                newPoints = parseInt(points);
+                console.log(`💰 포인트 설정: ${userId} -> ${newPoints}포인트`);
+                
+                const updateResult = await userCollection.updateOne(
+                    { userId: userId },
+                    { $set: { points: newPoints } }
+                );
+                
+                if (updateResult.modifiedCount === 0) {
+                    throw new Error('DB 업데이트 실패: 수정된 문서가 없습니다.');
+                }
+                
+                console.log(`✅ game-member 디비 업데이트 완료: ${userId} -> ${newPoints}포인트`);
+            }
+        } catch (dbError) {
+            console.error(`❌ DB 업데이트 오류: ${userId}`, dbError);
+            return res.status(500).json({
+                success: false,
+                message: '데이터베이스 업데이트에 실패했습니다.'
+            });
         }
         
         console.log(`✅ 포인트 업데이트 완료: ${userId} -> ${newPoints}포인트`);
