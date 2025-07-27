@@ -1284,9 +1284,29 @@ app.get('/api/user/:userId', async (req, res) => {
             });
         }
         
-        // MongoDB 연결 상태 확인
+        // MongoDB 연결 상태 확인 (로컬 개발용 임시 데이터)
         if (!checkMongoDBConnection()) {
-            return sendMongoDBErrorResponse(res, '데이터베이스 연결이 준비되지 않았습니다.');
+            // 임시 데이터 반환
+            const tempUser = {
+                userId: userId,
+                name: '테스트 사용자',
+                email: 'test@example.com',
+                phone: '010-1234-5678',
+                favoriteTeam: '두산',
+                points: 1000,
+                joinDate: '2025-01-01',
+                lastLogin: '2025-01-15',
+                totalBets: 10,
+                winCount: 5,
+                loseCount: 5,
+                donationAmount: 100
+            };
+            
+            return res.json({
+                success: true,
+                message: '사용자 정보를 조회했습니다. (임시 데이터)',
+                data: tempUser
+            });
         }
         
         const userCollection = getUserCollection();
@@ -1308,6 +1328,8 @@ app.get('/api/user/:userId', async (req, res) => {
             userId: user.userId,
                 name: user.name || user.username,
             email: user.email,
+                phone: user.phone,
+                favoriteTeam: user.favoriteTeam,
                 points: user.points || 0,
                 joinDate: user.createdAt || user.joinDate,
                 lastLogin: user.lastLogin,
