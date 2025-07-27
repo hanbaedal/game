@@ -2589,10 +2589,17 @@ app.post('/api/update-points', async (req, res) => {
     try {
         const { userId, points, addPoints } = req.body;
         
-        if (!userId || points === undefined) {
+        if (!userId) {
             return res.status(400).json({ 
                 success: false, 
-                message: '사용자 ID와 포인트가 필요합니다.'
+                message: '사용자 ID가 필요합니다.'
+            });
+        }
+        
+        if (points === undefined && addPoints === undefined) {
+            return res.status(400).json({ 
+                success: false, 
+                message: '포인트 또는 추가할 포인트가 필요합니다.'
             });
         }
         

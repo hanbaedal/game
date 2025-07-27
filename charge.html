@@ -148,6 +148,14 @@
                 if (storedUser) {
                     currentUser = JSON.parse(storedUser);
                     
+                    // userId가 없는 경우 기본값 설정
+                    if (!currentUser.userId) {
+                        currentUser.userId = currentUser.name || 'guest_' + Date.now();
+                        localStorage.setItem('currentUser', JSON.stringify(currentUser));
+                    }
+                    
+                    console.log('🔍 로드된 사용자 정보:', currentUser);
+                    
                     // 사용자 정보 표시
                     document.getElementById('userNameDisplay').textContent = `${currentUser.name}님`;
                     document.getElementById('currentPoints').textContent = `${currentUser.points}P`;
@@ -277,6 +285,9 @@
 
                 // 포인트 지급 처리
                 try {
+                    console.log('🔍 현재 사용자 정보:', currentUser);
+                    console.log('🔍 전송할 데이터:', { userId: currentUser.userId, addPoints: points });
+                    
                     const response = await fetch('/api/update-points', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
