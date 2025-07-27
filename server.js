@@ -2941,8 +2941,15 @@ const connectToMongoDB = async () => {
     try {
         console.log('MongoDB 연결 시도 중...');
         
+        // 환경변수가 없으면 MongoDB Atlas 사용
         const mongoUri = process.env.MONGODB_URI || 'mongodb+srv://ppadun_user:ppadun8267@member-management.bppicvz.mongodb.net/?retryWrites=true&w=majority&appName=member-management';
+        
+        if (!mongoUri) {
+            console.error('❌ MONGODB_URI 환경 변수가 설정되지 않았습니다.');
+            return false;
+        }
         console.log('🔗 연결 문자열 확인:', mongoUri ? mongoUri.substring(0, 20) + '...' : 'undefined');
+        console.log('🔍 환경변수 MONGODB_URI:', process.env.MONGODB_URI ? '설정됨' : '설정 안됨');
         
         const dbName = 'member-management';
         console.log('🎯 사용할 데이터베이스 이름:', dbName);
