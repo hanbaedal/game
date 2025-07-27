@@ -93,9 +93,9 @@ function getBoardCollection() {
     return mongoose.connection.db.collection('game-board');
 }
 
-// game-notices 컬렉션 가져오기 함수
+// notices 컬렉션 가져오기 함수
 function getNoticeCollection() {
-    return mongoose.connection.db.collection('game-notices');
+    return mongoose.connection.db.collection('notices');
 }
 
 // game-inquiries 컬렉션 가져오기 함수
