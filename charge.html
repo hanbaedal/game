@@ -256,9 +256,15 @@
             // 애니메이션 시작
             startAdAnimation(ctx, duration);
             
-            // 광고 시작 음성
+            // 광고 시작 음성 (시간별 다른 메시지)
             setTimeout(() => {
-                speakText("빠던나인 야구게임 광고를 시청해주셔서 감사합니다. 잠시만 기다려주세요.");
+                if (duration === 10) {
+                    speakText("10초 광고를 시청해주셔서 감사합니다. 빠른 소개를 시작합니다.");
+                } else if (duration === 20) {
+                    speakText("20초 광고를 시청해주셔서 감사합니다. 상세한 설명을 시작합니다.");
+                } else if (duration === 30) {
+                    speakText("30초 광고를 시청해주셔서 감사합니다. 완전한 가이드를 시작합니다.");
+                }
             }, 500);
 
             // 카운트다운
@@ -364,14 +370,49 @@
             let speechIndex = 0;
             let lastSpeechTime = 0;
             
-            // 야구 관련 텍스트들과 음성 내용
+            // 광고 시간별 다른 음성 내용
+            let speechTexts = [];
+            
+            if (duration === 10) {
+                // 10초 광고: 간단한 소개
+                speechTexts = [
+                    "빠던나인 야구게임에 오신 것을 환영합니다",
+                    "실시간으로 진행되는 스릴 넘치는 배팅 게임입니다",
+                    "타자가 어떤 결과를 낼지 예측해보세요",
+                    "포인트를 사용해서 원하는 결과에 배팅하세요",
+                    "예측이 맞으면 승리 포인트를 획득할 수 있습니다",
+                    "실시간으로 결과를 확인하고 포인트를 받아보세요"
+                ];
+            } else if (duration === 20) {
+                // 20초 광고: 상세한 설명
+                speechTexts = [
+                    "빠던나인 야구게임은 실시간으로 진행되는 야구 배팅 게임입니다",
+                    "매 타자마다 다양한 결과를 예측할 수 있어요",
+                    "1루, 2루, 3루, 홈런, 삼진, 아웃 중에서 선택하세요",
+                    "100포인트로 배팅하고 예측이 맞으면 승리 포인트를 획득합니다",
+                    "실패한 사람들의 포인트를 성공한 사람들이 나누어 가져갑니다",
+                    "관리자가 결과를 입력하면 즉시 포인트가 지급됩니다"
+                ];
+            } else if (duration === 30) {
+                // 30초 광고: 완전한 가이드
+                speechTexts = [
+                    "빠던나인 야구게임에 오신 것을 환영합니다. 이 게임은 실시간 야구 배팅 게임입니다",
+                    "게임을 시작하려면 먼저 원하는 경기를 선택하세요. 총 5개의 경기가 준비되어 있습니다",
+                    "경기를 선택하면 배팅이 시작됩니다. 100포인트로 타자의 결과를 예측해보세요",
+                    "예측할 수 있는 결과는 1루, 2루, 3루, 홈런, 삼진, 아웃이 있습니다",
+                    "배팅이 완료되면 관리자가 실제 결과를 입력할 때까지 기다려야 합니다",
+                    "예측이 맞으면 실패한 사람들의 포인트를 성공한 사람들이 나누어 가져갑니다. 실시간으로 포인트가 지급되니 확인해보세요"
+                ];
+            }
+            
+            // 야구 관련 텍스트들 (화면 표시용)
             const texts = [
-                { text: "빠던나인 야구게임", x: width/2, y: 80, size: 32, color: "#fbbf24", speech: "빠던나인 야구게임에 오신 것을 환영합니다" },
-                { text: "실시간 배팅 게임", x: width/2, y: 120, size: 24, color: "#60a5fa", speech: "실시간으로 진행되는 스릴 넘치는 배팅 게임입니다" },
-                { text: "타자 예측하기", x: width/2, y: 160, size: 20, color: "#34d399", speech: "타자가 어떤 결과를 낼지 예측해보세요" },
-                { text: "포인트로 배팅", x: width/2, y: 200, size: 20, color: "#f87171", speech: "포인트를 사용해서 원하는 결과에 배팅하세요" },
-                { text: "승리 포인트 획득", x: width/2, y: 240, size: 20, color: "#a78bfa", speech: "예측이 맞으면 승리 포인트를 획득할 수 있습니다" },
-                { text: "실시간 결과 확인", x: width/2, y: 280, size: 20, color: "#fbbf24", speech: "실시간으로 결과를 확인하고 포인트를 받아보세요" }
+                { text: "빠던나인 야구게임", x: width/2, y: 80, size: 32, color: "#fbbf24" },
+                { text: "실시간 배팅 게임", x: width/2, y: 120, size: 24, color: "#60a5fa" },
+                { text: "타자 예측하기", x: width/2, y: 160, size: 20, color: "#34d399" },
+                { text: "포인트로 배팅", x: width/2, y: 200, size: 20, color: "#f87171" },
+                { text: "승리 포인트 획득", x: width/2, y: 240, size: 20, color: "#a78bfa" },
+                { text: "실시간 결과 확인", x: width/2, y: 280, size: 20, color: "#fbbf24" }
             ];
             
             // 야구공 애니메이션
@@ -446,14 +487,14 @@
                     ctx.fillText(item.text, item.x, item.y);
                     
                     // 음성 재생 (각 텍스트가 강조될 때)
-                    const textStartTime = (duration / texts.length) * index;
-                    const textEndTime = (duration / texts.length) * (index + 1);
+                    const textStartTime = (duration / speechTexts.length) * index;
+                    const textEndTime = (duration / speechTexts.length) * (index + 1);
                     
                     if (elapsed >= textStartTime && elapsed <= textEndTime && 
                         elapsed - lastSpeechTime > 3 && speechIndex === index) {
-                        speakText(item.speech);
+                        speakText(speechTexts[index]);
                         lastSpeechTime = elapsed;
-                        speechIndex = (speechIndex + 1) % texts.length;
+                        speechIndex = (speechIndex + 1) % speechTexts.length;
                     }
                 });
                 
