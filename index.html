@@ -995,6 +995,7 @@
                     },
                 body: JSON.stringify({
                         userId: currentUser.userId,
+                        userName: currentUser.name || currentUser.userName || '사용자',
                         gameNumber: selectedGame.gameNumber,
                         prediction: selectedChoice,
                         points: selectedAmount

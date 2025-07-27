@@ -514,7 +514,7 @@ app.get('/api/team-games', async (req, res) => {
 // 배팅 제출 API (수정된 구조)
 app.post('/api/betting/submit', async (req, res) => {
     try {
-        const { userId, gameNumber, prediction, points } = req.body;
+        const { userId, userName, gameNumber, prediction, points } = req.body;
         
         if (!userId || !gameNumber || !prediction || !points) {
             return res.status(400).json({ 
@@ -605,7 +605,7 @@ app.post('/api/betting/submit', async (req, res) => {
                 betCounts: initialBetCounts,
                 bets: [{
                     userId: userId,
-                    userName: user.name,
+                    userName: userName || user.name,
                     prediction: prediction,
                     points: parseInt(points),
                     betTime: new Date()
@@ -625,7 +625,7 @@ app.post('/api/betting/submit', async (req, res) => {
                     $push: {
                         bets: {
                             userId: userId,
-                            userName: user.name,
+                            userName: userName || user.name,
                             prediction: prediction,
                             points: parseInt(points),
                             betTime: new Date()
@@ -2617,11 +2617,27 @@ app.post('/api/update-points', async (req, res) => {
         console.log(`🔍 사용자 조회 결과:`, user ? `사용자 발견 (기존 포인트: ${user.points || 0})` : '사용자 없음');
         
         if (!user) {
-            console.log(`❌ 사용자를 찾을 수 없음: ${userId}`);
-            return res.status(404).json({
-                success: false,
-                message: '사용자를 찾을 수 없습니다.'
-            });
+            console.log(`❌ 사용자를 찾을 수 없음: ${userId} - 새 사용자 생성 시도`);
+            
+            // 새 사용자 생성
+            const newUser = {
+                userId: userId,
+                name: '사용자',
+                points: 0,
+                createdAt: new Date()
+            };
+            
+            try {
+                await userCollection.insertOne(newUser);
+                console.log(`✅ 새 사용자 생성 완료: ${userId}`);
+                user = newUser;
+            } catch (error) {
+                console.error(`❌ 새 사용자 생성 실패: ${userId}`, error);
+                return res.status(500).json({
+                    success: false,
+                    message: '사용자 생성 중 오류가 발생했습니다.'
+                });
+            }
         }
         
         // 포인트 업데이트 (추가 또는 설정)
