@@ -2601,6 +2601,7 @@ app.post('/api/update-points', async (req, res) => {
         
         // MongoDB 연결이 없어도 실제 DB 업데이트 시도
         console.log(`🔧 포인트 업데이트 시도: ${userId} - addPoints: ${addPoints}, points: ${points}`);
+        console.log(`📦 받은 데이터 전체:`, JSON.stringify(req.body, null, 2));
         
         const userCollection = getUserCollection();
         
