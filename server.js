@@ -569,18 +569,74 @@ app.post('/api/betting/submit', async (req, res) => {
                     '-' + String(koreaTime.getMonth() + 1).padStart(2, '0') + 
                     '-' + String(koreaTime.getDate()).padStart(2, '0');
         
-        // 로컬 테스트를 위한 임시 배팅 데이터 저장
-        console.log(`게임 배팅 제출: ${userId} - ${prediction} ${points}포인트`);
-        console.log(`게임 번호: ${gameNumber}, 날짜: ${date}`);
+        // 실제 배팅 데이터 저장
+        const gameCollection = getBettingGameCollection(gameNumber);
         
-        // 임시로 성공 응답만 반환 (실제 DB 저장은 나중에)
-        res.json({ 
-            success: true, 
-            message: '배팅이 완료되었습니다.',
-            remainingPoints: user.points - parseInt(points)
+        // 기존 게임 데이터 조회
+        const existingGame = await gameCollection.findOne({ 
+            date: date,
+            gameNumber: parseInt(gameNumber)
         });
         
+        // team-games 컬렉션에서 matchup 정보 가져오기
+        const teamGamesCollection = getTeamGamesCollection();
+        const gameInfo = await teamGamesCollection.findOne({
+            date: date,
+            gameNumber: parseInt(gameNumber)
+        });
+        
+        const matchup = gameInfo ? gameInfo.matchup : '';
+        
+        if (!existingGame) {
+            // 기존 데이터가 없으면 새로운 집계 데이터 생성
+            const initialBetCounts = {
+                '1루': 0, '2루': 0, '3루': 0, '홈런': 0, '삼진': 0, '아웃': 0
+            };
+            initialBetCounts[prediction] = 1;
+            
+            await gameCollection.insertOne({
+                date: date,
+                gameNumber: parseInt(gameNumber),
+                matchup: matchup,
+                status: 'active',
+                bettingStart: '진행중',
+                bettingStop: '대기',
+                totalBets: 1,
+                betCounts: initialBetCounts,
+                bets: [{
+                    userId: userId,
+                    userName: user.name,
+                    prediction: prediction,
+                    points: parseInt(points),
+                    betTime: new Date()
+                }],
+                predictionResult: ''
+            });
+        } else {
+            // 기존 데이터가 있으면 업데이트
+            const updatedBetCounts = { ...existingGame.betCounts };
+            updatedBetCounts[prediction] = (updatedBetCounts[prediction] || 0) + 1;
+            
+            await gameCollection.updateOne(
+                { _id: existingGame._id },
+                {
+                    $inc: { totalBets: 1 },
+                    $set: { betCounts: updatedBetCounts },
+                    $push: {
+                        bets: {
+                            userId: userId,
+                            userName: user.name,
+                            prediction: prediction,
+                            points: parseInt(points),
+                            betTime: new Date()
+                        }
+                    }
+                }
+            );
+        }
+        
         console.log(`게임 배팅 제출: ${userId} - ${prediction} ${points}포인트`);
+        console.log(`게임 번호: ${gameNumber}, 날짜: ${date}`);
         
         res.json({ 
             success: true, 
@@ -2632,10 +2688,25 @@ app.post('/api/admin/calculate-winnings', async (req, res) => {
             }
         );
         
+        // 영어-한글 예측결과 매핑
+        const predictionMapping = {
+            '1base': '1루',
+            '2base': '2루', 
+            '3base': '3루',
+            'homerun': '홈런',
+            'strikeout': '삼진',
+            'out': '아웃'
+        };
+        
+        // 영어 예측결과를 한글로 변환
+        const koreanPredictionResult = predictionMapping[predictionResult] || predictionResult;
+        
+        console.log(`🔍 예측결과 변환: ${predictionResult} → ${koreanPredictionResult}`);
+        
         // 승리자 수와 패자 포인트 계산
         const totalBets = gameData.totalBets || 0;
         const betCounts = gameData.betCounts || {};
-        const winnerCount = betCounts[predictionResult] || 0;
+        const winnerCount = betCounts[koreanPredictionResult] || 0;
         const loserCount = totalBets - winnerCount;
         const totalLoserPoints = loserCount * 100; // 고정 배팅 포인트 100
         
@@ -2644,7 +2715,9 @@ app.post('/api/admin/calculate-winnings', async (req, res) => {
         
         // 승리자들에게 포인트 지급 (bets 배열에서 승리자 찾기)
         if (winnerCount > 0 && gameData.bets) {
-            const winningBets = gameData.bets.filter(bet => bet.prediction === predictionResult);
+            const winningBets = gameData.bets.filter(bet => bet.prediction === koreanPredictionResult);
+            
+            console.log(`🏆 승리자 배팅:`, winningBets);
             
             // 승리자들에게 포인트 지급
             for (const bet of winningBets) {
@@ -2652,6 +2725,7 @@ app.post('/api/admin/calculate-winnings', async (req, res) => {
                     { userId: bet.userId },
                     { $inc: { points: pointsPerWinner } }
                 );
+                console.log(`💰 ${bet.userName}에게 ${pointsPerWinner}포인트 지급`);
             }
         }
         
