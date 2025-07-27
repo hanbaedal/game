@@ -643,12 +643,12 @@
             
             // 첫 번째 음성 완료 후 두 번째 음성 (약 3초 후)
             setTimeout(() => {
-                speakText('빠던나인 게임은 야구게임 예측 게임으로 1차 버전에선 타자의 배팅 예측 게임으로 만들었습니다.');
+                speakText('빠던나인 게임은 야구게임 예측 게임으로, 일차 버전에서는 타자의 배팅을 예측하는 것을 게임으로 만들었습니다.');
             }, 3000);
             
             // 두 번째 음성 완료 후 세 번째 음성 (약 6초 후)
             setTimeout(() => {
-                speakText('배팅 포인트도 1차 버전에서는 100포인트 고정입니다.');
+                speakText('배팅 포인트는 일차 버전에서 100포인트 고정했습니다.');
             }, 6000);
             
             // 경기 선택 시 모든 배팅 데이터 강제 초기화
@@ -1784,6 +1784,7 @@
                 const donateNoBtn = modal.querySelector('#donateNoBtn');
                 if (donateNoBtn) {
                     donateNoBtn.onclick = function() {
+                        speakText('기부하지 않고 게임으로 돌아갑니다.');
                         closeDonationModal();
                         // 기부하지 않고 게임으로 돌아가기
                         showSelectedGameOnly();
@@ -1808,6 +1809,7 @@
                 
                 if (confirmNoBtn) {
                     confirmNoBtn.onclick = function() {
+                        speakText('기부를 취소했습니다.');
                         // 기부 확인 섹션 숨기기
                         const confirmSection = modal.querySelector('#donationConfirm');
                         if (confirmSection) {
@@ -1911,11 +1913,7 @@
                         userId: currentUser.userId,
                         userName: currentUser.name,
                         donationAmount: donationAmount,
-                        percentage: percentage,
-                        finalPoints: finalPoints,
-                        gameDate: today,
-                        gameNumber: 1,
-                        winAmount: winAmount
+                        percentage: percentage
                     })
                 });
 
@@ -1926,6 +1924,9 @@
                     document.getElementById('userPoints').textContent = `${finalPoints}포인트`;
                     localStorage.setItem('currentUser', JSON.stringify(currentUser));
                     
+                    // 기부 완료 음성 안내
+                    speakText(`${percentage}퍼센트 기부가 완료되었습니다. ${finalPoints}포인트를 받으셨습니다.`);
+                    
                     // 기부 모달 닫기
                     document.getElementById('donationModal').style.display = 'none';
                     document.getElementById('donationConfirm').classList.add('hidden');
@@ -1933,6 +1934,7 @@
                     // 기부 완료 모달 표시
                     showDonationCompleteModal(donationAmount, percentage);
                 } else {
+                    speakText('기부 처리 중 오류가 발생했습니다. 다시 시도해주세요.');
                     alert('기부 처리 중 오류가 발생했습니다: ' + data.message);
                 }
             } catch (error) {
@@ -1948,6 +1950,9 @@
             
             message.textContent = `${percentage}% (${donationAmount}포인트) 기부가 완료되었습니다. 감사합니다!`;
             modal.style.display = 'flex';
+            
+            // 기부 완료 음성 안내
+            speakText('기부 완료 모달이 표시되었습니다. 원하는 기부 비율을 선택해주세요.');
             
             // 확인 버튼 이벤트
             document.getElementById('donationCompleteBtn').onclick = function() {
@@ -2386,6 +2391,9 @@
             if (modal) {
                 modal.classList.remove('hidden');
                 
+                // 기부 모달 음성 안내
+                speakText('기부 모달이 표시되었습니다. 원하는 기부 비율을 선택해주세요.');
+                
                 // 기부 버튼 이벤트 리스너 설정
                 const donationBtns = modal.querySelectorAll('.donation-btn');
                 donationBtns.forEach(btn => {
@@ -2419,6 +2427,7 @@
                 const donateNoBtn = modal.querySelector('#donateNoBtn');
                 if (donateNoBtn) {
                     donateNoBtn.onclick = function() {
+                        speakText('기부하지 않고 게임으로 돌아갑니다.');
                         closeDonationModal();
                         // 기부하지 않고 게임으로 돌아가기
                         showSelectedGameOnly();
@@ -2443,6 +2452,7 @@
                 
                 if (confirmNoBtn) {
                     confirmNoBtn.onclick = function() {
+                        speakText('기부를 취소했습니다.');
                         // 기부 확인 섹션 숨기기
                         const confirmSection = modal.querySelector('#donationConfirm');
                         if (confirmSection) {

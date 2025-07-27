@@ -1438,6 +1438,77 @@ app.post('/api/inquiries', async (req, res) => {
     }
 });
 
+// 기부 처리 API
+app.post('/api/donation', async (req, res) => {
+    try {
+        const { userId, userName, donationAmount, percentage } = req.body;
+        
+        if (!userId || !userName || !donationAmount || percentage === undefined) {
+            return res.status(400).json({
+                success: false,
+                message: '필수 정보가 누락되었습니다.'
+            });
+        }
+        
+        // MongoDB 연결 상태 확인
+        if (!checkMongoDBConnection()) {
+            return sendMongoDBErrorResponse(res, '데이터베이스 연결이 준비되지 않았습니다.');
+        }
+        
+        const donationCollection = getDonationCollection();
+        const userCollection = getUserCollection();
+        
+        const today = new Date();
+        const koreaTime = new Date(today.getTime() + (9 * 60 * 60 * 1000));
+        const todayString = koreaTime.getFullYear().toString() + 
+                           '-' + String(koreaTime.getMonth() + 1).padStart(2, '0') + 
+                           '-' + String(koreaTime.getDate()).padStart(2, '0');
+        
+        // 기부 데이터 생성
+        const donationData = {
+            userId: userId,
+            userName: userName,
+            donationAmount: parseInt(donationAmount),
+            percentage: parseInt(percentage),
+            createdAt: todayString,
+            updatedAt: todayString
+        };
+        
+        // 기부 기록 저장
+        await donationCollection.insertOne(donationData);
+        
+        // 사용자 기부 총액 업데이트
+        await userCollection.updateOne(
+            { userId: userId },
+            { 
+                $inc: { donationAmount: parseInt(donationAmount) },
+                $set: { updatedAt: new Date() }
+            }
+        );
+        
+        console.log(`✅ 기부 처리 완료: ${userName} -> ${donationAmount}포인트 (${percentage}%)`);
+        
+        res.json({
+            success: true,
+            message: '기부가 완료되었습니다.',
+            data: {
+                userId: userId,
+                userName: userName,
+                donationAmount: parseInt(donationAmount),
+                percentage: parseInt(percentage),
+                createdAt: todayString
+            }
+        });
+        
+    } catch (error) {
+        console.error('기부 처리 오류:', error);
+        res.status(500).json({
+            success: false,
+            message: '기부 처리 중 오류가 발생했습니다.'
+        });
+    }
+});
+
 // 공지사항 목록 조회 API
 app.get('/api/notices', async (req, res) => {
     try {
