@@ -597,8 +597,18 @@
         }
 
         // DB 데이터를 사용한 경기 선택 함수
+        let gameSelectionInProgress = false; // 경기 선택 진행 중 플래그
+        
         async function selectSimpleGame(gameId, gameNumber, matchup) {
             console.log(`🎯 경기 선택: ${gameNumber}경기 ${matchup}`);
+            
+            // 이미 경기 선택이 진행 중이면 중복 실행 방지
+            if (gameSelectionInProgress) {
+                console.log('🎯 이미 경기 선택이 진행 중, 중복 실행 방지');
+                return;
+            }
+            
+            gameSelectionInProgress = true;
             
             // 경기 선택 음성 안내 (순차적)
             speakText(`${matchup}의 경기를 선택하셨습니다.`);
@@ -673,9 +683,14 @@
                 enableBettingPoints();
                 
                 console.log('✅ 경기 선택 완료:', selectedGame);
+                // 경기 선택 완료 후 플래그 리셋
+                setTimeout(() => {
+                    gameSelectionInProgress = false;
+                }, 10000); // 모든 음성 완료 후
             } else {
                 console.error('❌ 선택된 경기 데이터를 찾을 수 없습니다.');
                 alert('경기 선택 중 오류가 발생했습니다.');
+                gameSelectionInProgress = false; // 오류 시에도 플래그 리셋
             }
             if (typeof enableGameTypeSelection === 'function') enableGameTypeSelection();
             if (typeof enableBettingPoints === 'function') enableBettingPoints();
@@ -808,8 +823,19 @@
         }
 
         // 배팅 포인트 선택 활성화 (1→3→2 순서)
+        let pointsInitialized = false; // 중복 실행 방지 플래그
+        
         function enableBettingPoints() {
             console.log('💰 배팅 포인트 선택 활성화');
+            
+            // 이미 초기화되었으면 중복 실행 방지
+            if (pointsInitialized) {
+                console.log('💰 이미 포인트가 초기화됨, 중복 실행 방지');
+                return;
+            }
+            
+            pointsInitialized = true;
+            
             // 포인트 선택 UI 표시
             const pointsContainer = document.getElementById('bettingPointsContainer');
             if (pointsContainer) {
@@ -826,10 +852,7 @@
                     btn.classList.remove('cursor-pointer');
                     window.selectedAmount = 100;
                     
-                    // 포인트 선택 음성 안내 (약간의 지연 후)
-                    setTimeout(() => {
-                        speakText('100포인트가 자동으로 선택되었습니다.');
-                    }, 500);
+                    // 포인트 선택 음성 안내 제거 (경기 선택 시 이미 안내됨)
                 } else {
                     btn.disabled = true;
                     btn.classList.add('opacity-50', 'cursor-not-allowed');
