@@ -156,7 +156,7 @@
                     <!-- 댓글 목록이 여기에 표시됨 -->
                 </div>
                 <div class="flex space-x-2">
-                    <input type="text" id="commentInput" placeholder="댓글을 입력하세요" class="flex-1 p-2 rounded bg-gray-700 text-white text-sm">
+                    <input type="text" id="commentInput" placeholder="댓글을 입력하세요" class="flex-1 p-2 rounded bg-gray-700 text-white text-sm" value="" onkeypress="if(event.keyCode===13)addComment()">
                     <button onclick="addComment()" class="bg-blue-500 px-4 py-2 rounded text-sm hover:bg-blue-600">댓글 작성</button>
                 </div>
             </div>
@@ -425,7 +425,8 @@
             }
             
             const content = document.getElementById('commentInput').value.trim();
-            if (!content) {
+            
+            if (!content || content.length === 0) {
                 alert('댓글 내용을 입력해주세요.');
                 return;
             }
