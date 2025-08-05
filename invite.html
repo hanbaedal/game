@@ -51,13 +51,13 @@
             <div class="space-y-4 mb-6">
                 <h3 class="text-sm font-bold">초대 방법 선택</h3>
                 <div class="grid grid-cols-2 gap-4">
-                    <div class="bg-gray-700 p-4 rounded-lg text-center cursor-pointer hover:bg-gray-600" onclick="showPhoneInvite()">
-                        <i class="fas fa-phone text-2xl mb-2"></i>
-                        <p class="text-sm">전화번호로 초대</p>
+                    <div class="bg-sky-500 p-4 rounded-lg text-center cursor-pointer hover:bg-sky-600" onclick="showPhoneInvite()">
+                        <i class="fas fa-phone text-2xl mb-2 text-white"></i>
+                        <p class="text-[0.6rem] text-white">전화번호로 초대</p>
                     </div>
-                    <div class="bg-gray-700 p-4 rounded-lg text-center cursor-pointer hover:bg-gray-600" onclick="showKakaoInvite()">
-                        <i class="fas fa-comment text-2xl mb-2"></i>
-                        <p class="text-sm">카카오톡으로 초대</p>
+                    <div class="bg-purple-500 p-4 rounded-lg text-center cursor-pointer hover:bg-purple-600" onclick="showKakaoInvite()">
+                        <i class="fas fa-comment text-2xl mb-2 text-white"></i>
+                        <p class="text-[0.6rem] text-white">카카오톡으로 초대</p>
                     </div>
                 </div>
             </div>
@@ -67,7 +67,7 @@
                 <div>
                     <label class="block text-sm font-bold mb-2">전화번호</label>
                     <div class="flex space-x-2">
-                        <input type="text" id="phoneNumber" class="flex-1 p-2 rounded bg-gray-700 text-white" placeholder="010-0000-0000" oninput="checkPhoneNumber()">
+                        <input type="text" id="phoneNumber" class="w-32 p-2 rounded bg-gray-700 text-white" placeholder="010-0000-0000" maxlength="11" oninput="checkPhoneNumber()">
                         <button onclick="sendVerificationCode()" class="bg-blue-500 px-4 py-2 rounded">인증번호 전송</button>
                     </div>
                     <div id="phoneNumberWarning" class="text-red-500 text-xs mt-1 hidden"></div>
@@ -75,7 +75,7 @@
                 <div>
                     <label class="block text-sm font-bold mb-2">인증번호</label>
                     <div class="flex space-x-2">
-                        <input type="text" id="verificationCode" class="flex-1 p-2 rounded bg-gray-700 text-white" placeholder="인증번호 6자리" readonly>
+                        <input type="text" id="verificationCode" class="w-24 p-2 rounded bg-gray-700 text-white" placeholder="인증번호 6자리" maxlength="6" readonly>
                         <button onclick="verifyCode()" class="bg-blue-500 px-4 py-2 rounded">인증하기</button>
                     </div>
                 </div>
