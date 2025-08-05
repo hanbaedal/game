@@ -3158,8 +3158,14 @@ app.get('/', (req, res) => {
                 
                 const commentCollection = getCommentCollection();
                 
-                // 해당 게시글의 댓글 조회
-                const comments = await commentCollection.find({ boardId: boardId }).sort({ createdAt: 1 }).toArray();
+                // 해당 게시글의 댓글 조회 (ObjectId 변환)
+                let query = { boardId: boardId };
+                if (boardId.match(/^[0-9a-fA-F]{24}$/)) {
+                    const { ObjectId } = require('mongodb');
+                    query = { boardId: new ObjectId(boardId) };
+                }
+                
+                const comments = await commentCollection.find(query).sort({ createdAt: 1 }).toArray();
                 
                 console.log(`✅ 댓글 조회 완료: ${boardId} -> ${comments.length}개`);
                 
@@ -3189,8 +3195,14 @@ app.get('/', (req, res) => {
                 const commentCollection = getCommentCollection();
                 const boardCollection = getBoardCollection();
                 
-                // 게시글 존재 확인
-                const board = await boardCollection.findOne({ _id: boardId });
+                // 게시글 존재 확인 (ObjectId 변환)
+                let query = { _id: boardId };
+                if (boardId.match(/^[0-9a-fA-F]{24}$/)) {
+                    const { ObjectId } = require('mongodb');
+                    query = { _id: new ObjectId(boardId) };
+                }
+                
+                const board = await boardCollection.findOne(query);
                 if (!board) {
                     return res.status(404).json({ success: false, message: '게시글을 찾을 수 없습니다.' });
                 }
