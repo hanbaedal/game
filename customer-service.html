@@ -4,12 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>고객센터</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        // Tailwind CSS CDN 경고 숨기기
-        console.warn = function() {};
-        console.error = function() {};
-    </script>
+    <!-- Tailwind CSS 로컬 파일 사용 -->
+    <link rel="stylesheet" href="styles.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
 </head>
 <body class="bg-black text-white">
@@ -276,7 +272,7 @@
             }
             
             try {
-                const response = await fetch('/api/inquiry', {
+                const response = await fetch('/api/inquiries', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
@@ -312,7 +308,7 @@
         // 문의 상세 보기
         async function showInquiryDetail(inquiryId) {
             try {
-                const response = await fetch(`/api/inquiry/${inquiryId}`);
+                const response = await fetch(`/api/inquiries/${inquiryId}`);
                 if (!response.ok) {
                     throw new Error(`HTTP error! status: ${response.status}`);
                 }
