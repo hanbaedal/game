@@ -3160,6 +3160,10 @@ app.get('/', (req, res) => {
                 
                 // 해당 게시글의 댓글 조회 (문자열과 ObjectId 모두 조회)
                 const { ObjectId } = require('mongodb');
+                
+                console.log(`🔍 댓글 조회 boardId: ${boardId}`);
+                console.log(`🔍 댓글 조회 boardId 타입: ${typeof boardId}`);
+                
                 const comments = await commentCollection.find({
                     $or: [
                         { boardId: boardId },  // 문자열로 저장된 경우
@@ -3167,8 +3171,12 @@ app.get('/', (req, res) => {
                     ]
                 }).sort({ createdAt: 1 }).toArray();
                 
-                console.log(`🔍 댓글 조회 boardId: ${boardId}`);
                 console.log(`🔍 댓글 조회 쿼리: $or 조건으로 문자열과 ObjectId 모두 조회`);
+                console.log(`🔍 조회된 댓글 개수: ${comments.length}`);
+                if (comments.length > 0) {
+                    console.log(`🔍 첫 번째 댓글 boardId: ${comments[0].boardId}`);
+                    console.log(`🔍 첫 번째 댓글 boardId 타입: ${typeof comments[0].boardId}`);
+                }
                 
                 console.log(`✅ 댓글 조회 완료: ${boardId} -> ${comments.length}개`);
                 console.log(`📝 조회된 댓글들:`, comments);
@@ -3221,6 +3229,11 @@ app.get('/', (req, res) => {
                     const { ObjectId } = require('mongodb');
                     commentBoardId = new ObjectId(boardId);
                 }
+                
+                console.log(`📝 댓글 작성 boardId: ${boardId}`);
+                console.log(`📝 댓글 작성 boardId 타입: ${typeof boardId}`);
+                console.log(`📝 댓글 저장 boardId: ${commentBoardId}`);
+                console.log(`📝 댓글 저장 boardId 타입: ${typeof commentBoardId}`);
                 
                 const commentData = {
                     boardId: commentBoardId,
