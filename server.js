@@ -1204,6 +1204,18 @@ app.get('/api/board', async (req, res) => {
             .limit(parseInt(limit))
             .toArray();
         
+        // 각 게시글의 댓글 수를 실시간으로 계산
+        const commentCollection = getCommentCollection();
+        for (const board of boards) {
+            const commentCount = await commentCollection.countDocuments({
+                $or: [
+                    { boardId: board._id.toString() },  // 문자열로 저장된 경우
+                    { boardId: board._id }  // ObjectId로 저장된 경우
+                ]
+            });
+            board.commentCount = commentCount;
+        }
+        
         console.log(`✅ 게시글 목록 조회 완료: ${boards.length}건 (총 ${totalCount}건)`);
         
         res.json({
