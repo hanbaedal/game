@@ -533,18 +533,22 @@
                 modal.style.display = 'none';
                 video.pause();
 
-                // 포인트 지급 처리
+                // 포인트 충전 처리
                 try {
                     const points = 1000;
                     console.log('🔍 현재 사용자 정보:', currentUser);
-                    console.log('🔍 전송할 데이터:', { userId: currentUser.userId, addPoints: points });
                     
-                    const response = await fetch('/api/update-points', {
+                    const response = await fetch('/api/charge', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ 
-                            userId: currentUser.userId, 
-                            addPoints: points
+                            userId: currentUser.userId,
+                            userName: currentUser.name,
+                            amount: points,
+                            paymentMethod: 'video_ad',
+                            videoType: 'advertisement',
+                            videoTitle: '빠던나인 소개 동영상',
+                            videoDuration: 30
                         })
                     });
 
@@ -552,7 +556,7 @@
                         const data = await response.json();
                         if (data.success) {
                             // 서버 업데이트 성공
-                            currentUser.points = data.points;
+                            currentUser.points = data.data.totalPoints;
                             localStorage.setItem('currentUser', JSON.stringify(currentUser));
                             document.getElementById('currentPoints').textContent = `${currentUser.points}P`;
                             
@@ -567,14 +571,14 @@
                                 console.log('✅ 포인트 충전 완료 - 500포인트 초과로 더 이상 충전 불가');
                             }
                         } else {
-                            showErrorModal('포인트 지급에 실패했습니다. 다시 시도해주세요.');
+                            showErrorModal('포인트 충전에 실패했습니다. 다시 시도해주세요.');
                         }
                     } else {
                         showErrorModal('서버 연결에 실패했습니다. 다시 시도해주세요.');
                     }
                 } catch (error) {
-                    console.error('포인트 지급 오류:', error);
-                    showErrorModal('포인트 지급 중 오류가 발생했습니다. 다시 시도해주세요.');
+                    console.error('포인트 충전 오류:', error);
+                    showErrorModal('포인트 충전 중 오류가 발생했습니다. 다시 시도해주세요.');
                 }
             }
         }

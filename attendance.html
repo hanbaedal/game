@@ -174,11 +174,8 @@
                 const data = await response.json();
                 
                 if (data.success) {
-                    // 서버 응답 구조에 맞게 수정
-                    const earnedPoints = data.data.points;
-                    currentUser.points = data.data.totalPoints; // 서버에서 받은 총 포인트로 업데이트
-                    localStorage.setItem('currentUser', JSON.stringify(currentUser));
-                    alert(`${earnedPoints}포인트가 적립되었습니다!`);
+                    // 출석체크 완료 (포인트 지급 없음)
+                    alert('출석체크가 완료되었습니다!');
                     loadAttendanceData(); // 출석 현황 새로고침
                 } else {
                     alert(data.message || '출석체크에 실패했습니다.');
@@ -200,8 +197,8 @@
                     const attendanceData = data.data;
                     document.getElementById('monthAttendance').textContent = `${attendanceData.attendanceCount || 0}일`;
                     document.getElementById('totalAttendance').textContent = `${attendanceData.totalDays || 0}일`;
-                    document.getElementById('monthPoints').textContent = `${attendanceData.attendanceCount * 100 || 0}P`;
-                    document.getElementById('totalPoints').textContent = `${attendanceData.totalDays * 100 || 0}P`;
+                    document.getElementById('monthPoints').textContent = '0P'; // 포인트 지급 없음
+                    document.getElementById('totalPoints').textContent = '0P'; // 포인트 지급 없음
                     
                     // 달력 생성
                     createCalendar(attendanceData.attendanceHistory || []);

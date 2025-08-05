@@ -110,7 +110,12 @@ function getInquiryCollection() {
 
 // attendance 컬렉션 가져오기 함수
 function getAttendanceCollection() {
-    return mongoose.connection.db.collection('attendance');
+    return mongoose.connection.db.collection('game-attendance');
+}
+
+// game-charging 컬렉션 가져오기 함수
+function getChargingCollection() {
+    return mongoose.connection.db.collection('game-charging');
 }
 
 // 데이터 마이그레이션 API (영문 키를 한글 키로 변환)
@@ -2625,20 +2630,7 @@ app.post('/api/attendance/check', async (req, res) => {
         // attendance 컬렉션에 출석 기록 저장
         await attendanceCollection.insertOne(attendanceData);
         
-        // 포인트 추가 (100포인트)
-        const newPoints = (user.points || 0) + 100;
-        
-        // 사용자 정보 업데이트 (포인트만)
-        await userCollection.updateOne(
-            { userId: userId },
-            {
-                $set: {
-                    points: newPoints
-                } 
-            }
-        );
-        
-        console.log(`✅ 출석체크 완료: ${userId} -> ${todayString}, 포인트: ${newPoints}, 연속: ${currentStreak}일`);
+        console.log(`✅ 출석체크 완료: ${userId} -> ${todayString}, 연속: ${currentStreak}일`);
         
         res.json({
             success: true,
@@ -2647,9 +2639,9 @@ app.post('/api/attendance/check', async (req, res) => {
                 userId: userId,
                 userName: userName,
                 checkDate: todayString,
-                points: 100,
+                points: 0,
                 consecutiveDays: currentStreak,
-                totalPoints: newPoints
+                totalPoints: user.points || 0
             }
         });
         
@@ -3259,5 +3251,87 @@ app.get('/', (req, res) => {
             }
         });
         
+        // 포인트 충전 API
+        app.post('/api/charge', async (req, res) => {
+            try {
+                const { userId, userName, amount, paymentMethod, videoType, videoTitle, videoDuration } = req.body;
+                
+                if (!userId || !userName || !amount || !paymentMethod || !videoType || !videoTitle || !videoDuration) {
+                    return res.status(400).json({
+                        success: false,
+                        message: '필수 정보가 누락되었습니다.'
+                    });
+                }
+                
+                // MongoDB 연결 상태 확인
+                if (!checkMongoDBConnection()) {
+                    return sendMongoDBErrorResponse(res, '데이터베이스 연결이 준비되지 않았습니다.');
+                }
+                
+                const chargingCollection = getChargingCollection();
+                const userCollection = getUserCollection();
+                
+                // 사용자 정보 조회
+                const user = await userCollection.findOne({ userId: userId });
+                if (!user) {
+                    return res.status(404).json({
+                        success: false,
+                        message: '사용자를 찾을 수 없습니다.'
+                    });
+                }
+                
+                // 충전 데이터 생성
+                const chargingData = {
+                    userId: userId,
+                    userName: userName,
+                    amount: parseInt(amount),
+                    paymentMethod: paymentMethod,
+                    status: 'completed',
+                    videoType: videoType,
+                    videoTitle: videoTitle,
+                    videoDuration: parseInt(videoDuration),
+                    watchDate: new Date(),
+                    completed: true,
+                    createdAt: new Date()
+                };
+                
+                // 충전 기록 저장
+                await chargingCollection.insertOne(chargingData);
+                
+                // 사용자 포인트 업데이트
+                const newPoints = (user.points || 0) + parseInt(amount);
+                await userCollection.updateOne(
+                    { userId: userId },
+                    { 
+                        $set: { 
+                            points: newPoints,
+                            updatedAt: new Date()
+                        } 
+                    }
+                );
+                
+                console.log(`✅ 포인트 충전 완료: ${userName} -> ${amount}포인트`);
+                
+                res.json({
+                    success: true,
+                    message: '포인트 충전이 완료되었습니다.',
+                    data: {
+                        userId: userId,
+                        userName: userName,
+                        amount: parseInt(amount),
+                        totalPoints: newPoints,
+                        chargingId: chargingData._id
+                    }
+                });
+                
+            } catch (error) {
+                console.error('포인트 충전 오류:', error);
+                res.status(500).json({
+                    success: false,
+                    message: '포인트 충전 중 오류가 발생했습니다.'
+                });
+            }
+        });
+
         // 서버 시작
         startServer(); 

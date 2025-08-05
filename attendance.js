@@ -154,7 +154,7 @@ async function checkAttendance() {
         
         if (data.success) {
             const modal = document.getElementById('attendanceModal');
-            document.getElementById('todayPoints').textContent = data.points;
+            document.getElementById('todayPoints').textContent = '0'; // 포인트 지급 없음
             modal.classList.remove('hidden');
             
             // 캘린더 새로고침
