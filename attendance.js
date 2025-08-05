@@ -139,14 +139,14 @@ async function checkAttendance() {
             return;
         }
 
-        const response = await fetch('/api/attendance', {
+        const response = await fetch('/api/attendance/check', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
                 userId: userId,
-                date: formattedDate
+                userName: sessionStorage.getItem('userName') || '사용자'
             })
         });
 
