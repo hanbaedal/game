@@ -18,7 +18,7 @@
         Kakao.init('91aa1cde73565007b6b63ea01cb00634');
     </script>
 </head>
-<body class="bg-black text-white">
+<body class="bg-black text-white flex flex-col min-h-screen">
     <!-- 상단 네비게이션 -->
     <header class="flex justify-between items-center px-6 py-4 border-b border-gray-700">
         <div class="flex items-center space-x-3">
@@ -40,7 +40,7 @@
     </header>
 
     <!-- 메인 컨테이너 -->
-    <main class="p-4">
+    <main class="p-4 flex-1 overflow-y-auto">
         <div class="bg-gray-800 max-w-lg mx-auto p-6 rounded-lg">
             <h2 class="text-xl font-bold mb-6">친구 초대</h2>
             
@@ -481,5 +481,27 @@
             }, 30000);
         });
     </script>
+
+    <!-- 하단 네비게이션 -->
+    <nav class="w-full bg-black text-white py-3 border-t border-gray-700 flex-shrink-0">
+        <div class="flex justify-evenly">
+            <div class="text-center cursor-pointer" onclick="location.href='invite.html'">
+                <i class="fas fa-user-plus text-2xl"></i>
+                <p class="text-[0.4rem]">초대</p>
+            </div>
+            <div class="text-center cursor-pointer" onclick="location.href='attendance.html'">
+                <i class="fas fa-calendar-alt text-2xl"></i>
+                <p class="text-[0.4rem]">출석부</p>
+            </div>
+            <div class="text-center cursor-pointer" onclick="location.href='board.html'">
+                <i class="fas fa-clipboard text-2xl"></i>
+                <p class="text-[0.4rem]">게시판</p>
+            </div>
+            <div class="text-center cursor-pointer" onclick="location.href='charge.html'">
+                <i class="fas fa-coins text-2xl"></i>
+                <p class="text-[0.4rem]">포인트충전</p>
+            </div>
+        </div>
+    </nav>
 </body>
 </html> 

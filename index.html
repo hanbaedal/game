@@ -11,7 +11,7 @@
     </script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
 </head>
-<body class="bg-black text-white">
+<body class="bg-black text-white flex flex-col min-h-screen">
 
     <!-- 상단 네비게이션 -->
     <header class="flex justify-between items-center px-6 py-4 border-b border-gray-700">
@@ -39,7 +39,7 @@
     </header>
 
     <!-- 메인 컨테이너 -->
-    <main class="p-4">
+    <main class="p-4 flex-1 overflow-y-auto">
         <div class="bg-gray-800 max-w-lg mx-auto p-6 rounded-lg">
             <p class="text-right text-gray-300 mb-4" id="currentDate"></p>
 
@@ -274,7 +274,7 @@
     </main>
 
     <!-- 하단 네비게이션 -->
-    <nav class="w-full bg-black text-white py-3 border-t border-gray-700">
+    <nav class="w-full bg-black text-white py-3 border-t border-gray-700 flex-shrink-0">
         <div class="flex justify-evenly">
             <div class="text-center cursor-pointer" onclick="location.href='invite.html'">
                 <i class="fas fa-user-plus text-2xl"></i>
