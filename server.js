@@ -404,15 +404,15 @@ app.post('/api/clean-english-data', async (req, res) => {
         console.log(`✅ 영문 키 완전 제거 완료: ${cleanedCount}개 경기`);
         
         res.json({
-            success: true,
+                success: true, 
             message: `영문 키 완전 제거 완료: ${cleanedCount}개 경기`,
             cleanedCount: cleanedCount
         });
         
     } catch (error) {
         console.error('❌ 영문 제거 오류:', error);
-        res.status(500).json({
-            success: false,
+        res.status(500).json({ 
+            success: false, 
             message: '영문 제거 중 오류가 발생했습니다.'
         });
     }
@@ -510,12 +510,12 @@ app.get('/api/team-games', async (req, res) => {
     } catch (error) {
         console.error('team-games 조회 오류:', error);
         res.status(500).json({ 
-            success: false, 
+                success: false,
             message: 'team-games 조회 중 오류가 발생했습니다.'
-        });
-    }
+            });
+        }
 });
-
+        
 // 배팅 제출 API (수정된 구조)
 app.post('/api/betting/submit', async (req, res) => {
     try {
@@ -523,7 +523,7 @@ app.post('/api/betting/submit', async (req, res) => {
         
         if (!userId || !gameNumber || !prediction || !points) {
             return res.status(400).json({ 
-                success: false, 
+                success: false,
                 message: '필수 정보가 누락되었습니다.'
             });
         }
@@ -539,7 +539,7 @@ app.post('/api/betting/submit', async (req, res) => {
         // 포인트 확인
         if (user.points < parseInt(points)) {
             return res.status(400).json({
-                success: false, 
+                success: false,
                 message: '포인트가 부족합니다.'
             });
         }

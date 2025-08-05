@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>배팅 페이지</title>
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         // Tailwind CSS CDN 경고 숨기기
@@ -546,7 +547,7 @@
             if (speechQueue.length === 0 || isSpeaking) {
                 return;
             }
-            
+
             isSpeaking = true;
             const { text, rate, pitch } = speechQueue.shift();
             
@@ -861,7 +862,7 @@
                 console.log('💰 이미 포인트가 초기화됨, 중복 실행 방지');
                 return;
             }
-            
+
             pointsInitialized = true;
             
             // 포인트 선택 UI 표시
@@ -2552,8 +2553,8 @@
             if (!currentUser || !currentUser.userId) {
                     speakText('사용자 정보가 없습니다. 다시 로그인해주세요.');
                     alert('사용자 정보가 없습니다. 다시 로그인해주세요.');
-                return;
-            }
+                        return;
+                    }
                 if (!window.selectedChoice) {
                     speakText('배팅 선택이 되지 않았습니다.');
                     alert('배팅 선택이 되지 않았습니다.');
@@ -2755,8 +2756,8 @@
                                         // 오류 시 기본값 사용 (배팅 포인트만)
                                         const winAmount = 100;
                                         showSuccessModal(winAmount);
-                                    }
-                                } else {
+                }
+            } else {
                                     // 실패시 실패 모달 표시
                                     console.log('❌ 예측 실패');
                                     showFailureModal();

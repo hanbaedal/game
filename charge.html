@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>포인트 충전</title>
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <script>
@@ -45,33 +46,15 @@
             </p>
         </div>
 
-        <!-- 게임 소개 옵션 -->
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-            <div id="ad10" class="bg-gradient-to-br from-blue-600 to-blue-700 rounded-lg p-6 text-center cursor-pointer hover:from-blue-700 hover:to-blue-800 transition-all duration-300">
+        <!-- 빠던나인 소개 동영상 -->
+        <div class="grid grid-cols-1 gap-6 mb-8">
+            <div id="videoOption" class="bg-gradient-to-br from-blue-600 to-blue-700 rounded-lg p-6 text-center cursor-pointer hover:from-blue-700 hover:to-blue-800 transition-all duration-300">
                 <div class="text-4xl mb-4">
-                    <i class="fas fa-gamepad"></i>
+                    <i class="fas fa-play-circle"></i>
                 </div>
-                <h3 class="text-xl font-bold mb-2">게임 소개 1</h3>
+                <h3 class="text-xl font-bold mb-2">빠던나인 소개 동영상</h3>
                 <p class="text-2xl font-bold text-yellow-400 mb-2">1,000P</p>
-                <p class="text-sm text-gray-300">게임 기본 규칙</p>
-            </div>
-
-            <div id="ad20" class="bg-gradient-to-br from-green-600 to-green-700 rounded-lg p-6 text-center cursor-pointer hover:from-green-700 hover:to-green-800 transition-all duration-300">
-                <div class="text-4xl mb-4">
-                    <i class="fas fa-book"></i>
-                </div>
-                <h3 class="text-xl font-bold mb-2">게임 규칙</h3>
-                <p class="text-2xl font-bold text-yellow-400 mb-2">2,000P</p>
-                <p class="text-sm text-gray-300">상세한 게임 규칙</p>
-            </div>
-
-            <div id="ad30" class="bg-gradient-to-br from-purple-600 to-purple-700 rounded-lg p-6 text-center cursor-pointer hover:from-purple-700 hover:to-purple-800 transition-all duration-300">
-                <div class="text-4xl mb-4">
-                    <i class="fas fa-coins"></i>
-                </div>
-                <h3 class="text-xl font-bold mb-2">배팅 규칙</h3>
-                <p class="text-2xl font-bold text-yellow-400 mb-2">3,000P</p>
-                <p class="text-sm text-gray-300">상세한 배팅 규칙</p>
+                <p class="text-sm text-gray-300">동영상 시청 완료 시 포인트 지급</p>
             </div>
         </div>
 
@@ -111,15 +94,31 @@
         </div>
     </nav>
 
-    <!-- 게임 소개 모달 -->
-    <div id="adModal" class="fixed inset-0 bg-black bg-opacity-75 hidden items-center justify-center z-50">
-        <div class="bg-gray-800 rounded-lg p-6 max-w-4xl w-full mx-4">
-            <div class="text-center">
-                <h3 id="adTitle" class="text-xl font-bold mb-4">빠던나인 게임 소개</h3>
-                <div class="bg-gray-700 rounded-lg p-4 mb-4">
-                    <canvas id="adCanvas" width="640" height="360" class="w-full rounded border border-gray-600"></canvas>
-                </div>
-                <div class="text-center mb-4">
+    <!-- 동영상 모달 -->
+    <div id="videoModal" class="fixed inset-0 bg-black bg-opacity-90 hidden items-center justify-center z-50">
+        <div class="w-full h-full flex flex-col">
+            <!-- 상단 닫기 버튼 -->
+            <div class="flex justify-end p-4">
+                <button onclick="closeVideoModal()" class="text-white hover:text-gray-300 text-2xl">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <!-- 동영상 플레이어 -->
+            <div class="flex-1 flex items-center justify-center p-4">
+                <video id="mascotVideo" class="w-full max-w-4xl rounded-lg" controls>
+                    <source src="/img/mascot.mp4" type="video/mp4">
+                    브라우저가 동영상을 지원하지 않습니다.
+                </video>
+            </div>
+            
+            <!-- 하단 안내 -->
+            <div class="text-center p-4 text-white">
+                <p class="text-lg mb-2">동영상 시청 완료 시 1,000포인트가 지급됩니다</p>
+                <p class="text-sm text-gray-300">동영상을 끝까지 시청해주세요</p>
+            </div>
+        </div>
+    </div>
                     <p class="text-lg">남은 시간: <span id="countdown" class="font-bold text-yellow-400">0</span>초</p>
                 </div>
                 <div class="bg-gray-700 rounded-lg p-4">
@@ -201,8 +200,8 @@
                         return;
                     }
 
-                    // 광고 버튼 활성화
-                    enableAdButtons();
+                    // 동영상 버튼 활성화
+                    enableVideoButton();
                 } else {
                     // 로그인하지 않은 사용자
                     document.getElementById('userNameDisplay').textContent = '게스트 사용자';
@@ -210,30 +209,26 @@
                     document.getElementById('loginButton').style.display = 'block';
                     document.getElementById('homeButton').style.display = 'none';
                     
-                    // 광고 버튼 비활성화
-                    disableAdButtons();
+                    // 동영상 버튼 비활성화
+                    disableVideoButton();
                 }
             } catch (error) {
                 console.error('사용자 정보 로드 실패:', error);
-                disableAdButtons();
+                disableVideoButton();
             }
         });
 
-        // 광고 버튼 활성화
-        function enableAdButtons() {
-            document.getElementById('ad10').onclick = () => watchAd(10);
-            document.getElementById('ad20').onclick = () => watchAd(20);
-            document.getElementById('ad30').onclick = () => watchAd(30);
+        // 동영상 버튼 활성화
+        function enableVideoButton() {
+            document.getElementById('videoOption').onclick = () => watchVideo();
         }
 
-        // 광고 버튼 비활성화
-        function disableAdButtons() {
-            const adButtons = document.querySelectorAll('#ad10, #ad20, #ad30');
-            adButtons.forEach(btn => {
-                btn.onclick = null;
-                btn.classList.add('opacity-50', 'cursor-not-allowed');
-                btn.classList.remove('cursor-pointer');
-            });
+        // 동영상 버튼 비활성화
+        function disableVideoButton() {
+            const videoButton = document.getElementById('videoOption');
+            videoButton.onclick = null;
+            videoButton.classList.add('opacity-50', 'cursor-not-allowed');
+            videoButton.classList.remove('cursor-pointer');
         }
 
         // 500포인트 초과 경고 모달 표시
@@ -294,78 +289,40 @@
             }
         }
 
-        // 게임 소개 시청
-        async function watchAd(duration) {
-            if (adPlaying) return;
+        // 동영상 시청
+        async function watchVideo() {
             if (!currentUser) {
-                alert('로그인 후 게임 소개 시청을 이용해주세요.');
+                alert('로그인 후 동영상을 시청해주세요.');
                 window.location.href = 'login.html';
                 return;
             }
 
             // 500포인트 초과 체크
             if (currentUser.points > 500) {
-                alert('포인트가 500을 초과하여 광고 시청이 제한됩니다.');
+                alert('포인트가 500을 초과하여 동영상 시청이 제한됩니다.');
                 return;
             }
 
-            adPlaying = true;
-            const points = adOptions[duration].points;
-            const title = adOptions[duration].title;
-
-            // 광고 모달 표시
-            const modal = document.getElementById('adModal');
-            const adTitle = document.getElementById('adTitle');
-            const adCanvas = document.getElementById('adCanvas');
-            const countdown = document.getElementById('countdown');
+            // 동영상 모달 표시
+            const modal = document.getElementById('videoModal');
+            const video = document.getElementById('mascotVideo');
             
-            adTitle.textContent = title;
             modal.style.display = 'flex';
-            countdown.textContent = duration;
+            video.currentTime = 0; // 동영상 처음부터 재생
+            video.play();
 
-            // Canvas 설정
-            const ctx = adCanvas.getContext('2d');
-            ctx.fillStyle = '#1f2937';
-            ctx.fillRect(0, 0, adCanvas.width, adCanvas.height);
-
-            // 애니메이션 시작
-            startAdAnimation(ctx, duration);
-            
-            // 게임 소개 시작 음성
-            setTimeout(() => {
-                const content = adOptions[duration].content;
-                if (duration === 20) {
-                    speakText('게임 규칙을 시작합니다.');
-                } else if (duration === 30) {
-                    speakText('배팅 규칙을 시작합니다.');
-                } else {
-                    speakText('게임 소개 1을 시작합니다.');
-                }
-                setTimeout(() => {
-                    speakText(content);
-                }, 2000);
-            }, 500);
-
-            // 카운트다운
-            let timeLeft = duration;
-            const timer = setInterval(() => {
-                timeLeft--;
-                countdown.textContent = timeLeft > 0 ? timeLeft : 0;
-                if (timeLeft <= 0) clearInterval(timer);
-            }, 1000);
-
-            // 광고 완료 처리
-            let finished = false;
-            async function finishAd() {
-                if (finished) return;
-                finished = true;
+            // 동영상 완료 이벤트 리스너
+            let completed = false;
+            video.onended = async function() {
+                if (completed) return;
+                completed = true;
                 
-                clearInterval(timer);
                 modal.style.display = 'none';
-                adPlaying = false;
+                video.pause();
 
                 // 포인트 지급 처리
                 try {
+                    const points = 1000;
                     console.log('🔍 현재 사용자 정보:', currentUser);
                     console.log('🔍 전송할 데이터:', { userId: currentUser.userId, addPoints: points });
                     
@@ -386,17 +343,9 @@
                             localStorage.setItem('currentUser', JSON.stringify(currentUser));
                             document.getElementById('currentPoints').textContent = `${currentUser.points}P`;
                             
-                            // 게임 소개 완료 음성
-                            if (duration === 20) {
-                                speakText(`게임 규칙 시청이 완료되었습니다. ${points.toLocaleString()}포인트가 지급되었습니다.`);
-                                alert(`${duration}초 게임 규칙 시청 완료!\n${points.toLocaleString()}포인트가 지급되었습니다.`);
-                            } else if (duration === 30) {
-                                speakText(`배팅 규칙 시청이 완료되었습니다. ${points.toLocaleString()}포인트가 지급되었습니다.`);
-                                alert(`${duration}초 배팅 규칙 시청 완료!\n${points.toLocaleString()}포인트가 지급되었습니다.`);
-                            } else {
-                                speakText(`게임 소개 시청이 완료되었습니다. ${points.toLocaleString()}포인트가 지급되었습니다.`);
-                                alert(`${duration}초 게임 소개 시청 완료!\n${points.toLocaleString()}포인트가 지급되었습니다.`);
-                            }
+                            // 동영상 시청 완료 음성
+                            speakText(`빠던나인 소개 동영상 시청이 완료되었습니다. ${points.toLocaleString()}포인트가 지급되었습니다.`);
+                            alert(`동영상 시청 완료!\n${points.toLocaleString()}포인트가 지급되었습니다.`);
                             
                             // 포인트 충전 후에는 경고 모달 대신 성공 메시지만 표시
                             if (currentUser.points > 500) {
@@ -413,11 +362,16 @@
                     alert('포인트 지급 중 오류가 발생했습니다. 다시 시도해주세요.');
                 }
             }
+        }
 
-            // 애니메이션 완료는 타이머로 처리
+        // 동영상 모달 닫기
+        function closeVideoModal() {
+            const modal = document.getElementById('videoModal');
+            const video = document.getElementById('mascotVideo');
             
-            // 백업 타이머
-            setTimeout(finishAd, duration * 1000);
+            modal.style.display = 'none';
+            video.pause();
+            video.currentTime = 0;
         }
 
         // 음성 합성 함수
@@ -443,173 +397,6 @@
                 
                 speechSynthesis.speak(utterance);
             }
-        }
-
-        // 광고 애니메이션 함수
-        function startAdAnimation(ctx, duration) {
-            const canvas = ctx.canvas;
-            const width = canvas.width;
-            const height = canvas.height;
-            
-            let startTime = Date.now();
-            let animationId;
-            let speechIndex = 0;
-            let lastSpeechTime = 0;
-            
-            // 게임 소개 시간별 다른 음성 내용
-            let speechTexts = [];
-            
-            if (duration === 10) {
-                // 10초 소개: 기본 규칙
-                speechTexts = [
-                    "공격하는 팀의 선수가 타석에 들어서 부터 투수가 투구를 하기 직전까지",
-                    "게이머는 투수, 타자, 수비수를 대상으로 공격 결과에 대한 예측을 하여",
-                    "일정 점수를 베팅 합니다"
-                ];
-            } else if (duration === 20) {
-                // 20초 소개: 게임 규칙
-                speechTexts = [
-                    "타자가 타석에 들어서면 게이머들의 베팅이 시작되며",
-                    "투수가 투구를 하기 위해 세트 포지션에 임했을 때 베팅의 접속이 중단됩니다",
-                    "게이머는, 투수의 투구에 대한 공격의 결과",
-                    "1루, 2루, 3루, 홈런, 아웃 5가지 경우의 수를 예상하고",
-                    "일정 점수를 1회에 한하여 투수, 타자, 수비수",
-                    "9가지 경우의 수에게 각각 베팅을 합니다",
-                    "투수, 타자, 수비수의 공격, 수비 결과에 따라",
-                    "공격, 수비 결과를 맞춘 게이머들에게",
-                    "공격, 수비 결과를 맞추지 못한 나머지 게이머들의 점수를",
-                    "균등하게 배분하여 가산 시켜줍니다",
-                    "게임의 시작과 종료는, 경기 중계방송이 시작되는 시점에 시작하여",
-                    "경기 종료로 중계방송이 종료가 되었거나",
-                    "방송사의 사정으로 중계방송이 중단될 경우 게임도 종료됩니다"
-                ];
-            } else if (duration === 30) {
-                // 30초 소개: 배팅 규칙
-                speechTexts = [
-                    "게이머가 참여 경기를 선택한 후 로그인을하면",
-                    "기본 점수 1,000점을 부여하며",
-                    "경기중에도 포인트가 부족할 경우",
-                    "회원의 등급에 따라 무료, 유료로 충전을 할 수가 있습니다",
-                    "1회 초 첫 타자부터 팀에 관계없이",
-                    "투수와 타석에 들어서는 매 타자마다 100점씩 베팅하며",
-                    "추가로 유료결제로 점수충전을 하여",
-                    "경기가 종료, 정규이닝 혹은 연장전 포함될 때까지 베팅을 합니다",
-                    "수비수에 대한 규칙은 별도로 추가됩니다"
-                ];
-            }
-            
-            // 배팅 규칙 관련 텍스트들 (화면 표시용)
-            const texts = [
-                { text: "빠던나인 야구게임", x: width/2, y: 80, size: 32, color: "#fbbf24" },
-                { text: "상세한 배팅 규칙", x: width/2, y: 120, size: 24, color: "#60a5fa" },
-                { text: "기본 점수 1,000점", x: width/2, y: 160, size: 20, color: "#34d399" },
-                { text: "매 타자마다 100점", x: width/2, y: 200, size: 20, color: "#f87171" },
-                { text: "무료/유료 충전", x: width/2, y: 240, size: 20, color: "#a78bfa" },
-                { text: "경기 종료까지", x: width/2, y: 280, size: 20, color: "#fbbf24" }
-            ];
-            
-            // 야구공 애니메이션
-            let ballX = 50;
-            let ballY = height/2;
-            let ballSpeedX = 3;
-            let ballSpeedY = 2;
-            
-            // 배트 애니메이션
-            let batAngle = 0;
-            let batSpeed = 0.1;
-            
-            function animate() {
-                const currentTime = Date.now();
-                const elapsed = (currentTime - startTime) / 1000;
-                
-                if (elapsed >= duration) {
-                    cancelAnimationFrame(animationId);
-                    return;
-                }
-                
-                // 배경 그라데이션
-                const gradient = ctx.createLinearGradient(0, 0, width, height);
-                gradient.addColorStop(0, '#1e3a8a');
-                gradient.addColorStop(1, '#1f2937');
-                ctx.fillStyle = gradient;
-                ctx.fillRect(0, 0, width, height);
-                
-                // 야구공 움직임
-                ballX += ballSpeedX;
-                ballY += ballSpeedY;
-                
-                if (ballX > width - 20 || ballX < 20) ballSpeedX *= -1;
-                if (ballY > height - 20 || ballY < 20) ballSpeedY *= -1;
-                
-                // 야구공 그리기
-                ctx.beginPath();
-                ctx.arc(ballX, ballY, 15, 0, 2 * Math.PI);
-                ctx.fillStyle = '#ffffff';
-                ctx.fill();
-                ctx.strokeStyle = '#dc2626';
-                ctx.lineWidth = 2;
-                ctx.stroke();
-                
-                // 야구공 스티치
-                ctx.beginPath();
-                ctx.moveTo(ballX - 15, ballY);
-                ctx.lineTo(ballX + 15, ballY);
-                ctx.strokeStyle = '#dc2626';
-                ctx.lineWidth = 1;
-                ctx.stroke();
-                
-                // 배트 애니메이션
-                batAngle += batSpeed;
-                const batX = width/2 + 100;
-                const batY = height/2;
-                
-                ctx.save();
-                ctx.translate(batX, batY);
-                ctx.rotate(batAngle);
-                ctx.fillStyle = '#8b4513';
-                ctx.fillRect(-5, -40, 10, 80);
-                ctx.restore();
-                
-                // 텍스트 애니메이션과 음성 재생
-                texts.forEach((item, index) => {
-                    const alpha = Math.sin(elapsed * 2 + index * 0.5) * 0.5 + 0.5;
-                    ctx.fillStyle = item.color;
-                    ctx.globalAlpha = alpha;
-                    ctx.font = `bold ${item.size}px Arial`;
-                    ctx.textAlign = 'center';
-                    ctx.fillText(item.text, item.x, item.y);
-                    
-                    // 음성 재생 (각 텍스트가 강조될 때)
-                    const textStartTime = (duration / speechTexts.length) * index;
-                    const textEndTime = (duration / speechTexts.length) * (index + 1);
-                    
-                    if (elapsed >= textStartTime && elapsed <= textEndTime && 
-                        elapsed - lastSpeechTime > 3 && speechIndex === index) {
-                        speakText(speechTexts[index]);
-                        lastSpeechTime = elapsed;
-                        speechIndex = (speechIndex + 1) % speechTexts.length;
-                    }
-                });
-                
-                // 진행률 표시
-                const progress = elapsed / duration;
-                ctx.fillStyle = '#fbbf24';
-                ctx.fillRect(50, height - 30, (width - 100) * progress, 10);
-                ctx.strokeStyle = '#ffffff';
-                ctx.lineWidth = 2;
-                ctx.strokeRect(50, height - 30, width - 100, 10);
-                
-                // 진행률 텍스트
-                ctx.fillStyle = '#ffffff';
-                ctx.font = 'bold 16px Arial';
-                ctx.textAlign = 'center';
-                ctx.fillText(`${Math.round(progress * 100)}%`, width/2, height - 10);
-                
-                ctx.globalAlpha = 1;
-                animationId = requestAnimationFrame(animate);
-            }
-            
-            animate();
         }
     </script>
 </body>
