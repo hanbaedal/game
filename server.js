@@ -1331,8 +1331,9 @@ app.get('/api/user/:userId', async (req, res) => {
         }
         
         const userCollection = getUserCollection();
+        const donationCollection = getDonationCollection();
 
-// 사용자 정보 조회
+        // 사용자 정보 조회
         const user = await userCollection.findOne({ userId: userId });
         if (!user) {
             return res.status(404).json({
@@ -1340,6 +1341,10 @@ app.get('/api/user/:userId', async (req, res) => {
                 message: '사용자를 찾을 수 없습니다.'
             });
         }
+        
+        // game-donations 컬렉션에서 사용자의 총 기부액 계산
+        const donations = await donationCollection.find({ userId: userId }).toArray();
+        const totalDonationAmount = donations.reduce((sum, donation) => sum + donation.donationAmount, 0);
         
         // 민감한 정보 제외하고 응답
         res.json({
@@ -1357,7 +1362,7 @@ app.get('/api/user/:userId', async (req, res) => {
                 totalBets: user.totalBets || 0,
                 winCount: user.winCount || 0,
                 loseCount: user.loseCount || 0,
-                donationAmount: user.donationAmount || 0
+                donationAmount: totalDonationAmount
             }
         });
         
@@ -1522,14 +1527,7 @@ app.post('/api/donation', async (req, res) => {
         // 기부 기록 저장
         await donationCollection.insertOne(donationData);
         
-        // 사용자 기부 총액 업데이트
-        await userCollection.updateOne(
-            { userId: userId },
-            { 
-                $inc: { donationAmount: parseInt(donationAmount) },
-                $set: { updatedAt: new Date() }
-            }
-        );
+        console.log(`✅ 기부 처리 완료: ${userName} -> ${donationAmount}포인트 (${percentage}%)`);
         
         console.log(`✅ 기부 처리 완료: ${userName} -> ${donationAmount}포인트 (${percentage}%)`);
         
@@ -2678,75 +2676,6 @@ app.post('/api/attendance/check', async (req, res) => {
     }
 });
 
-// 배팅 결과 조회 API
-app.get('/api/betting/results', async (req, res) => {
-    try {
-        const { date, gameNumber, userId } = req.query;
-        
-        if (!date || !gameNumber) {
-            return res.status(400).json({
-                success: false,
-                message: '날짜와 게임 번호가 필요합니다.'
-            });
-        }
-        
-        // MongoDB 연결 상태 확인
-        if (!checkMongoDBConnection()) {
-            return sendMongoDBErrorResponse(res, '데이터베이스 연결이 준비되지 않았습니다.');
-        }
-        
-        const gameCollection = getBettingGameCollection(gameNumber);
-        const gameRecordCollection = getGameRecordCollection();
-        
-        // 게임별 배팅 집계 데이터 조회
-        const gameData = await gameCollection.findOne({
-            date: date,
-            gameNumber: parseInt(gameNumber)
-        });
-        
-        if (!gameData) {
-            return res.status(404).json({
-                success: false,
-                message: '게임 데이터를 찾을 수 없습니다.'
-            });
-        }
-        
-        // game-record 컬렉션에서 개별 배팅 결과 조회
-        let userBettingRecords = [];
-        if (userId) {
-            userBettingRecords = await gameRecordCollection.find({
-                userId: userId,
-                gameNumber: parseInt(gameNumber),
-                date: date
-            }).sort({ betTime: -1 }).toArray();
-        }
-        
-        console.log(`✅ 배팅 결과 조회 완료: 게임 ${gameNumber}, 날짜 ${date}`);
-        
-        res.json({
-            success: true,
-            message: '배팅 결과를 조회했습니다.',
-            data: {
-                gameNumber: parseInt(gameNumber),
-                date: date,
-                matchup: gameData.matchup,
-                predictionResult: gameData.predictionResult,
-                totalBets: gameData.totalBets,
-                betCounts: gameData.betCounts,
-                userBettingRecords: userBettingRecords,
-                gameStatus: gameData.status
-            }
-        });
-        
-    } catch (error) {
-        console.error('배팅 결과 조회 오류:', error);
-        res.status(500).json({
-            success: false,
-            message: '배팅 결과 조회 중 오류가 발생했습니다.'
-        });
-    }
-});
-
 // 초대 리스트 조회 API
 app.get('/api/invites', async (req, res) => {
     try {
@@ -2993,51 +2922,13 @@ app.post('/api/admin/calculate-winnings', async (req, res) => {
         
         console.log(`🏆 승리자 배팅:`, winners);
         
-        // 승리자들에게 포인트 지급 및 game-record 컬렉션 결과 업데이트
+        // 승리자들에게 포인트 지급
         for (const winner of winners) {
-            // 포인트 지급
             await userCollection.updateOne(
                 { userId: winner.userId },
                 { $inc: { points: pointsPerWinner } }
             );
             console.log(`💰 ${winner.userName || winner.userId}에게 ${pointsPerWinner}포인트 지급`);
-            
-            // game-record 컬렉션에서 해당 사용자의 배팅 기록 결과 업데이트
-            await gameRecordCollection.updateMany(
-                { 
-                    userId: winner.userId,
-                    gameNumber: parseInt(gameNumber),
-                    date: date,
-                    status: 'active'
-                },
-                { 
-                    $set: { 
-                        result: 'win',
-                        winPoints: pointsPerWinner,
-                        updatedAt: new Date()
-                    } 
-                }
-            );
-        }
-        
-        // 패자들의 game-record 컬렉션 결과 업데이트
-        const losers = gameData.bets.filter(bet => bet.prediction !== koreanPredictionResult);
-        for (const loser of losers) {
-            await gameRecordCollection.updateMany(
-                { 
-                    userId: loser.userId,
-                    gameNumber: parseInt(gameNumber),
-                    date: date,
-                    status: 'active'
-                },
-                { 
-                    $set: { 
-                        result: 'lose',
-                        winPoints: 0,
-                        updatedAt: new Date()
-                    } 
-                }
-            );
         }
         
         console.log(`✅ 게임 ${gameNumber} 승리포인트 계산 완료:`);
@@ -3046,7 +2937,6 @@ app.post('/api/admin/calculate-winnings', async (req, res) => {
         console.log(`- 패자: ${loserCount}명`);
         console.log(`- 총 패자 포인트: ${totalLoserPoints}`);
         console.log(`- 성공자당 분배 포인트: ${pointsPerWinner}`);
-        console.log(`✅ game-record 컬렉션 결과 업데이트 완료`);
         
         res.json({
             success: true,

@@ -2375,7 +2375,7 @@
             // Y 버튼 클릭 시 성공 모달 닫고 기부 모달 표시
             document.getElementById('donateYesBtn').onclick = function() {
                 modal.remove(); // 성공 모달 제거
-                showDonationModal(); // 기부 모달 표시
+                showDonationModal(winAmount); // 기부 모달 표시 (승리 포인트 전달)
             };
             
             // N 버튼 클릭 시 게임으로 돌아가기
@@ -2389,7 +2389,7 @@
         }
 
         // 기부 모달(간단 예시)
-        function showDonationModal() {
+        function showDonationModal(winPoints = 0) {
             const modal = document.getElementById('donationModal');
             if (modal) {
                 modal.classList.remove('hidden');
