@@ -2823,30 +2823,33 @@ app.post('/api/admin/calculate-winnings', async (req, res) => {
         
         console.log(`🔍 예측결과 변환: ${predictionResult} → ${koreanPredictionResult}`);
         
-        // 승리자 수와 패자 포인트 계산
-        const totalBets = gameData.totalBets || 0;
-        const betCounts = gameData.betCounts || {};
-        const winnerCount = betCounts[koreanPredictionResult] || 0;
-        const loserCount = totalBets - winnerCount;
-        const totalLoserPoints = loserCount * 100; // 고정 배팅 포인트 100
+        // 올바른 승리자 계산 (bets 배열에서 실제 승리자 찾기)
+        if (!gameData.bets || gameData.bets.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: '배팅 데이터가 없습니다.'
+            });
+        }
         
-        // 성공자당 분배 포인트 계산
+        // 승리자 찾기 (bets 배열에서 koreanPredictionResult와 일치하는 사용자들)
+        const winners = gameData.bets.filter(bet => bet.prediction === koreanPredictionResult);
+        const winnerCount = winners.length;
+        const totalBets = gameData.bets.length;
+        const loserCount = totalBets - winnerCount;
+        
+        // 승리 포인트 계산: (패자 수 × 100) ÷ 승리자 수
+        const totalLoserPoints = loserCount * 100; // 고정 배팅 포인트 100
         const pointsPerWinner = winnerCount > 0 ? Math.floor(totalLoserPoints / winnerCount) : 0;
         
-        // 승리자들에게 포인트 지급 (bets 배열에서 승리자 찾기)
-        if (winnerCount > 0 && gameData.bets) {
-            const winningBets = gameData.bets.filter(bet => bet.prediction === koreanPredictionResult);
-            
-            console.log(`🏆 승리자 배팅:`, winningBets);
-            
-            // 승리자들에게 포인트 지급
-            for (const bet of winningBets) {
-                await userCollection.updateOne(
-                    { userId: bet.userId },
-                    { $inc: { points: pointsPerWinner } }
-                );
-                console.log(`💰 ${bet.userName}에게 ${pointsPerWinner}포인트 지급`);
-            }
+        console.log(`🏆 승리자 배팅:`, winners);
+        
+        // 승리자들에게 포인트 지급
+        for (const winner of winners) {
+            await userCollection.updateOne(
+                { userId: winner.userId },
+                { $inc: { points: pointsPerWinner } }
+            );
+            console.log(`💰 ${winner.userName || winner.userId}에게 ${pointsPerWinner}포인트 지급`);
         }
         
         console.log(`✅ 게임 ${gameNumber} 승리포인트 계산 완료:`);
@@ -2862,11 +2865,13 @@ app.post('/api/admin/calculate-winnings', async (req, res) => {
             data: {
                 gameNumber: gameNumber,
                 predictionResult: predictionResult,
+                koreanPredictionResult: koreanPredictionResult,
                 totalBets: totalBets,
                 winnerCount: winnerCount,
                 loserCount: loserCount,
                 totalLoserPoints: totalLoserPoints,
-                pointsPerWinner: pointsPerWinner
+                pointsPerWinner: pointsPerWinner,
+                winners: winners.map(w => ({ userId: w.userId, userName: w.userName }))
             }
         });
         
