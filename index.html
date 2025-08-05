@@ -2573,7 +2573,13 @@
                     
                     closeDonationModal();
                     // 기부 완료 후 배팅 선택 화면으로 돌아가기 (게임 선택 유지)
-                    showSelectedGameOnly();
+                    if (selectedGame) {
+                        showSelectedGameOnly(
+                            selectedGame.gameNumber,
+                            selectedGame.matchup || `${selectedGame.homeTeam || ''} vs ${selectedGame.awayTeam || ''}`,
+                            selectedGame
+                        );
+                    }
                     enableBettingSelection();
                     enableBettingPoints();
                 } else {
