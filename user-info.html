@@ -196,7 +196,7 @@
             }
 
             try {
-                const response = await fetch(`/api/users/${currentUser.userId}`, {
+                const response = await fetch(`/api/user/${currentUser.userId}`, {
                     method: 'PUT',
                     headers: {
                         'Content-Type': 'application/json'

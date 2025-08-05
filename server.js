@@ -2387,7 +2387,7 @@ app.get('/api/inquiries/:inquiryId', async (req, res) => {
 app.put('/api/user/:userId', async (req, res) => {
     try {
         const { userId } = req.params;
-        const { name, email } = req.body;
+        const { name, email, phone, favoriteTeam } = req.body;
         
         if (!userId) {
             return res.status(400).json({ 
@@ -2407,6 +2407,11 @@ app.put('/api/user/:userId', async (req, res) => {
         const updateData = {};
         if (name) updateData.name = name;
         if (email) updateData.email = email;
+        if (phone) updateData.phone = phone;
+        if (favoriteTeam) updateData.favoriteTeam = favoriteTeam;
+        
+        // updatedAt 필드 추가
+        updateData.updatedAt = new Date();
         
         const result = await userCollection.updateOne(
             { userId: userId },
@@ -2420,11 +2425,20 @@ app.put('/api/user/:userId', async (req, res) => {
             });
         }
         
+        // 업데이트된 사용자 정보 조회
+        const updatedUser = await userCollection.findOne({ userId: userId });
+        
         res.json({
             success: true,
             message: '사용자 정보가 업데이트되었습니다.',
             data: {
                 userId: userId,
+                user: {
+                    name: updatedUser.name,
+                    email: updatedUser.email,
+                    phone: updatedUser.phone,
+                    favoriteTeam: updatedUser.favoriteTeam
+                },
                 updatedFields: Object.keys(updateData)
             }
         });
