@@ -54,6 +54,14 @@
                 <p class="text-lg font-bold text-yellow-600 mb-1">1,000P</p>
                 <p class="text-xs text-gray-600">동영상 시청 완료 시 포인트 지급</p>
             </div>
+            <div id="videoOption3" class="bg-gradient-to-br from-yellow-400 to-yellow-500 rounded-lg p-3 text-center cursor-pointer hover:from-yellow-500 hover:to-yellow-600 transition-all duration-300">
+                <div class="mb-2">
+                    <img src="/img/mascot.png" alt="빠던나인 마스코트" class="w-14 h-14 mx-auto rounded-full border-2 border-white shadow-lg">
+                </div>
+                <h3 class="text-base font-bold mb-1 text-gray-800">빠던나인 소개 동영상</h3>
+                <p class="text-lg font-bold text-yellow-700 mb-1">1,000P</p>
+                <p class="text-xs text-gray-600">동영상 시청 완료 시 포인트 지급</p>
+            </div>
         </div>
 
 
@@ -105,17 +113,7 @@
                 <p class="text-sm text-gray-300">동영상을 끝까지 시청해주세요</p>
             </div>
         </div>
-    </div>
-                    <p class="text-lg">남은 시간: <span id="countdown" class="font-bold text-yellow-400">0</span>초</p>
-                </div>
-                <div class="bg-gray-700 rounded-lg p-4">
-                    <p class="text-sm text-gray-300">
-                        게임 소개 시청이 완료되면 자동으로 포인트가 지급됩니다.
-                    </p>
-                </div>
-            </div>
-        </div>
-    </div>
+
 
     <!-- 500포인트 초과 경고 모달 -->
     <div id="warningModal" class="fixed inset-0 bg-black bg-opacity-75 hidden items-center justify-center z-50">
@@ -137,28 +135,8 @@
 
     <script>
         let currentUser = null;
-        let adPlaying = false;
         let speechQueue = [];
         let isSpeaking = false;
-
-        // 게임 소개 옵션 설정
-        const adOptions = {
-            10: { 
-                points: 1000, 
-                title: '게임 소개 1 - 기본 규칙',
-                content: '공격하는 팀의 선수가 타석에 들어서 부터 투수가 투구를 하기 직전까지 게이머는 투수/타자/수비수를 대상으로 공격 결과에 대한 예측을 하여 일정점수를 베팅 한다.'
-            },
-            20: { 
-                points: 2000, 
-                title: '게임 규칙 - 상세 규칙',
-                content: '타자가 타석에 들어서면 게이머들의 베팅이 시작되며, 투수가 투구를 하기 위해 세트 포지션에 임했을 때 베팅의 접속이 중단된다. 게이머는, 투수의 투구에 대한 공격의 결과 (1루/2루/3루/홈런/아웃 5가지 경우의 수) 를 예상하고 일정 점수를 1회에 한하여 투수/타자/수비수(9가지 경우의 수)에게 각각 베팅을 한다. 투수/타자/수비수의 공격/수비 결과에 따라, 공격/수비 결과를 맞춘 게이머들에게 공격/수비 결과를 맞추지 못한 나머지 게이머들의 점수를 균등하게 배분하여 가산 시켜준다. 게임의 시작과 종료는, 경기 중계방송이 시작되는 시점에 시작하여 경기 종료로 중계방송이 종료가 되었거나, 방송사의 사정으로 중계방송이 중단될 경우 게임도 종료된다.'
-            },
-            30: { 
-                points: 3000, 
-                title: '배팅 규칙 - 상세 규칙',
-                content: '게이머가 참여 경기를 선택한 후 로그인을하면, 기본 점수 1,000점을 부여하며, 경기중에도 포인트가 부족할 경우 회원의 등급에 따라 무료/유료로 충전을 할 수가 있다. 1회 초 첫 타자부터 팀에 관계없이 투수와 타석에 들어서는 매 타자마다 100점씩 베팅하며 추가로 유료결제로 점수충전을 하여 경기가 종료(정규이닝 혹은 연장전 포함)될 때까지 베팅을 한다. (수비수에 대한 규칙은 별도로 추가)'
-            }
-        };
 
         // 페이지 로드 시 실행
         document.addEventListener('DOMContentLoaded', async () => {
@@ -209,20 +187,25 @@
         function enableVideoButton() {
             document.getElementById('videoOption').onclick = () => watchVideo();
             document.getElementById('videoOption2').onclick = () => watchVideo2();
+            document.getElementById('videoOption3').onclick = () => watchVideo3();
         }
 
         // 동영상 버튼 비활성화
         function disableVideoButton() {
             const videoButton = document.getElementById('videoOption');
             const videoButton2 = document.getElementById('videoOption2');
+            const videoButton3 = document.getElementById('videoOption3');
             
             videoButton.onclick = null;
             videoButton2.onclick = null;
+            videoButton3.onclick = null;
             
             videoButton.classList.add('opacity-50', 'cursor-not-allowed');
             videoButton2.classList.add('opacity-50', 'cursor-not-allowed');
+            videoButton3.classList.add('opacity-50', 'cursor-not-allowed');
             videoButton.classList.remove('cursor-pointer');
             videoButton2.classList.remove('cursor-pointer');
+            videoButton3.classList.remove('cursor-pointer');
         }
 
         // 500포인트 초과 경고 모달 표시
@@ -360,6 +343,81 @@
 
         // 동영상 시청 (두 번째 메뉴)
         async function watchVideo2() {
+            if (!currentUser) {
+                alert('로그인 후 동영상을 시청해주세요.');
+                window.location.href = 'login.html';
+                return;
+            }
+
+            // 500포인트 초과 체크
+            if (currentUser.points > 500) {
+                alert('포인트가 500을 초과하여 동영상 시청이 제한됩니다.');
+                return;
+            }
+
+            // 동영상 모달 표시
+            const modal = document.getElementById('videoModal');
+            const video = document.getElementById('mascotVideo');
+            
+            modal.style.display = 'flex';
+            video.currentTime = 0; // 동영상 처음부터 재생
+            video.play();
+
+            // 동영상 완료 이벤트 리스너
+            let completed = false;
+            video.onended = async function() {
+                if (completed) return;
+                completed = true;
+                
+                modal.style.display = 'none';
+                video.pause();
+
+                // 포인트 지급 처리
+                try {
+                    const points = 1000;
+                    console.log('🔍 현재 사용자 정보:', currentUser);
+                    console.log('🔍 전송할 데이터:', { userId: currentUser.userId, addPoints: points });
+                    
+                    const response = await fetch('/api/update-points', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ 
+                            userId: currentUser.userId, 
+                            addPoints: points
+                        })
+                    });
+
+                    if (response.ok) {
+                        const data = await response.json();
+                        if (data.success) {
+                            // 서버 업데이트 성공
+                            currentUser.points = data.points;
+                            localStorage.setItem('currentUser', JSON.stringify(currentUser));
+                            document.getElementById('currentPoints').textContent = `${currentUser.points}P`;
+                            
+                            // 동영상 시청 완료 음성
+                            speakText(`빠던나인 소개 동영상 시청이 완료되었습니다. ${points.toLocaleString()}포인트가 지급되었습니다.`);
+                            alert(`동영상 시청 완료!\n${points.toLocaleString()}포인트가 지급되었습니다.`);
+                            
+                            // 포인트 충전 후에는 경고 모달 대신 성공 메시지만 표시
+                            if (currentUser.points > 500) {
+                                console.log('✅ 포인트 충전 완료 - 500포인트 초과로 더 이상 충전 불가');
+                            }
+                        } else {
+                            alert('포인트 지급에 실패했습니다. 다시 시도해주세요.');
+                        }
+                    } else {
+                        alert('서버 연결에 실패했습니다. 다시 시도해주세요.');
+                    }
+                } catch (error) {
+                    console.error('포인트 지급 오류:', error);
+                    alert('포인트 지급 중 오류가 발생했습니다. 다시 시도해주세요.');
+                }
+            }
+        }
+
+        // 동영상 시청 (세 번째 메뉴)
+        async function watchVideo3() {
             if (!currentUser) {
                 alert('로그인 후 동영상을 시청해주세요.');
                 window.location.href = 'login.html';
