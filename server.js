@@ -123,6 +123,10 @@ function getGameRecordCollection() {
     return mongoose.connection.db.collection('game-record');
 }
 
+function getCommentCollection() {
+    return mongoose.connection.db.collection('game-comment');
+}
+
 // 데이터 마이그레이션 API (영문 키를 한글 키로 변환)
 app.post('/api/migrate-betting-data', async (req, res) => {
     try {
@@ -3147,16 +3151,22 @@ app.get('/', (req, res) => {
                     return res.status(400).json({ success: false, message: '게시글 ID가 필요합니다.' }); 
                 }
                 
-        // MongoDB 연결 상태 확인
+                // MongoDB 연결 상태 확인
                 if (!checkMongoDBConnection()) {
                     return sendMongoDBErrorResponse(res, '데이터베이스 연결이 준비되지 않았습니다.');
                 }
                 
-                // 임시로 빈 댓글 배열 반환 (댓글 기능은 나중에 구현)
+                const commentCollection = getCommentCollection();
+                
+                // 해당 게시글의 댓글 조회
+                const comments = await commentCollection.find({ boardId: boardId }).sort({ createdAt: 1 }).toArray();
+                
+                console.log(`✅ 댓글 조회 완료: ${boardId} -> ${comments.length}개`);
+                
                 res.json({ 
                     success: true, 
                     message: '댓글을 조회했습니다.', 
-                    comments: [] 
+                    comments: comments 
                 });
             } catch (error) {
                 console.error('댓글 조회 오류:', error);
@@ -3167,12 +3177,61 @@ app.get('/', (req, res) => {
         app.post('/api/comment', async (req, res) => {
             try {
                 const { boardId, author, authorName, content } = req.body;
-                if (!boardId || !author || !authorName || !content) { return res.status(400).json({ success: false, message: '필수 정보가 누락되었습니다.' }); }
-                // MongoDB 연결 확인 제거 - 임시 데이터로 작동
+                if (!boardId || !author || !authorName || !content) { 
+                    return res.status(400).json({ success: false, message: '필수 정보가 누락되었습니다.' }); 
+                }
+                
+                // MongoDB 연결 상태 확인
+                if (!checkMongoDBConnection()) {
+                    return sendMongoDBErrorResponse(res, '데이터베이스 연결이 준비되지 않았습니다.');
+                }
+                
+                const commentCollection = getCommentCollection();
+                const boardCollection = getBoardCollection();
+                
+                // 게시글 존재 확인
+                const board = await boardCollection.findOne({ _id: boardId });
+                if (!board) {
+                    return res.status(404).json({ success: false, message: '게시글을 찾을 수 없습니다.' });
+                }
+                
                 const today = new Date();
                 const koreaTime = new Date(today.getTime() + (9 * 60 * 60 * 1000));
                 const todayString = koreaTime.getFullYear().toString() + '-' + String(koreaTime.getMonth() + 1).padStart(2, '0') + '-' + String(koreaTime.getDate()).padStart(2, '0');
-                res.json({ success: true, message: '댓글이 작성되었습니다.', data: { commentId: 'temp_' + Date.now(), boardId: boardId, author: author, authorName: authorName, content: content, createdAt: todayString } });
+                
+                // 댓글 데이터 생성
+                const commentData = {
+                    boardId: boardId,
+                    author: author,
+                    authorName: authorName,
+                    content: content,
+                    createdAt: todayString,
+                    updatedAt: todayString
+                };
+                
+                // 댓글 저장
+                const result = await commentCollection.insertOne(commentData);
+                
+                // 게시글의 댓글 수 증가
+                await boardCollection.updateOne(
+                    { _id: boardId },
+                    { $inc: { commentCount: 1 } }
+                );
+                
+                console.log(`✅ 댓글 작성 완료: ${authorName} -> ${content.substring(0, 20)}...`);
+                
+                res.json({ 
+                    success: true, 
+                    message: '댓글이 작성되었습니다.', 
+                    data: { 
+                        _id: result.insertedId,
+                        boardId: boardId, 
+                        author: author, 
+                        authorName: authorName, 
+                        content: content, 
+                        createdAt: todayString 
+                    } 
+                });
             } catch (error) {
                 console.error('댓글 작성 오류:', error);
                 res.status(500).json({ success: false, message: '댓글 작성 중 오류가 발생했습니다.' });
@@ -3183,8 +3242,40 @@ app.get('/', (req, res) => {
             try {
                 const { commentId } = req.params;
                 const { author } = req.body;
-                if (!commentId || !author) { return res.status(400).json({ success: false, message: '댓글 ID와 작성자 정보가 필요합니다.' }); }
-                // MongoDB 연결 확인 제거 - 임시 데이터로 작동
+                if (!commentId || !author) { 
+                    return res.status(400).json({ success: false, message: '댓글 ID와 작성자 정보가 필요합니다.' }); 
+                }
+                
+                // MongoDB 연결 상태 확인
+                if (!checkMongoDBConnection()) {
+                    return sendMongoDBErrorResponse(res, '데이터베이스 연결이 준비되지 않았습니다.');
+                }
+                
+                const commentCollection = getCommentCollection();
+                const boardCollection = getBoardCollection();
+                
+                // 댓글 조회
+                const comment = await commentCollection.findOne({ _id: commentId });
+                if (!comment) {
+                    return res.status(404).json({ success: false, message: '댓글을 찾을 수 없습니다.' });
+                }
+                
+                // 작성자 확인
+                if (comment.author !== author) {
+                    return res.status(403).json({ success: false, message: '댓글을 삭제할 권한이 없습니다.' });
+                }
+                
+                // 댓글 삭제
+                await commentCollection.deleteOne({ _id: commentId });
+                
+                // 게시글의 댓글 수 감소
+                await boardCollection.updateOne(
+                    { _id: comment.boardId },
+                    { $inc: { commentCount: -1 } }
+                );
+                
+                console.log(`✅ 댓글 삭제 완료: ${commentId} -> ${comment.authorName}`);
+                
                 res.json({ success: true, message: '댓글이 삭제되었습니다.' });
             } catch (error) {
                 console.error('댓글 삭제 오류:', error);
