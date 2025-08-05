@@ -1529,8 +1529,6 @@ app.post('/api/donation', async (req, res) => {
         
         console.log(`✅ 기부 처리 완료: ${userName} -> ${donationAmount}포인트 (${percentage}%)`);
         
-        console.log(`✅ 기부 처리 완료: ${userName} -> ${donationAmount}포인트 (${percentage}%)`);
-        
         res.json({
             success: true,
             message: '기부가 완료되었습니다.',

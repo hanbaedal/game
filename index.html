@@ -2501,13 +2501,41 @@
 
         async function handleDonation(percent) {
             try {
+                // selectedGame이 없거나 필수 정보가 없으면 오류 처리
+                if (!selectedGame || !selectedGame.gameNumber || !selectedGame.date) {
+                    speakText('게임 정보가 올바르지 않습니다. 게임을 다시 선택해주세요.');
+                    alert('게임 정보가 올바르지 않습니다. 게임을 다시 선택해주세요.');
+                    return;
+                }
+                
+                // predictionResult가 없으면 서버에서 최신 게임 정보를 가져와서 설정
+                let actualResult = selectedGame.predictionResult || '';
+                if (!actualResult) {
+                    try {
+                        const gameResponse = await fetch(`/api/game/${selectedGame.date}/${selectedGame.gameNumber}`);
+                        const gameData = await gameResponse.json();
+                        if (gameData.success && gameData.game.predictionResult) {
+                            actualResult = gameData.game.predictionResult;
+                        } else {
+                            speakText('게임 결과가 아직 입력되지 않았습니다.');
+                            alert('게임 결과가 아직 입력되지 않았습니다.');
+                            return;
+                        }
+                    } catch (error) {
+                        console.error('게임 정보 조회 오류:', error);
+                        speakText('게임 정보 조회 중 오류가 발생했습니다.');
+                        alert('게임 정보 조회 중 오류가 발생했습니다.');
+                        return;
+                    }
+                }
+                
                 // 서버에서 실제 승리 포인트 계산 요청
                 const response = await fetch('/api/betting/calculate-game-winners', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         gameNumber: selectedGame.gameNumber,
-                        actualResult: selectedGame.predictionResult || '',
+                        actualResult: actualResult,
                         date: selectedGame.date
                     })
                 });
@@ -2517,23 +2545,41 @@
                 const totalWinAmount = 100 + pointsPerWinner; // 고정 배팅 포인트(100) + 성공자당 분배 포인트
                 const donationAmount = Math.floor(totalWinAmount * (percent / 100)); // 기부할 포인트
                 const remainingAmount = totalWinAmount - donationAmount; // 남은 포인트
-            
-                // 기부 완료 음성 안내
-                speakText(`${percent}퍼센트 기부가 완료되었습니다. ${remainingAmount}포인트를 받으셨습니다.`);
                 
-                // 실제 기부 처리 로직 필요
-                alert(`${percent}% 기부가 처리되었습니다!\n기부 금액: ${donationAmount}포인트\n받을 포인트: ${remainingAmount}포인트`);
+                // 실제 기부 API 호출
+                const donationResponse = await fetch('/api/donation', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        userId: currentUser.userId,
+                        userName: currentUser.name,
+                        donationAmount: donationAmount,
+                        percentage: percent
+                    })
+                });
                 
-                // 남은 포인트를 사용자에게 지급
-                currentUser.points += remainingAmount;
-                document.getElementById('userPoints').textContent = `${currentUser.points}포인트`;
-                localStorage.setItem('currentUser', JSON.stringify(currentUser));
+                const donationData = await donationResponse.json();
                 
-                closeDonationModal();
-                // 기부 완료 후 배팅 선택 화면으로 돌아가기 (게임 선택 유지)
-                showSelectedGameOnly();
-                enableBettingSelection();
-                enableBettingPoints();
+                if (donationData.success) {
+                    // 남은 포인트를 사용자에게 지급
+                    currentUser.points += remainingAmount;
+                    document.getElementById('userPoints').textContent = `${currentUser.points}포인트`;
+                    localStorage.setItem('currentUser', JSON.stringify(currentUser));
+                    
+                    // 기부 완료 음성 안내
+                    speakText(`${percent}퍼센트 기부가 완료되었습니다. ${remainingAmount}포인트를 받으셨습니다.`);
+                    
+                    closeDonationModal();
+                    // 기부 완료 후 배팅 선택 화면으로 돌아가기 (게임 선택 유지)
+                    showSelectedGameOnly();
+                    enableBettingSelection();
+                    enableBettingPoints();
+                } else {
+                    speakText('기부 처리 중 오류가 발생했습니다. 다시 시도해주세요.');
+                    alert('기부 처리 중 오류가 발생했습니다: ' + donationData.message);
+                }
             } catch (error) {
                 console.error('기부 처리 중 오류:', error);
                 
