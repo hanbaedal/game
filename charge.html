@@ -13,7 +13,7 @@
 </head>
 <body class="bg-gray-900 text-white flex flex-col min-h-screen">
     <!-- 상단 네비게이션 -->
-    <nav class="bg-gray-800 p-4">
+    <nav class="fixed top-0 left-0 right-0 bg-gray-800 p-4 z-50">
         <div class="container mx-auto flex justify-between items-center">
             <div class="flex items-center space-x-4">
                 <h1 class="text-xl font-bold">포인트 충전</h1>
@@ -32,7 +32,7 @@
     </nav>
 
     <!-- 메인 컨텐츠 -->
-    <div class="container mx-auto px-4 py-8 flex-1 overflow-y-auto">
+    <div class="container mx-auto px-4 py-8 flex-1 overflow-y-auto pt-20 pb-16">
         <!-- 포인트 충전 안내 -->
         <div class="bg-gray-800 rounded-lg p-6 mb-8">
             <h2 class="text-2xl font-bold mb-4 text-center">
@@ -90,7 +90,7 @@
     </div>
 
     <!-- 하단 네비게이션 -->
-    <nav class="w-full bg-black text-white py-3 border-t border-gray-700 flex-shrink-0">
+    <nav class="fixed bottom-0 left-0 right-0 bg-black text-white py-3 border-t border-gray-700 z-50">
         <div class="flex justify-evenly">
             <div class="text-center cursor-pointer" onclick="location.href='invite.html'">
                 <i class="fas fa-user-plus text-2xl"></i>
