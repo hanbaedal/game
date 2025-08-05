@@ -730,6 +730,12 @@
             const container = document.getElementById('gameSelectionContainer');
             if (!container) return;
             
+            // gameData가 없거나 undefined인 경우 안전하게 처리
+            if (!gameData) {
+                console.warn('⚠️ gameData가 없습니다. 기본값을 사용합니다.');
+                gameData = {};
+            }
+            
             // DB에서 읽어온 데이터를 그대로 사용 (시간 계산 삭제)
             const progressStatus = gameData.progressStatus || '경기전';
             const bettingStart = gameData.bettingStart || '중지';
@@ -2573,12 +2579,21 @@
                     
                     closeDonationModal();
                     // 기부 완료 후 배팅 선택 화면으로 돌아가기 (게임 선택 유지)
-                    if (selectedGame) {
-                        showSelectedGameOnly(
-                            selectedGame.gameNumber,
-                            selectedGame.matchup || `${selectedGame.homeTeam || ''} vs ${selectedGame.awayTeam || ''}`,
-                            selectedGame
-                        );
+                    try {
+                        if (selectedGame) {
+                            console.log('🎯 기부 완료 후 게임 화면 업데이트:', selectedGame);
+                            showSelectedGameOnly(
+                                selectedGame.gameNumber,
+                                selectedGame.matchup || `${selectedGame.homeTeam || ''} vs ${selectedGame.awayTeam || ''}`,
+                                selectedGame
+                            );
+                        } else {
+                            console.warn('⚠️ selectedGame이 없습니다. 기본 화면으로 돌아갑니다.');
+                            loadSimpleGames(); // 기본 게임 목록으로 돌아가기
+                        }
+                    } catch (error) {
+                        console.error('❌ 게임 화면 업데이트 오류:', error);
+                        loadSimpleGames(); // 오류 시 기본 게임 목록으로 돌아가기
                     }
                     enableBettingSelection();
                     enableBettingPoints();
