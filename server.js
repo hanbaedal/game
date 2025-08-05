@@ -3211,9 +3211,15 @@ app.get('/', (req, res) => {
                 const koreaTime = new Date(today.getTime() + (9 * 60 * 60 * 1000));
                 const todayString = koreaTime.getFullYear().toString() + '-' + String(koreaTime.getMonth() + 1).padStart(2, '0') + '-' + String(koreaTime.getDate()).padStart(2, '0');
                 
-                // 댓글 데이터 생성
+                // 댓글 데이터 생성 (ObjectId 변환)
+                let commentBoardId = boardId;
+                if (boardId.match(/^[0-9a-fA-F]{24}$/)) {
+                    const { ObjectId } = require('mongodb');
+                    commentBoardId = new ObjectId(boardId);
+                }
+                
                 const commentData = {
-                    boardId: boardId,
+                    boardId: commentBoardId,
                     author: author,
                     authorName: authorName,
                     content: content,
