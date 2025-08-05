@@ -3158,16 +3158,20 @@ app.get('/', (req, res) => {
                 
                 const commentCollection = getCommentCollection();
                 
-                // 해당 게시글의 댓글 조회 (ObjectId 변환)
-                let query = { boardId: boardId };
-                if (boardId.match(/^[0-9a-fA-F]{24}$/)) {
-                    const { ObjectId } = require('mongodb');
-                    query = { boardId: new ObjectId(boardId) };
-                }
+                // 해당 게시글의 댓글 조회 (문자열과 ObjectId 모두 조회)
+                const { ObjectId } = require('mongodb');
+                const comments = await commentCollection.find({
+                    $or: [
+                        { boardId: boardId },  // 문자열로 저장된 경우
+                        { boardId: new ObjectId(boardId) }  // ObjectId로 저장된 경우
+                    ]
+                }).sort({ createdAt: 1 }).toArray();
                 
-                const comments = await commentCollection.find(query).sort({ createdAt: 1 }).toArray();
+                console.log(`🔍 댓글 조회 boardId: ${boardId}`);
+                console.log(`🔍 댓글 조회 쿼리: $or 조건으로 문자열과 ObjectId 모두 조회`);
                 
                 console.log(`✅ 댓글 조회 완료: ${boardId} -> ${comments.length}개`);
+                console.log(`📝 조회된 댓글들:`, comments);
                 
                 res.json({ 
                     success: true, 
@@ -3229,6 +3233,8 @@ app.get('/', (req, res) => {
                 
                 // 댓글 저장
                 const result = await commentCollection.insertOne(commentData);
+                console.log(`💾 댓글 저장 완료:`, result);
+                console.log(`📝 저장된 댓글 데이터:`, commentData);
                 
                 // 게시글의 댓글 수 증가
                 await boardCollection.updateOne(
