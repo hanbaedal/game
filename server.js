@@ -3249,11 +3249,20 @@ app.get('/', (req, res) => {
                 console.log(`💾 댓글 저장 완료:`, result);
                 console.log(`📝 저장된 댓글 데이터:`, commentData);
                 
-                // 게시글의 댓글 수 증가
-                await boardCollection.updateOne(
-                    { _id: boardId },
+                // 게시글의 댓글 수 증가 (ObjectId 변환)
+                let updateQuery = { _id: boardId };
+                if (boardId.match(/^[0-9a-fA-F]{24}$/)) {
+                    const { ObjectId } = require('mongodb');
+                    updateQuery = { _id: new ObjectId(boardId) };
+                }
+                
+                const updateResult = await boardCollection.updateOne(
+                    updateQuery,
                     { $inc: { commentCount: 1 } }
                 );
+                
+                console.log(`📊 게시글 댓글 수 증가 결과:`, updateResult);
+                console.log(`📊 업데이트된 게시글 ID: ${boardId}`);
                 
                 console.log(`✅ 댓글 작성 완료: ${authorName} -> ${content.substring(0, 20)}...`);
                 
@@ -3305,11 +3314,20 @@ app.get('/', (req, res) => {
                 // 댓글 삭제
                 await commentCollection.deleteOne({ _id: commentId });
                 
-                // 게시글의 댓글 수 감소
-                await boardCollection.updateOne(
-                    { _id: comment.boardId },
+                // 게시글의 댓글 수 감소 (ObjectId 변환)
+                let updateQuery = { _id: comment.boardId };
+                if (comment.boardId && comment.boardId.match(/^[0-9a-fA-F]{24}$/)) {
+                    const { ObjectId } = require('mongodb');
+                    updateQuery = { _id: new ObjectId(comment.boardId) };
+                }
+                
+                const updateResult = await boardCollection.updateOne(
+                    updateQuery,
                     { $inc: { commentCount: -1 } }
                 );
+                
+                console.log(`📊 게시글 댓글 수 감소 결과:`, updateResult);
+                console.log(`📊 업데이트된 게시글 ID: ${comment.boardId}`);
                 
                 console.log(`✅ 댓글 삭제 완료: ${commentId} -> ${comment.authorName}`);
                 
