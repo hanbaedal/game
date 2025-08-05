@@ -211,19 +211,21 @@
 
                 const data = await response.json();
                 
-                if (data.message) {
+                if (data.success) {
                     // 성공 모달 표시
                     document.getElementById('successModal').style.display = 'flex';
                     
                     // 로컬 스토리지 업데이트
-                    currentUser.name = data.user.name;
-                    localStorage.setItem('currentUser', JSON.stringify(currentUser));
-                    
-                    // 헤더의 사용자 이름 업데이트
-                    document.getElementById('userNameDisplay').textContent = `${data.user.name}님 환영합니다!`;
+                    if (data.data && data.data.user) {
+                        currentUser.name = data.data.user.name;
+                        localStorage.setItem('currentUser', JSON.stringify(currentUser));
+                        
+                        // 헤더의 사용자 이름 업데이트
+                        document.getElementById('userNameDisplay').textContent = `${data.data.user.name}님 환영합니다!`;
+                    }
                     
                 } else {
-                    alert(data.error || '회원정보 수정에 실패했습니다.');
+                    alert(data.message || '회원정보 수정에 실패했습니다.');
                 }
             } catch (error) {
                 console.error('회원정보 수정 오류:', error);
