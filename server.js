@@ -118,6 +118,11 @@ function getChargingCollection() {
     return mongoose.connection.db.collection('game-charging');
 }
 
+// game-record 컬렉션 가져오기 함수
+function getGameRecordCollection() {
+    return mongoose.connection.db.collection('game-record');
+}
+
 // 데이터 마이그레이션 API (영문 키를 한글 키로 변환)
 app.post('/api/migrate-betting-data', async (req, res) => {
     try {
@@ -572,6 +577,7 @@ app.post('/api/betting/submit', async (req, res) => {
         
         // 실제 배팅 데이터 저장
         const gameCollection = getBettingGameCollection(gameNumber);
+        const gameRecordCollection = getGameRecordCollection();
         
         // 기존 게임 데이터 조회
         const existingGame = await gameCollection.findOne({ 
@@ -636,8 +642,26 @@ app.post('/api/betting/submit', async (req, res) => {
             );
         }
         
+        // game-record 컬렉션에 배팅 기록 저장
+        const bettingRecord = {
+            userId: userId,
+            userName: userName || user.name,
+            gameNumber: parseInt(gameNumber),
+            date: date,
+            matchup: matchup,
+            prediction: prediction,
+            points: parseInt(points),
+            betTime: new Date(),
+            status: 'active',
+            result: null,
+            createdAt: new Date()
+        };
+        
+        await gameRecordCollection.insertOne(bettingRecord);
+        
         console.log(`게임 배팅 제출: ${userId} - ${prediction} ${points}포인트`);
         console.log(`게임 번호: ${gameNumber}, 날짜: ${date}`);
+        console.log(`✅ game-record 컬렉션에 배팅 기록 저장 완료`);
         
         res.json({
             success: true,
