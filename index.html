@@ -1881,14 +1881,6 @@
 
         // 기부 처리 함수
         async function processDonation(donationAmount, percentage) {
-            const finalPoints = currentUser.points - donationAmount;
-            // 한국 시간대로 오늘 날짜 계산
-            const now = new Date();
-            const koreaTime = new Date(now.getTime() + (9 * 60 * 60 * 1000)); // UTC+9
-            const today = koreaTime.getFullYear().toString() + 
-                         String(koreaTime.getMonth() + 1).padStart(2, '0') + 
-                         String(koreaTime.getDate()).padStart(2, '0');
-            
             try {
                 // 서버에서 실제 승리 포인트 계산
                 const pointsResponse = await fetch('/api/betting/calculate-game-winners', {
@@ -1903,7 +1895,16 @@
                 
                 const pointsData = await pointsResponse.json();
                 const pointsPerWinner = pointsData.success ? pointsData.data.pointsPerWinner : 0;
-                const winAmount = 100 + pointsPerWinner; // 고정 배팅 포인트(100) + 성공자당 분배 포인트
+                const totalWinAmount = 100 + pointsPerWinner; // 고정 배팅 포인트(100) + 성공자당 분배 포인트
+                const calculatedDonationAmount = Math.floor(totalWinAmount * (percentage / 100)); // 기부할 포인트
+                const remainingAmount = totalWinAmount - calculatedDonationAmount; // 남은 포인트
+                
+                // 한국 시간대로 오늘 날짜 계산
+                const now = new Date();
+                const koreaTime = new Date(now.getTime() + (9 * 60 * 60 * 1000)); // UTC+9
+                const today = koreaTime.getFullYear().toString() + 
+                             String(koreaTime.getMonth() + 1).padStart(2, '0') + 
+                             String(koreaTime.getDate()).padStart(2, '0');
                 
                 const response = await fetch('/api/donation', {
                     method: 'POST',
@@ -1913,7 +1914,7 @@
                     body: JSON.stringify({
                         userId: currentUser.userId,
                         userName: currentUser.name,
-                        donationAmount: donationAmount,
+                        donationAmount: calculatedDonationAmount,
                         percentage: percentage
                     })
                 });
@@ -1921,19 +1922,20 @@
                 const data = await response.json();
                 
                 if (data.success) {
-                    currentUser.points = finalPoints;
-                    document.getElementById('userPoints').textContent = `${finalPoints}포인트`;
+                    // 남은 포인트를 사용자에게 지급
+                    currentUser.points += remainingAmount;
+                    document.getElementById('userPoints').textContent = `${currentUser.points}포인트`;
                     localStorage.setItem('currentUser', JSON.stringify(currentUser));
                     
                     // 기부 완료 음성 안내
-                    speakText(`${percentage}퍼센트 기부가 완료되었습니다. ${finalPoints}포인트를 받으셨습니다.`);
+                    speakText(`${percentage}퍼센트 기부가 완료되었습니다. ${remainingAmount}포인트를 받으셨습니다.`);
                     
                     // 기부 모달 닫기
                     document.getElementById('donationModal').style.display = 'none';
                     document.getElementById('donationConfirm').classList.add('hidden');
                     
                     // 기부 완료 모달 표시
-                    showDonationCompleteModal(donationAmount, percentage);
+                    showDonationCompleteModal(calculatedDonationAmount, percentage);
                 } else {
                     speakText('기부 처리 중 오류가 발생했습니다. 다시 시도해주세요.');
                     alert('기부 처리 중 오류가 발생했습니다: ' + data.message);
