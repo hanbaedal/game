@@ -451,20 +451,8 @@
                     localStorage.setItem('currentUser', JSON.stringify(data.user));
                         console.log('사용자 정보를 로컬 스토리지에 저장:', data.user);
                         
-                        // 로그인 상태 업데이트
-                        updateLoginStatus(data.user);
-                        
-                        // 로그인 폼 숨기고 상태 표시
-                        const loginStatus = document.getElementById('loginStatus');
-                        const loginForm = document.getElementById('loginForm');
-                        
-                        loginStatus.style.display = 'block';
-                        loginForm.classList.add('hidden');
-                        
-                        // 3초 후 메인 페이지로 이동
-                        setTimeout(() => {
-                            window.location.href = 'index.html';
-                        }, 3000);
+                        // 바로 메인 페이지로 이동 (환영 모달 숨김)
+                        window.location.href = 'index.html';
                     }
                 } else {
                     showModal(data.message || '아이디 또는 비밀번호가 일치하지 않습니다');
@@ -492,19 +480,9 @@
             };
             
             localStorage.setItem('currentUser', JSON.stringify(guestUser));
-            updateLoginStatus(guestUser);
             
-            // 로그인 폼 숨기고 상태 표시
-            const loginStatus = document.getElementById('loginStatus');
-            const loginForm = document.getElementById('loginForm');
-            
-            loginStatus.style.display = 'block';
-            loginForm.classList.add('hidden');
-            
-            // 3초 후 메인 페이지로 이동
-            setTimeout(() => {
-                window.location.href = 'index.html';
-            }, 3000);
+            // 바로 메인 페이지로 이동 (환영 모달 숨김)
+            window.location.href = 'index.html';
         }
     </script>
 </body>
