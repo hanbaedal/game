@@ -976,8 +976,7 @@
             
             if (
                 selectedGame &&
-                selectedGame.bettingStart === '시작' &&
-                selectedGame.bettingStop === '진행'
+                selectedGame.bettingStart === '시작'
             ) {
                 if (bettingSelectionBtn) {
                     bettingSelectionBtn.disabled = false;
@@ -995,14 +994,24 @@
 
         // 배팅 선택 모달 표시
         function showBettingSelectionModal() {
+            console.log('🎯 배팅 선택 모달 요청:', {
+                selectedGame: selectedGame,
+                bettingStart: selectedGame?.bettingStart,
+                bettingStop: selectedGame?.bettingStop
+            });
+            
             // 배팅 상태 확인
             if (!selectedGame || 
-                selectedGame.bettingStart !== '시작' || 
-                selectedGame.bettingStop !== '진행') {
+                selectedGame.bettingStart !== '시작') {
+                console.log('❌ 배팅 상태 조건 불만족:', {
+                    hasSelectedGame: !!selectedGame,
+                    bettingStart: selectedGame?.bettingStart
+                });
                 speakText('아직 배팅이 시작되지 않았습니다.');
                 return;
             }
             
+            console.log('✅ 배팅 선택 모달 표시');
             const modal = document.getElementById('bettingSelectionModal');
             modal.classList.remove('hidden');
             modal.style.display = 'flex';
@@ -1084,17 +1093,24 @@
         function enableBettingChoices() {
             const bettingSelectionBtn = document.getElementById('bettingSelectionBtn');
             
+            console.log('🎯 배팅 선택 버튼 활성화 체크:', {
+                selectedGame: selectedGame,
+                bettingStart: selectedGame?.bettingStart,
+                bettingStop: selectedGame?.bettingStop
+            });
+            
             if (
                 selectedGame &&
-                selectedGame.bettingStart === '시작' &&
-                selectedGame.bettingStop === '진행'
+                selectedGame.bettingStart === '시작'
             ) {
+                console.log('✅ 배팅 선택 버튼 활성화');
                 if (bettingSelectionBtn) {
                     bettingSelectionBtn.disabled = false;
                     bettingSelectionBtn.classList.remove('opacity-50', 'cursor-not-allowed');
                     bettingSelectionBtn.classList.add('cursor-pointer');
                 }
             } else {
+                console.log('❌ 배팅 선택 버튼 비활성화');
                 if (bettingSelectionBtn) {
                     bettingSelectionBtn.disabled = true;
                     bettingSelectionBtn.classList.add('opacity-50', 'cursor-not-allowed');
@@ -1109,7 +1125,6 @@
             if (
                 selectedGame &&
                 selectedGame.bettingStart === '시작' &&
-                selectedGame.bettingStop === '진행' &&
                 window.selectedChoice
             ) {
                 betBtn.disabled = false;
