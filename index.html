@@ -985,19 +985,65 @@
             const bettingOptionsContainer = document.getElementById('bettingOptionsContainer');
             
             if (bettingOptionsContainer) {
-                // 모든 배팅 버튼에서 선택 상태 제거
+                // 모든 배팅 버튼 숨기기
                 const betButtons = bettingOptionsContainer.querySelectorAll('.bet-choice-btn');
                 betButtons.forEach(btn => {
+                    btn.style.display = 'none';
                     btn.classList.remove('bg-blue-600', 'border-2', 'border-blue-400');
                     btn.classList.add('bg-gray-700');
                 });
                 
-                // 선택된 배팅 버튼에 선택 상태 추가
+                // 선택된 배팅 버튼만 표시하고 선택 상태 추가
                 const selectedButton = bettingOptionsContainer.querySelector(`[onclick*="${choice}"]`);
                 if (selectedButton) {
+                    selectedButton.style.display = 'block';
                     selectedButton.classList.remove('bg-gray-700');
                     selectedButton.classList.add('bg-blue-600', 'border-2', 'border-blue-400');
+                    
+                    // 선택된 버튼에 "다시 선택" 텍스트 추가
+                    const buttonContent = selectedButton.querySelector('.flex-1');
+                    if (buttonContent) {
+                        const originalText = buttonContent.innerHTML;
+                        buttonContent.innerHTML = originalText + '<div class="text-xs text-blue-300 mt-1">(클릭하여 다시 선택)</div>';
+                    }
+                    
+                    // 선택된 버튼에 다시 클릭하면 모든 옵션을 표시하는 이벤트 추가
+                    selectedButton.onclick = function() {
+                        showAllBettingOptions();
+                    };
                 }
+            }
+        }
+
+        // 모든 배팅 옵션 표시
+        function showAllBettingOptions() {
+            const bettingOptionsContainer = document.getElementById('bettingOptionsContainer');
+            
+            if (bettingOptionsContainer) {
+                // 모든 배팅 버튼 표시
+                const betButtons = bettingOptionsContainer.querySelectorAll('.bet-choice-btn');
+                betButtons.forEach(btn => {
+                    btn.style.display = 'block';
+                    btn.classList.remove('bg-blue-600', 'border-2', 'border-blue-400');
+                    btn.classList.add('bg-gray-700');
+                    
+                    // 원래 텍스트 복원
+                    const buttonContent = btn.querySelector('.flex-1');
+                    if (buttonContent) {
+                        const originalText = buttonContent.innerHTML.replace('<div class="text-xs text-blue-300 mt-1">(클릭하여 다시 선택)</div>', '');
+                        buttonContent.innerHTML = originalText;
+                    }
+                    
+                    // 원래 onclick 이벤트 복원
+                    const choice = btn.getAttribute('onclick').match(/'([^']+)'/)[1];
+                    btn.onclick = function() {
+                        selectBetChoiceFromModal(choice);
+                    };
+                });
+                
+                // 선택 상태 초기화
+                window.selectedChoice = null;
+                enablePredictionButton();
             }
         }
 
