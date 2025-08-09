@@ -93,27 +93,42 @@
                     <div class="flex-1">
                         <p class="text-sm">배팅선택</p>
                         <div id="bettingSection" class="space-y-2 mt-2">
-                            <div class="grid grid-cols-2 gap-2">
-                                <button class="bet-choice-btn bg-pink-200 hover:bg-pink-300 text-pink-800 p-3 rounded cursor-pointer text-center" data-choice="1루" onclick="selectBetChoice('1루')">
-                                    <div class="font-bold text-lg">1루</div>
-                                    <div class="text-xs opacity-75">안타</div>
-                                </button>
-                                <button class="bet-choice-btn bg-orange-200 hover:bg-orange-300 text-orange-800 p-3 rounded cursor-pointer text-center" data-choice="2루" onclick="selectBetChoice('2루')">
-                                    <div class="font-bold text-lg">2루</div>
-                                    <div class="text-xs opacity-75">2루타</div>
-                                </button>
-                                <button class="bet-choice-btn bg-yellow-200 hover:bg-yellow-300 text-yellow-800 p-3 rounded cursor-pointer text-center" data-choice="3루" onclick="selectBetChoice('3루')">
-                                    <div class="font-bold text-lg">3루</div>
-                                    <div class="text-xs opacity-75">3루타</div>
-                                </button>
-                                <button class="bet-choice-btn bg-green-200 hover:bg-green-300 text-green-800 p-3 rounded cursor-pointer text-center" data-choice="홈런" onclick="selectBetChoice('홈런')">
-                                    <div class="font-bold text-lg">홈런</div>
-                                    <div class="text-xs opacity-75">홈런</div>
-                                </button>
-                                <button class="bet-choice-btn bg-purple-200 hover:bg-purple-300 text-purple-800 p-3 rounded cursor-pointer text-center" data-choice="아웃" onclick="selectBetChoice('아웃')">
-                                    <div class="font-bold text-lg">아웃</div>
-                                    <div class="text-xs opacity-75">아웃</div>
-                                </button>
+                            <div class="space-y-2">
+                                <label class="bet-choice-item flex items-center p-3 bg-gray-700 rounded cursor-pointer hover:bg-gray-600 transition-colors">
+                                    <input type="radio" name="betChoice" value="1루" class="bet-choice-radio mr-3 w-4 h-4 text-blue-600 bg-gray-700 border-gray-600 focus:ring-blue-500" onchange="selectBetChoice('1루')">
+                                    <div class="flex-1">
+                                        <div class="font-bold text-pink-300">1루</div>
+                                        <div class="text-xs text-gray-400">안타</div>
+                                    </div>
+                                </label>
+                                <label class="bet-choice-item flex items-center p-3 bg-gray-700 rounded cursor-pointer hover:bg-gray-600 transition-colors">
+                                    <input type="radio" name="betChoice" value="2루" class="bet-choice-radio mr-3 w-4 h-4 text-blue-600 bg-gray-700 border-gray-600 focus:ring-blue-500" onchange="selectBetChoice('2루')">
+                                    <div class="flex-1">
+                                        <div class="font-bold text-orange-300">2루</div>
+                                        <div class="text-xs text-gray-400">2루타</div>
+                                    </div>
+                                </label>
+                                <label class="bet-choice-item flex items-center p-3 bg-gray-700 rounded cursor-pointer hover:bg-gray-600 transition-colors">
+                                    <input type="radio" name="betChoice" value="3루" class="bet-choice-radio mr-3 w-4 h-4 text-blue-600 bg-gray-700 border-gray-600 focus:ring-blue-500" onchange="selectBetChoice('3루')">
+                                    <div class="flex-1">
+                                        <div class="font-bold text-yellow-300">3루</div>
+                                        <div class="text-xs text-gray-400">3루타</div>
+                                    </div>
+                                </label>
+                                <label class="bet-choice-item flex items-center p-3 bg-gray-700 rounded cursor-pointer hover:bg-gray-600 transition-colors">
+                                    <input type="radio" name="betChoice" value="홈런" class="bet-choice-radio mr-3 w-4 h-4 text-blue-600 bg-gray-700 border-gray-600 focus:ring-blue-500" onchange="selectBetChoice('홈런')">
+                                    <div class="flex-1">
+                                        <div class="font-bold text-green-300">홈런</div>
+                                        <div class="text-xs text-gray-400">홈런</div>
+                                    </div>
+                                </label>
+                                <label class="bet-choice-item flex items-center p-3 bg-gray-700 rounded cursor-pointer hover:bg-gray-600 transition-colors">
+                                    <input type="radio" name="betChoice" value="아웃" class="bet-choice-radio mr-3 w-4 h-4 text-blue-600 bg-gray-700 border-gray-600 focus:ring-blue-500" onchange="selectBetChoice('아웃')">
+                                    <div class="flex-1">
+                                        <div class="font-bold text-purple-300">아웃</div>
+                                        <div class="text-xs text-gray-400">아웃</div>
+                                    </div>
+                                </label>
                             </div>
                         </div>
                     </div>
@@ -514,13 +529,14 @@
                     selectedChoice = null;
                     selectedAmount = 100;
                     
-                    // 배팅 선택 버튼 초기화
-                    document.querySelectorAll('.bet-choice-btn').forEach(btn => {
-                        btn.classList.remove('bg-blue-600', 'border-blue-400');
-                        btn.classList.add('bg-gray-600');
-                        btn.disabled = true;
-                        btn.classList.add('opacity-50', 'cursor-not-allowed');
-                        btn.classList.remove('cursor-pointer');
+                    // 배팅 선택 체크박스 초기화
+                    document.querySelectorAll('.bet-choice-item').forEach(item => {
+                        item.classList.remove('bg-blue-600', 'border-2', 'border-blue-400');
+                        item.classList.add('bg-gray-700');
+                    });
+                    document.querySelectorAll('.bet-choice-radio').forEach(radio => {
+                        radio.checked = false;
+                        radio.disabled = true;
                     });
                     
                     // 예측하기 버튼 비활성화
@@ -777,13 +793,14 @@
                 btn.classList.add('bg-green-600', 'border-green-500');
             });
             
-            // 배팅 선택 버튼 초기화
-            document.querySelectorAll('.bet-choice-btn').forEach(btn => {
-                btn.classList.remove('bg-blue-600', 'border-blue-400');
-                btn.classList.add('bg-gray-600');
-                btn.disabled = true;
-                btn.classList.add('opacity-50', 'cursor-not-allowed');
-                btn.classList.remove('cursor-pointer');
+            // 배팅 선택 체크박스 초기화
+            document.querySelectorAll('.bet-choice-item').forEach(item => {
+                item.classList.remove('bg-blue-600', 'border-2', 'border-blue-400');
+                item.classList.add('bg-gray-700');
+            });
+            document.querySelectorAll('.bet-choice-radio').forEach(radio => {
+                radio.checked = false;
+                radio.disabled = true;
             });
             
             // 예측하기 버튼 비활성화
@@ -897,12 +914,15 @@
                 }
                 btn.onclick = null;
             });
-            // 포인트 선택 전에는 배팅 항목 버튼 비활성화
-            const betButtons = document.querySelectorAll('.bet-choice-btn');
-            betButtons.forEach(b => {
-                b.disabled = true;
-                b.classList.add('opacity-50', 'cursor-not-allowed');
-                b.classList.remove('cursor-pointer');
+            // 포인트 선택 전에는 배팅 항목 체크박스 비활성화
+            const betChoiceRadios = document.querySelectorAll('.bet-choice-radio');
+            const betChoiceItems = document.querySelectorAll('.bet-choice-item');
+            betChoiceRadios.forEach(radio => {
+                radio.disabled = true;
+            });
+            betChoiceItems.forEach(item => {
+                item.classList.add('opacity-50', 'cursor-not-allowed');
+                item.classList.remove('cursor-pointer');
             });
             // 안내 문구 숨김
             const guide = document.getElementById('bettingTypeGuide');
@@ -915,27 +935,33 @@
 
         // 배팅 선택 활성화
         function enableBettingSelection() {
-            const betButtons = document.querySelectorAll('.bet-choice-btn');
+            const betChoiceRadios = document.querySelectorAll('.bet-choice-radio');
+            const betChoiceItems = document.querySelectorAll('.bet-choice-item');
+            
             if (
                 selectedGame &&
                 selectedGame.bettingStart === '시작' &&
                 selectedGame.bettingStop === '진행'
             ) {
-                betButtons.forEach(b => {
-                    b.disabled = false;
-                    b.classList.remove('opacity-50', 'cursor-not-allowed');
-                    b.classList.add('cursor-pointer');
+                betChoiceRadios.forEach(radio => {
+                    radio.disabled = false;
+                });
+                betChoiceItems.forEach(item => {
+                    item.classList.remove('opacity-50', 'cursor-not-allowed');
+                    item.classList.add('cursor-pointer');
                 });
             } else {
-                betButtons.forEach(b => {
-                    b.disabled = true;
-                    b.classList.add('opacity-50', 'cursor-not-allowed');
-                    b.classList.remove('cursor-pointer');
+                betChoiceRadios.forEach(radio => {
+                    radio.disabled = true;
+                });
+                betChoiceItems.forEach(item => {
+                    item.classList.add('opacity-50', 'cursor-not-allowed');
+                    item.classList.remove('cursor-pointer');
                 });
             }
         }
 
-        // 배팅 선택 함수 (경기 선택 방식과 유사)
+        // 배팅 선택 함수 (체크박스 방식)
         function selectBetChoice(choice) {
             console.log(`🎯 배팅 선택: ${choice}`);
             
@@ -947,18 +973,21 @@
                 return;
             }
             
-            // 모든 배팅 선택 버튼에서 선택 상태 제거
-            const betChoiceButtons = document.querySelectorAll('.bet-choice-btn');
-            betChoiceButtons.forEach(btn => {
-                btn.classList.remove('bg-blue-600', 'border-2', 'border-blue-400');
-                btn.classList.add('opacity-75');
+            // 모든 배팅 선택 아이템에서 선택 상태 제거
+            const betChoiceItems = document.querySelectorAll('.bet-choice-item');
+            betChoiceItems.forEach(item => {
+                item.classList.remove('bg-blue-600', 'border-2', 'border-blue-400');
+                item.classList.add('bg-gray-700');
             });
             
-            // 선택된 버튼에 선택 상태 추가
-            const selectedButton = document.querySelector(`[data-choice="${choice}"]`);
-            if (selectedButton) {
-                selectedButton.classList.remove('opacity-75');
-                selectedButton.classList.add('bg-blue-600', 'border-2', 'border-blue-400');
+            // 선택된 아이템에 선택 상태 추가
+            const selectedRadio = document.querySelector(`input[value="${choice}"]`);
+            if (selectedRadio) {
+                const selectedItem = selectedRadio.closest('.bet-choice-item');
+                if (selectedItem) {
+                    selectedItem.classList.remove('bg-gray-700');
+                    selectedItem.classList.add('bg-blue-600', 'border-2', 'border-blue-400');
+                }
             }
             
             // 선택된 배팅 유형 저장
@@ -972,25 +1001,30 @@
             enablePredictionButton();
         }
 
-        // 배팅 선택 버튼 활성화
+        // 배팅 선택 체크박스 활성화
         function enableBettingChoices() {
-            const betChoiceButtons = document.querySelectorAll('.bet-choice-btn');
+            const betChoiceRadios = document.querySelectorAll('.bet-choice-radio');
+            const betChoiceItems = document.querySelectorAll('.bet-choice-item');
             
             if (
                 selectedGame &&
                 selectedGame.bettingStart === '시작' &&
                 selectedGame.bettingStop === '진행'
             ) {
-                betChoiceButtons.forEach(btn => {
-                    btn.disabled = false;
-                    btn.classList.remove('opacity-50', 'cursor-not-allowed');
-                    btn.classList.add('cursor-pointer');
+                betChoiceRadios.forEach(radio => {
+                    radio.disabled = false;
+                });
+                betChoiceItems.forEach(item => {
+                    item.classList.remove('opacity-50', 'cursor-not-allowed');
+                    item.classList.add('cursor-pointer');
                 });
             } else {
-                betChoiceButtons.forEach(btn => {
-                    btn.disabled = true;
-                    btn.classList.add('opacity-50', 'cursor-not-allowed');
-                    btn.classList.remove('cursor-pointer');
+                betChoiceRadios.forEach(radio => {
+                    radio.disabled = true;
+                });
+                betChoiceItems.forEach(item => {
+                    item.classList.add('opacity-50', 'cursor-not-allowed');
+                    item.classList.remove('cursor-pointer');
                 });
             }
         }
@@ -1343,13 +1377,14 @@
                 btn.classList.add('bg-green-600', 'border-green-500');
             });
             
-            // 배팅 선택 버튼 초기화
-            document.querySelectorAll('.bet-choice-btn').forEach(btn => {
-                btn.classList.remove('bg-blue-600', 'border-blue-400');
-                btn.classList.add('bg-gray-600');
-                btn.disabled = true;
-                btn.classList.add('opacity-50', 'cursor-not-allowed');
-                btn.classList.remove('cursor-pointer');
+            // 배팅 선택 체크박스 초기화
+            document.querySelectorAll('.bet-choice-item').forEach(item => {
+                item.classList.remove('bg-blue-600', 'border-2', 'border-blue-400');
+                item.classList.add('bg-gray-700');
+            });
+            document.querySelectorAll('.bet-choice-radio').forEach(radio => {
+                radio.checked = false;
+                radio.disabled = true;
             });
             
             // 예측하기 버튼 비활성화
