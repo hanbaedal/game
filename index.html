@@ -300,6 +300,37 @@
                 </div>
             </div>
 
+            <!-- 혼자서 승리 시 안내 모달 -->
+            <div id="soloWinModal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center z-50">
+                <div class="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+                    <h3 class="text-xl font-bold text-center mb-4 text-red-600">🎯 혼자서 게임하셨군요!</h3>
+                    
+                    <div class="space-y-3 mb-6">
+                        <p class="text-red-600 font-semibold text-center">이 게임은 친구들과 함께 즐기는 게임입니다.</p>
+                        <p class="text-red-600 font-semibold text-center">혼자서는 승리수당과 기부가 계산되지 않습니다.</p>
+                        <p class="text-red-600 font-semibold text-center">친구들을 초대해서 더 재미있게 게임해보세요!</p>
+                    </div>
+
+                    <div class="bg-gray-100 p-3 rounded-lg mb-4">
+                        <p class="text-sm text-gray-700 text-center">
+                            <strong>게임 규칙:</strong><br>
+                            • 2명 이상 참가 시 승리수당 계산<br>
+                            • 패자의 배팅 포인트를 승리자들이 분배<br>
+                            • 승리수당에서 기부 가능
+                        </p>
+                    </div>
+
+                    <div class="space-y-2">
+                        <button id="inviteFriendsBtn" class="w-full bg-red-600 text-white py-2 px-4 rounded-lg hover:bg-red-700 font-semibold">
+                            🔗 친구 초대하기
+                        </button>
+                        <button id="nextGameBtn" class="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 font-semibold">
+                            🎮 다음 게임하기
+                        </button>
+                    </div>
+                </div>
+            </div>
+
 
         </div>
     </main>
@@ -2022,6 +2053,16 @@
                 const winningBonus = pointsPerWinner; // 승리수당만 기부 대상
                 const calculatedDonationAmount = calculateDonation(winningBonus, percentage);
                 
+                // 혼자서 승리한 경우 감지
+                const totalUniqueUsers = pointsData.data.totalUniqueUsers || 1;
+                const winnerCount = pointsData.data.winnerCount || 1;
+                
+                if (totalUniqueUsers === 1 && winnerCount === 1) {
+                    console.log('🎯 혼자서 승리 감지 - 기부 모달 대신 안내 모달 표시');
+                    showSoloWinModal();
+                    return; // 기부 처리 중단
+                }
+                
                 console.log('💰 기부 계산:', {
                     원금: originalBet,
                     승리수당: winningBonus,
@@ -2110,6 +2151,26 @@
         // 공통 기부 계산 함수 (승리수당에서만 계산)
         function calculateDonation(winningBonus, percentage) {
             return Math.floor(winningBonus * (percentage / 100)); // 승리수당에서만 기부 계산
+        }
+
+        // 혼자서 승리 시 안내 모달 표시 함수
+        function showSoloWinModal() {
+            const modal = document.getElementById('soloWinModal');
+            modal.style.display = 'flex';
+            
+            // 친구 초대 버튼 이벤트
+            document.getElementById('inviteFriendsBtn').onclick = function() {
+                window.location.href = '/invite.html';
+            };
+            
+            // 다음 게임 버튼 이벤트
+            document.getElementById('nextGameBtn').onclick = function() {
+                modal.style.display = 'none';
+                resetGame(); // 게임 초기화하고 다시 시작
+            };
+            
+            // 음성 안내
+            speakText('혼자서 게임하셨군요. 이 게임은 친구들과 함께 즐기는 게임입니다.');
         }
 
         // 기부 완료 모달 표시 함수
@@ -2718,6 +2779,16 @@
                 const originalBet = 100; // 원금 (기부 대상 아님)
                 const winningBonus = pointsPerWinner; // 승리수당만 기부 대상
                 const donationAmount = calculateDonation(winningBonus, percent);
+                
+                // 혼자서 승리한 경우 감지
+                const totalUniqueUsers = data.data.totalUniqueUsers || 1;
+                const winnerCount = data.data.winnerCount || 1;
+                
+                if (totalUniqueUsers === 1 && winnerCount === 1) {
+                    console.log('🎯 혼자서 승리 감지 - 기부 모달 대신 안내 모달 표시');
+                    showSoloWinModal();
+                    return; // 기부 처리 중단
+                }
                 
                 console.log('💰 기부 계산:', {
                     원금: originalBet,
