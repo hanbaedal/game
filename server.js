@@ -1540,10 +1540,33 @@ app.post('/api/donation', async (req, res) => {
             updatedAt: todayString
         };
         
+        // 사용자 포인트 차감 (기부 금액만큼)
+        const user = await userCollection.findOne({ userId: userId });
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: '사용자를 찾을 수 없습니다.'
+            });
+        }
+        
+        if (user.points < donationAmount) {
+            return res.status(400).json({
+                success: false,
+                message: '보유 포인트가 부족합니다.'
+            });
+        }
+        
         // 기부 기록 저장
         await donationCollection.insertOne(donationData);
         
+        // 사용자 포인트 차감
+        await userCollection.updateOne(
+            { userId: userId },
+            { $inc: { points: -donationAmount } }
+        );
+        
         console.log(`✅ 기부 처리 완료: ${userName} -> ${donationAmount}포인트 (${percentage}%)`);
+        console.log(`💰 사용자 포인트 차감: ${user.points} → ${user.points - donationAmount}`);
         
         res.json({
             success: true,
@@ -1553,7 +1576,8 @@ app.post('/api/donation', async (req, res) => {
                 userName: userName,
                 donationAmount: parseInt(donationAmount),
                 percentage: parseInt(percentage),
-                createdAt: todayString
+                createdAt: todayString,
+                remainingPoints: user.points - donationAmount
             }
         });
         
@@ -2931,18 +2955,19 @@ app.post('/api/admin/calculate-winnings', async (req, res) => {
         const loserCount = totalBets - winnerCount;
         
         // 승리 포인트 계산: (패자 수 × 100) ÷ 승리자 수
+        // 패자들이 잃은 포인트를 승리자들이 균등하게 분배
         const totalLoserPoints = loserCount * 100; // 고정 배팅 포인트 100
         const pointsPerWinner = winnerCount > 0 ? Math.floor(totalLoserPoints / winnerCount) : 0;
         
         console.log(`🏆 승리자 배팅:`, winners);
         
-        // 승리자들에게 포인트 지급
+        // 승리자들에게 포인트 지급 (원금 100은 이미 차감되어 있으므로 승리 수당만 추가)
         for (const winner of winners) {
             await userCollection.updateOne(
                 { userId: winner.userId },
                 { $inc: { points: pointsPerWinner } }
             );
-            console.log(`💰 ${winner.userName || winner.userId}에게 ${pointsPerWinner}포인트 지급`);
+            console.log(`💰 ${winner.userName || winner.userId}에게 승리 수당 ${pointsPerWinner}포인트 지급`);
         }
         
         console.log(`✅ 게임 ${gameNumber} 승리포인트 계산 완료:`);
@@ -2951,6 +2976,8 @@ app.post('/api/admin/calculate-winnings', async (req, res) => {
         console.log(`- 패자: ${loserCount}명`);
         console.log(`- 총 패자 포인트: ${totalLoserPoints}`);
         console.log(`- 성공자당 분배 포인트: ${pointsPerWinner}`);
+        console.log(`📊 수당 계산 공식: (${loserCount} × 100) ÷ ${winnerCount} = ${pointsPerWinner}`);
+        console.log(`💡 승리자는 원금 100포인트 + 승리 수당 ${pointsPerWinner}포인트를 받습니다.`);
         
         res.json({
             success: true,

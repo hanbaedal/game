@@ -1726,12 +1726,8 @@
         // 수동 배팅 세션 생성 함수 (테스트용)
         async function createBettingSession() {
             try {
-                        // 한국 시간대로 오늘 날짜 계산 (YYYY-MM-DD 형식)
-        const now = new Date();
-        const koreaTime = new Date(now.getTime() + (9 * 60 * 60 * 1000)); // UTC+9
-        const today = koreaTime.getFullYear().toString() + 
-                     '-' + String(koreaTime.getMonth() + 1).padStart(2, '0') + 
-                     '-' + String(koreaTime.getDate()).padStart(2, '0');
+                // 공통 함수 사용하여 한국 시간 계산
+                const today = getKoreanDate();
         
         const response = await fetch('/api/betting/create-session', {
                     method: 'POST',
@@ -1959,33 +1955,71 @@
             }
         }
 
-        // 기부 처리 함수
-        async function processDonation(donationAmount, percentage) {
+        // 기부 처리 함수 (통합된 버전)
+        async function processDonation(percentage) {
             try {
+                console.log('🎯 기부 처리 시작:', { percentage });
+                
+                // selectedGame이 없거나 필수 정보가 없으면 오류 처리
+                if (!selectedGame || !selectedGame.gameNumber || !selectedGame.date) {
+                    speakText('게임 정보가 올바르지 않습니다. 게임을 다시 선택해주세요.');
+                    alert('게임 정보가 올바르지 않습니다. 게임을 다시 선택해주세요.');
+                    return;
+                }
+                
+                // predictionResult가 없으면 서버에서 최신 게임 정보를 가져와서 설정
+                let actualResult = selectedGame.predictionResult || '';
+                if (!actualResult) {
+                    try {
+                        const gameResponse = await fetch(`/api/game/${selectedGame.date}/${selectedGame.gameNumber}`);
+                        const gameData = await gameResponse.json();
+                        if (gameData.success && gameData.game.predictionResult) {
+                            actualResult = gameData.game.predictionResult;
+                        } else {
+                            speakText('게임 결과가 아직 입력되지 않았습니다.');
+                            alert('게임 결과가 아직 입력되지 않았습니다.');
+                            return;
+                        }
+                    } catch (error) {
+                        console.error('게임 정보 조회 오류:', error);
+                        speakText('게임 정보 조회 중 오류가 발생했습니다.');
+                        alert('게임 정보 조회 중 오류가 발생했습니다.');
+                        return;
+                    }
+                }
+                
                 // 서버에서 실제 승리 포인트 계산
                 const pointsResponse = await fetch('/api/betting/calculate-game-winners', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         gameNumber: selectedGame.gameNumber,
-                        actualResult: selectedGame.predictionResult || '',
+                        actualResult: actualResult,
                         date: selectedGame.date
                     })
                 });
                 
                 const pointsData = await pointsResponse.json();
-                const pointsPerWinner = pointsData.success ? pointsData.data.pointsPerWinner : 0;
-                const totalWinAmount = 100 + pointsPerWinner; // 고정 배팅 포인트(100) + 성공자당 분배 포인트
-                const calculatedDonationAmount = Math.floor(totalWinAmount * (percentage / 100)); // 기부할 포인트
-                const remainingAmount = totalWinAmount - calculatedDonationAmount; // 남은 포인트
+                if (!pointsData.success) {
+                    throw new Error('승리 포인트 계산 실패: ' + pointsData.message);
+                }
                 
-                // 한국 시간대로 오늘 날짜 계산
-                const now = new Date();
-                const koreaTime = new Date(now.getTime() + (9 * 60 * 60 * 1000)); // UTC+9
-                const today = koreaTime.getFullYear().toString() + 
-                             String(koreaTime.getMonth() + 1).padStart(2, '0') + 
-                             String(koreaTime.getDate()).padStart(2, '0');
+                const pointsPerWinner = pointsData.data.pointsPerWinner || 0;
+                const totalWinAmount = calculateWinnings(pointsPerWinner);
+                const originalBet = 100; // 원금 (기부 대상 아님)
+                const winningBonus = pointsPerWinner; // 승리수당만 기부 대상
+                const calculatedDonationAmount = calculateDonation(winningBonus, percentage);
                 
+                console.log('💰 기부 계산:', {
+                    원금: originalBet,
+                    승리수당: winningBonus,
+                    총획득: totalWinAmount,
+                    기부비율: percentage,
+                    기부금액: calculatedDonationAmount,
+                    기부후받는포인트: totalWinAmount - calculatedDonationAmount
+                });
+                
+                // 실제 기부 API 호출
                 const response = await fetch('/api/donation', {
                     method: 'POST',
                     headers: {
@@ -2002,13 +2036,13 @@
                 const data = await response.json();
                 
                 if (data.success) {
-                    // 남은 포인트를 사용자에게 지급
-                    currentUser.points += remainingAmount;
+                    // 서버에서 업데이트된 포인트로 사용자 정보 갱신
+                    currentUser.points = data.data.remainingPoints;
                     document.getElementById('userPoints').textContent = `${currentUser.points}포인트`;
                     localStorage.setItem('currentUser', JSON.stringify(currentUser));
                     
                     // 기부 완료 음성 안내
-                    speakText(`${percentage}퍼센트 기부가 완료되었습니다. ${remainingAmount}포인트를 받으셨습니다.`);
+                    speakText(`${percentage}퍼센트 기부가 완료되었습니다. ${calculatedDonationAmount}포인트를 기부하셨습니다.`);
                     
                     // 기부 모달 닫기
                     document.getElementById('donationModal').style.display = 'none';
@@ -2016,6 +2050,26 @@
                     
                     // 기부 완료 모달 표시
                     showDonationCompleteModal(calculatedDonationAmount, percentage);
+                    
+                    // 기부 완료 후 배팅 선택 화면으로 돌아가기 (게임 선택 유지)
+                    try {
+                        if (selectedGame) {
+                            console.log('🎯 기부 완료 후 게임 화면 업데이트:', selectedGame);
+                            showSelectedGameOnly(
+                                selectedGame.gameNumber,
+                                selectedGame.matchup || `${selectedGame.homeTeam || ''} vs ${selectedGame.awayTeam || ''}`,
+                                selectedGame
+                            );
+                        } else {
+                            console.warn('⚠️ selectedGame이 없습니다. 기본 화면으로 돌아갑니다.');
+                            loadSimpleGames(); // 기본 게임 목록으로 돌아가기
+                        }
+                    } catch (error) {
+                        console.error('❌ 게임 화면 업데이트 오류:', error);
+                        loadSimpleGames(); // 오류 시 기본 게임 목록으로 돌아가기
+                    }
+                    enableBettingSelection();
+                    enableBettingPoints();
                 } else {
                     speakText('기부 처리 중 오류가 발생했습니다. 다시 시도해주세요.');
                     alert('기부 처리 중 오류가 발생했습니다: ' + data.message);
@@ -2026,6 +2080,26 @@
             }
         }
         
+        // 공통 한국 시간 계산 함수
+        function getKoreanDate() {
+            const now = new Date();
+            const koreaTime = new Date(now.getTime() + (9 * 60 * 60 * 1000)); // UTC+9
+            return koreaTime.getFullYear().toString() + 
+                   String(koreaTime.getMonth() + 1).padStart(2, '0') + 
+                   String(koreaTime.getDate()).padStart(2, '0');
+        }
+
+        // 공통 수당 계산 함수
+        function calculateWinnings(pointsPerWinner) {
+            const originalBet = 100; // 고정 배팅 포인트
+            return originalBet + pointsPerWinner; // 원금 + 승리 수당
+        }
+
+        // 공통 기부 계산 함수 (승리수당에서만 계산)
+        function calculateDonation(winningBonus, percentage) {
+            return Math.floor(winningBonus * (percentage / 100)); // 승리수당에서만 기부 계산
+        }
+
         // 기부 완료 모달 표시 함수
         function showDonationCompleteModal(donationAmount, percentage) {
             const modal = document.getElementById('donationCompleteModal');
@@ -2581,6 +2655,8 @@
 
         async function handleDonation(percent) {
             try {
+                console.log('🎯 기부 처리 시작:', { percent, selectedGame });
+                
                 // selectedGame이 없거나 필수 정보가 없으면 오류 처리
                 if (!selectedGame || !selectedGame.gameNumber || !selectedGame.date) {
                     speakText('게임 정보가 올바르지 않습니다. 게임을 다시 선택해주세요.');
@@ -2621,10 +2697,24 @@
                 });
                 
                 const data = await response.json();
-                const pointsPerWinner = data.success ? data.data.pointsPerWinner : 0;
-                const totalWinAmount = 100 + pointsPerWinner; // 고정 배팅 포인트(100) + 성공자당 분배 포인트
-                const donationAmount = Math.floor(totalWinAmount * (percent / 100)); // 기부할 포인트
-                const remainingAmount = totalWinAmount - donationAmount; // 남은 포인트
+                if (!data.success) {
+                    throw new Error('승리 포인트 계산 실패: ' + data.message);
+                }
+                
+                const pointsPerWinner = data.data.pointsPerWinner || 0;
+                const totalWinAmount = calculateWinnings(pointsPerWinner);
+                const originalBet = 100; // 원금 (기부 대상 아님)
+                const winningBonus = pointsPerWinner; // 승리수당만 기부 대상
+                const donationAmount = calculateDonation(winningBonus, percent);
+                
+                console.log('💰 기부 계산:', {
+                    원금: originalBet,
+                    승리수당: winningBonus,
+                    총획득: totalWinAmount,
+                    기부비율: percent,
+                    기부금액: donationAmount,
+                    기부후받는포인트: totalWinAmount - donationAmount
+                });
                 
                 // 실제 기부 API 호출
                 const donationResponse = await fetch('/api/donation', {
@@ -2643,13 +2733,13 @@
                 const donationData = await donationResponse.json();
                 
                 if (donationData.success) {
-                    // 남은 포인트를 사용자에게 지급
-                    currentUser.points += remainingAmount;
+                    // 서버에서 업데이트된 포인트로 사용자 정보 갱신
+                    currentUser.points = donationData.data.remainingPoints;
                     document.getElementById('userPoints').textContent = `${currentUser.points}포인트`;
                     localStorage.setItem('currentUser', JSON.stringify(currentUser));
                     
                     // 기부 완료 음성 안내
-                    speakText(`${percent}퍼센트 기부가 완료되었습니다. ${remainingAmount}포인트를 받으셨습니다.`);
+                    speakText(`${percent}퍼센트 기부가 완료되었습니다. ${donationAmount}포인트를 기부하셨습니다.`);
                     
                     closeDonationModal();
                     // 기부 완료 후 배팅 선택 화면으로 돌아가기 (게임 선택 유지)
@@ -2886,8 +2976,12 @@
                                         
                                         if (pointsData.success) {
                                             const pointsPerWinner = pointsData.data.pointsPerWinner || 0;
-                                            const winAmount = 100 + pointsPerWinner; // 고정 배팅 포인트(100) + 성공자당 분배 포인트
-                                            console.log('💰 획득 포인트:', winAmount);
+                                            const winAmount = calculateWinnings(pointsPerWinner);
+                                            console.log('💰 수당 계산:', {
+                                                원금: 100,
+                                                승리수당: pointsPerWinner,
+                                                총획득: winAmount
+                                            });
                                             showSuccessModal(winAmount);
                 } else {
                                             // 오류 시 기본값 사용 (배팅 포인트만)
@@ -2942,8 +3036,12 @@
             modal.innerHTML = `
                 <div class="bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4 text-center cursor-pointer">
                     <h3 class="text-lg font-bold mb-4 text-green-400">🎉 축하합니다!</h3>
-                    <div class="mb-4">
-                        <p class="text-lg font-bold">획득 포인트: <span class="text-yellow-300">${winAmount}</span></p>
+                    <div class="mb-4 space-y-2">
+                        <p class="text-lg font-bold">총 획득 포인트: <span class="text-yellow-300">${winAmount}</span></p>
+                        <div class="text-sm text-gray-300">
+                            <p>원금: 100포인트</p>
+                            <p>승리 수당: ${winAmount - 100}포인트</p>
+                        </div>
                     </div>
                     <p class="text-sm text-gray-300">클릭하여 기부 모달로 이동</p>
                 </div>
