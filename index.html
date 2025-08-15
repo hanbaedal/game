@@ -1202,9 +1202,20 @@
             };
         }
 
-        // 배팅 처리
+        // 배팅 처리 (중복 방지)
+        let isBettingInProgress = false; // 배팅 진행 중 플래그
+        
         async function processBetting() {
+            // 중복 배팅 방지
+            if (isBettingInProgress) {
+                console.log('⚠️ 배팅이 이미 진행 중입니다.');
+                return;
+            }
+            
             try {
+                isBettingInProgress = true; // 배팅 시작
+                console.log('🎯 배팅 시작 - 중복 방지 활성화');
+                
                 const response = await fetch('/api/betting/submit', {
                 method: 'POST',
                     headers: {
@@ -1240,6 +1251,9 @@
             } catch (error) {
                 console.error('배팅 처리 오류:', error);
                 alert('배팅 처리 중 오류가 발생했습니다.');
+            } finally {
+                isBettingInProgress = false; // 배팅 완료 (성공/실패 상관없이)
+                console.log('✅ 배팅 완료 - 중복 방지 해제');
             }
         }
 
@@ -1765,12 +1779,8 @@
                     return;
                 }
 
-                // 한국 시간대로 오늘 날짜 계산 (YYYY-MM-DD 형식)
-                const now = new Date();
-                const koreaTime = new Date(now.getTime() + (9 * 60 * 60 * 1000)); // UTC+9
-                const today = koreaTime.getFullYear().toString() + 
-                             '-' + String(koreaTime.getMonth() + 1).padStart(2, '0') + 
-                             '-' + String(koreaTime.getDate()).padStart(2, '0');
+                // 공통 함수 사용하여 한국 시간 계산
+                const today = getKoreanDate();
                 
                 // 서버에서 배팅 결과 조회
                 const response = await fetch(`/api/betting/results?date=${today}&gameNumber=${selectedGame.gameNumber}`);
@@ -1960,32 +1970,34 @@
             try {
                 console.log('🎯 기부 처리 시작:', { percentage });
                 
-                // selectedGame이 없거나 필수 정보가 없으면 오류 처리
-                if (!selectedGame || !selectedGame.gameNumber || !selectedGame.date) {
+                // 선택된 게임 정보 가져오기
+                const selectedGame = await getSelectedGame();
+                if (!selectedGame || !selectedGame.gameNumber) {
                     speakText('게임 정보가 올바르지 않습니다. 게임을 다시 선택해주세요.');
                     alert('게임 정보가 올바르지 않습니다. 게임을 다시 선택해주세요.');
                     return;
                 }
                 
+                // 오늘 날짜 계산
+                const today = getKoreanDate();
+                
                 // predictionResult가 없으면 서버에서 최신 게임 정보를 가져와서 설정
-                let actualResult = selectedGame.predictionResult || '';
-                if (!actualResult) {
-                    try {
-                        const gameResponse = await fetch(`/api/game/${selectedGame.date}/${selectedGame.gameNumber}`);
-                        const gameData = await gameResponse.json();
-                        if (gameData.success && gameData.game.predictionResult) {
-                            actualResult = gameData.game.predictionResult;
-                        } else {
-                            speakText('게임 결과가 아직 입력되지 않았습니다.');
-                            alert('게임 결과가 아직 입력되지 않았습니다.');
-                            return;
-                        }
-                    } catch (error) {
-                        console.error('게임 정보 조회 오류:', error);
-                        speakText('게임 정보 조회 중 오류가 발생했습니다.');
-                        alert('게임 정보 조회 중 오류가 발생했습니다.');
+                let actualResult = '';
+                try {
+                    const gameResponse = await fetch(`/api/game/${today}/${selectedGame.gameNumber}`);
+                    const gameData = await gameResponse.json();
+                    if (gameData.success && gameData.game.predictionResult) {
+                        actualResult = gameData.game.predictionResult;
+                    } else {
+                        speakText('게임 결과가 아직 입력되지 않았습니다.');
+                        alert('게임 결과가 아직 입력되지 않았습니다.');
                         return;
                     }
+                } catch (error) {
+                    console.error('게임 정보 조회 오류:', error);
+                    speakText('게임 정보 조회 중 오류가 발생했습니다.');
+                    alert('게임 정보 조회 중 오류가 발생했습니다.');
+                    return;
                 }
                 
                 // 서버에서 실제 승리 포인트 계산
@@ -1995,7 +2007,7 @@
                     body: JSON.stringify({
                         gameNumber: selectedGame.gameNumber,
                         actualResult: actualResult,
-                        date: selectedGame.date
+                        date: today
                     })
                 });
                 
@@ -2280,10 +2292,8 @@
             const now = new Date();
             const koreaTime = new Date(now.getTime() + (9 * 60 * 60 * 1000)); // UTC+9
             
-            // 오늘 날짜 (YYYY-MM-DD 형식)
-            const today = koreaTime.getFullYear().toString() + 
-                         '-' + String(koreaTime.getMonth() + 1).padStart(2, '0') + 
-                         '-' + String(koreaTime.getDate()).padStart(2, '0');
+            // 공통 함수 사용하여 오늘 날짜 계산
+            const today = getKoreanDate();
             
             // 시간 파싱 (HH:MM 형식)
             const parseTime = (timeStr) => {
@@ -2655,34 +2665,36 @@
 
         async function handleDonation(percent) {
             try {
-                console.log('🎯 기부 처리 시작:', { percent, selectedGame });
+                console.log('🎯 기부 처리 시작:', { percent });
                 
-                // selectedGame이 없거나 필수 정보가 없으면 오류 처리
-                if (!selectedGame || !selectedGame.gameNumber || !selectedGame.date) {
+                // 선택된 게임 정보 가져오기
+                const selectedGame = await getSelectedGame();
+                if (!selectedGame || !selectedGame.gameNumber) {
                     speakText('게임 정보가 올바르지 않습니다. 게임을 다시 선택해주세요.');
                     alert('게임 정보가 올바르지 않습니다. 게임을 다시 선택해주세요.');
                     return;
                 }
                 
+                // 오늘 날짜 계산
+                const today = getKoreanDate();
+                
                 // predictionResult가 없으면 서버에서 최신 게임 정보를 가져와서 설정
-                let actualResult = selectedGame.predictionResult || '';
-                if (!actualResult) {
-                    try {
-                        const gameResponse = await fetch(`/api/game/${selectedGame.date}/${selectedGame.gameNumber}`);
-                        const gameData = await gameResponse.json();
-                        if (gameData.success && gameData.game.predictionResult) {
-                            actualResult = gameData.game.predictionResult;
-                        } else {
-                            speakText('게임 결과가 아직 입력되지 않았습니다.');
-                            alert('게임 결과가 아직 입력되지 않았습니다.');
-                            return;
-                        }
-                    } catch (error) {
-                        console.error('게임 정보 조회 오류:', error);
-                        speakText('게임 정보 조회 중 오류가 발생했습니다.');
-                        alert('게임 정보 조회 중 오류가 발생했습니다.');
+                let actualResult = '';
+                try {
+                    const gameResponse = await fetch(`/api/game/${today}/${selectedGame.gameNumber}`);
+                    const gameData = await gameResponse.json();
+                    if (gameData.success && gameData.game.predictionResult) {
+                        actualResult = gameData.game.predictionResult;
+                    } else {
+                        speakText('게임 결과가 아직 입력되지 않았습니다.');
+                        alert('게임 결과가 아직 입력되지 않았습니다.');
                         return;
                     }
+                } catch (error) {
+                    console.error('게임 정보 조회 오류:', error);
+                    speakText('게임 정보 조회 중 오류가 발생했습니다.');
+                    alert('게임 정보 조회 중 오류가 발생했습니다.');
+                    return;
                 }
                 
                 // 서버에서 실제 승리 포인트 계산 요청
@@ -2692,7 +2704,7 @@
                     body: JSON.stringify({
                         gameNumber: selectedGame.gameNumber,
                         actualResult: actualResult,
-                        date: selectedGame.date
+                        date: today
                     })
                 });
                 

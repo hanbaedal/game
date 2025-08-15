@@ -244,8 +244,23 @@ app.post('/api/betting/calculate-game-winners', async (req, res) => {
         // 승리자 찾기 (bets 배열에서 actualResult와 일치하는 사용자들)
         const winners = gameData.bets.filter(bet => bet.prediction === actualResult);
         const winnerCount = winners.length;
+        
+        // 고유 사용자 수 계산 (중복 배팅 방지)
+        const uniqueUserIds = [...new Set(gameData.bets.map(bet => bet.userId))];
+        const totalUniqueUsers = uniqueUserIds.length;
         const totalBets = gameData.bets.length;
-        const loserCount = totalBets - winnerCount;
+        
+        // 중복 배팅 감지 및 로깅
+        if (totalBets > totalUniqueUsers) {
+            console.log(`⚠️ 중복 배팅 감지: 총 배팅 ${totalBets}개, 고유 사용자 ${totalUniqueUsers}명`);
+            console.log('🔍 중복 배팅 상세:', gameData.bets.map(bet => ({
+                userId: bet.userId,
+                prediction: bet.prediction,
+                points: bet.points
+            })));
+        }
+        
+        const loserCount = totalUniqueUsers - winnerCount;
         
         // 승리 포인트 계산: (패자 수 × 100) ÷ 승리자 수
         const totalLoserPoints = loserCount * 100;
@@ -260,7 +275,7 @@ app.post('/api/betting/calculate-game-winners', async (req, res) => {
         }
         
         console.log(`✅ 게임 ${gameNumber} 승리포인트 계산 및 지급 완료:`);
-        console.log(`- 총 배팅: ${totalBets}명`);
+        console.log(`- 총 배팅: ${totalBets}개 (고유 사용자: ${totalUniqueUsers}명)`);
         console.log(`- 승리자: ${winnerCount}명`);
         console.log(`- 패자: ${loserCount}명`);
         console.log(`- 성공자당 분배 포인트: ${pointsPerWinner}`);
@@ -272,6 +287,7 @@ app.post('/api/betting/calculate-game-winners', async (req, res) => {
                 gameNumber: gameNumber,
                 actualResult: actualResult,
                 totalBets: totalBets,
+                totalUniqueUsers: totalUniqueUsers,
                 winnerCount: winnerCount,
                 loserCount: loserCount,
                 pointsPerWinner: pointsPerWinner
@@ -563,15 +579,6 @@ app.post('/api/betting/submit', async (req, res) => {
             });
         }
         
-        // 중복 배팅 체크 (오늘 날짜에 이미 배팅했는지 확인)
-        const checkToday = new Date();
-        const checkKoreaTime = new Date(checkToday.getTime() + (9 * 60 * 60 * 1000));
-        const checkTodayString = checkKoreaTime.getFullYear().toString() + 
-                                '-' + String(checkToday.getMonth() + 1).padStart(2, '0') + 
-                                '-' + String(checkToday.getDate()).padStart(2, '0');
-        
-        
-        
         // 한국 시간대로 오늘 날짜 계산
         const today = new Date();
         const koreaTime = new Date(today.getTime() + (9 * 60 * 60 * 1000));
@@ -579,8 +586,23 @@ app.post('/api/betting/submit', async (req, res) => {
                     '-' + String(koreaTime.getMonth() + 1).padStart(2, '0') + 
                     '-' + String(koreaTime.getDate()).padStart(2, '0');
         
-        // 실제 배팅 데이터 저장
+        // 중복 배팅 체크 (같은 사용자가 같은 게임에 이미 배팅했는지 확인)
         const gameCollection = getBettingGameCollection(gameNumber);
+        const existingBet = await gameCollection.findOne({
+            date: date,
+            gameNumber: parseInt(gameNumber),
+            'bets.userId': userId
+        });
+        
+        if (existingBet) {
+            console.log(`⚠️ 중복 배팅 시도 감지: ${userId} - 게임 ${gameNumber}`);
+            return res.status(400).json({
+                success: false,
+                message: '이미 이 게임에 배팅하셨습니다.'
+            });
+        }
+        
+        // 실제 배팅 데이터 저장
         const gameRecordCollection = getGameRecordCollection();
         
         // 기존 게임 데이터 조회
@@ -3534,6 +3556,96 @@ app.get('/', (req, res) => {
                 res.status(500).json({
                     success: false,
                     message: '포인트 충전 중 오류가 발생했습니다.'
+                });
+            }
+        });
+
+        // 중복 배팅 데이터 정리 API
+        app.post('/api/cleanup-duplicate-bets', async (req, res) => {
+            try {
+                console.log('🧹 중복 배팅 데이터 정리 시작...');
+                
+                // 한국 시간대로 오늘 날짜 계산
+                const today = new Date();
+                const koreaTime = new Date(today.getTime() + (9 * 60 * 60 * 1000));
+                const todayString = koreaTime.getFullYear().toString() + 
+                                   '-' + String(koreaTime.getMonth() + 1).padStart(2, '0') + 
+                                   '-' + String(koreaTime.getDate()).padStart(2, '0');
+                
+                let cleanedCount = 0;
+                
+                // 1~5경기 데이터 정리
+                for (let gameNumber = 1; gameNumber <= 5; gameNumber++) {
+                    const gameCollection = getBettingGameCollection(gameNumber);
+                    
+                    // 오늘 게임 데이터 조회
+                    const gameData = await gameCollection.findOne({
+                        date: todayString,
+                        gameNumber: gameNumber
+                    });
+                    
+                    if (gameData && gameData.bets && gameData.bets.length > 0) {
+                        // 중복 제거 (userId 기준으로 첫 번째만 유지)
+                        const uniqueBets = [];
+                        const seenUserIds = new Set();
+                        
+                        for (const bet of gameData.bets) {
+                            if (!seenUserIds.has(bet.userId)) {
+                                uniqueBets.push(bet);
+                                seenUserIds.add(bet.userId);
+                            } else {
+                                console.log(`🗑️ 중복 배팅 제거: ${bet.userId} - 게임 ${gameNumber}`);
+                            }
+                        }
+                        
+                        // 중복 제거된 데이터로 업데이트
+                        if (uniqueBets.length !== gameData.bets.length) {
+                            await gameCollection.updateOne(
+                                { _id: gameData._id },
+                                { 
+                                    $set: { 
+                                        bets: uniqueBets,
+                                        totalBets: uniqueBets.length
+                                    }
+                                }
+                            );
+                            
+                            // betCounts 재계산
+                            const newBetCounts = {
+                                '1루': 0, '2루': 0, '3루': 0, '홈런': 0, '삼진': 0, '아웃': 0
+                            };
+                            
+                            for (const bet of uniqueBets) {
+                                newBetCounts[bet.prediction] = (newBetCounts[bet.prediction] || 0) + 1;
+                            }
+                            
+                            await gameCollection.updateOne(
+                                { _id: gameData._id },
+                                { $set: { betCounts: newBetCounts } }
+                            );
+                            
+                            cleanedCount++;
+                            console.log(`✅ 경기 ${gameNumber} 중복 데이터 정리 완료: ${gameData.bets.length} → ${uniqueBets.length}`);
+                        }
+                    }
+                }
+                
+                console.log(`✅ 중복 배팅 데이터 정리 완료: ${cleanedCount}개 경기`);
+                
+                res.json({
+                    success: true,
+                    message: '중복 배팅 데이터가 정리되었습니다.',
+                    data: {
+                        cleanedCount: cleanedCount,
+                        date: todayString
+                    }
+                });
+                
+            } catch (error) {
+                console.error('중복 배팅 데이터 정리 오류:', error);
+                res.status(500).json({
+                    success: false,
+                    message: '중복 배팅 데이터 정리 중 오류가 발생했습니다.'
                 });
             }
         });
