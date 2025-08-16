@@ -1592,8 +1592,10 @@
                                             selectedGame = firstGame;
                                             previousBettingStart = '시작';
                                             
-                                            updateSimpleGameDisplay(firstGame.gameNumber || firstGame.number, firstGame.matchup, firstGame);
                                             resetBettingSelection();
+                                            
+                                            // 게임 선택 모달 다시 로드하여 선택된 게임 표시
+                                            loadSimpleGames();
                                             
                                             speakText(`첫 번째 경기 ${firstGame.gameNumber || firstGame.number}경기를 활성화했습니다.`, 1.0);
                                             console.log('✅ 첫 번째 게임 강제 활성화 완료');
@@ -1613,10 +1615,48 @@
                                     bettingStop: selectedGame.bettingStop
                                 });
                                 
-                                // 배팅 선택 버튼 상태 업데이트
-                                enableBettingChoices();
-                                enableBettingSelection();
-                                enablePredictionButton();
+                                // 게임 상태에 따른 UI 업데이트
+                                if (currentGame.bettingStart === '시작') {
+                                    // 배팅 가능한 상태
+                                    enableBettingChoices();
+                                    enableBettingSelection();
+                                    enablePredictionButton();
+                                    
+                                    // 게임 선택 모달 업데이트
+                                    loadSimpleGames();
+                                } else if (currentGame.bettingStart === '중지' || currentGame.bettingStart === '종료') {
+                                    // 배팅 불가능한 상태 - 다음 게임으로 넘어가기
+                                    console.log('🔄 현재 게임이 비활성 상태입니다. 다음 게임을 찾습니다.');
+                                    
+                                    const nextGame = data.games.find(game => {
+                                        const currentNum = currentGame.gameNumber || currentGame.number;
+                                        const nextNum = game.gameNumber || game.number;
+                                        return nextNum > currentNum && game.bettingStart === '시작';
+                                    });
+                                    
+                                    if (nextGame) {
+                                        console.log('🎯 다음 활성 게임 발견:', nextGame);
+                                        selectedGame = nextGame;
+                                        previousBettingStart = nextGame.bettingStart;
+                                        
+                                        resetBettingSelection();
+                                        loadSimpleGames();
+                                        
+                                        speakText(`다음 경기 ${nextGame.gameNumber || nextGame.number}경기로 넘어갑니다.`, 1.0);
+                                    } else {
+                                        // 다음 게임이 없으면 첫 번째 게임으로
+                                        const firstActiveGame = data.games.find(game => game.bettingStart === '시작');
+                                        if (firstActiveGame) {
+                                            selectedGame = firstActiveGame;
+                                            previousBettingStart = firstActiveGame.bettingStart;
+                                            
+                                            resetBettingSelection();
+                                            loadSimpleGames();
+                                            
+                                            speakText(`첫 번째 경기 ${firstActiveGame.gameNumber || firstActiveGame.number}경기로 돌아갑니다.`, 1.0);
+                                        }
+                                    }
+                                }
                             }
                         }
                 }
