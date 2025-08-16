@@ -800,6 +800,64 @@ app.get('/api/games/status', async (req, res) => {
     }
 });
 
+// 단일 경기 조회 API (기부 전 확인용)
+app.get('/api/game/:date/:gameNumber', async (req, res) => {
+    try {
+        const { date, gameNumber } = req.params;
+        if (!date || !gameNumber) {
+            return res.status(400).json({ success: false, message: '날짜와 게임 번호가 필요합니다.' });
+        }
+
+        // DB 연결 확인
+        if (!checkMongoDBConnection()) {
+            return sendMongoDBErrorResponse(res, '데이터베이스 연결이 준비되지 않았습니다.');
+        }
+
+        const num = parseInt(gameNumber);
+        const teamGamesCollection = getTeamGamesCollection();
+
+        // team-games에서 우선 조회 (matchup, predictionResult 포함 가능)
+        const game = await teamGamesCollection.findOne({ date, gameNumber: num });
+        if (game) {
+            return res.json({
+                success: true,
+                game: {
+                    gameNumber: game.gameNumber,
+                    matchup: game.matchup || '',
+                    date: game.date,
+                    startTime: game.startTime || null,
+                    endTime: game.endTime || null,
+                    gameStatus: game.gameStatus || null,
+                    progressStatus: game.progressStatus || null,
+                    bettingStart: game.bettingStart || null,
+                    bettingStop: game.bettingStop || null,
+                    predictionResult: game.predictionResult || ''
+                }
+            });
+        }
+
+        // fallback: 집계 컬렉션(betting-game-<n>)에서 조회
+        const gameCollection = getBettingGameCollection(num);
+        const aggregateGame = await gameCollection.findOne({ date, gameNumber: num });
+        if (aggregateGame) {
+            return res.json({
+                success: true,
+                game: {
+                    gameNumber: aggregateGame.gameNumber,
+                    matchup: aggregateGame.matchup || '',
+                    date: date,
+                    predictionResult: aggregateGame.predictionResult || ''
+                }
+            });
+        }
+
+        return res.status(404).json({ success: false, message: '경기를 찾을 수 없습니다.' });
+    } catch (error) {
+        console.error('단일 경기 조회 오류:', error);
+        return res.status(500).json({ success: false, message: '단일 경기 조회 중 오류가 발생했습니다.' });
+    }
+});
+
 // 관리자 게임 제어 API들
 app.put('/api/admin/game/:gameNumber/start-betting', async (req, res) => {
     try {
