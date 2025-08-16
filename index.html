@@ -1495,97 +1495,149 @@
             
             console.log('🔄 배팅 상태 확인 시작...');
             
-            // 서버에서 최신 배팅 상태 가져오기
-            fetch('/api/team-games')
-                .then(response => response.json())
-                .then(data => {
-                    console.log('📊 서버 데이터:', data);
-                    if (data && data.games) {
-                        const currentGame = data.games.find(game => 
-                            game.number === selectedGame.number || 
-                            game.gameNumber === selectedGame.gameNumber ||
-                            game._id === selectedGame._id ||
-                            game.id === selectedGame.id
-                        );
-                        
-                        console.log('🎯 현재 게임:', currentGame);
-                        
-                        if (currentGame) {
-                            // 배팅 시작 상태 변경 감지
-                            if (previousBettingStart !== '시작' && currentGame.bettingStart === '시작') {
-                                console.log('🎤 배팅 시작 감지!');
-                                // 급한 목소리로 두 번 반복
+            try {
+                // 서버에서 최신 배팅 상태 가져오기
+                const response = await fetch('/api/team-games');
+                const data = await response.json();
+                
+                console.log('📊 서버 데이터:', data);
+                if (data && data.games) {
+                    const currentGame = data.games.find(game => 
+                        game.number === selectedGame.number || 
+                        game.gameNumber === selectedGame.gameNumber ||
+                        game._id === selectedGame._id ||
+                        game.id === selectedGame.id
+                    );
+                    
+                    console.log('🎯 현재 게임:', currentGame);
+                    
+                    if (currentGame) {
+                        // 배팅 시작 상태 변경 감지
+                        if (previousBettingStart !== '시작' && currentGame.bettingStart === '시작') {
+                            console.log('🎤 배팅 시작 감지!');
+                            // 급한 목소리로 두 번 반복
+                            speakText('이제부터 배팅선택을 할 수 있습니다.', 1.3);
+                            setTimeout(() => {
                                 speakText('이제부터 배팅선택을 할 수 있습니다.', 1.3);
-                                setTimeout(() => {
-                                    speakText('이제부터 배팅선택을 할 수 있습니다.', 1.3);
-                                }, 2000);
-                            }
-                            
-                            // 배팅 중지 상태 변경 감지
-                            if (previousBettingStart !== '중지' && currentGame.bettingStart === '중지') {
-                                console.log('🎤 배팅 중지 감지!');
-                                // 엄격한 목소리로 세 번 반복
+                            }, 2000);
+                        }
+                        
+                        // 배팅 중지 상태 변경 감지
+                        if (previousBettingStart !== '중지' && currentGame.bettingStart === '중지') {
+                            console.log('🎤 배팅 중지 감지!');
+                            // 엄격한 목소리로 세 번 반복
+                            speakText('이제부터 배팅을 할 수 없습니다.', 0.8);
+                            setTimeout(() => {
                                 speakText('이제부터 배팅을 할 수 없습니다.', 0.8);
-                                setTimeout(() => {
-                                    speakText('이제부터 배팅을 할 수 없습니다.', 0.8);
-                                }, 2000);
-                                setTimeout(() => {
-                                    speakText('이제부터 배팅을 할 수 없습니다.', 0.8);
-                                }, 4000);
+                            }, 2000);
+                            setTimeout(() => {
+                                speakText('이제부터 배팅을 할 수 없습니다.', 0.8);
+                            }, 4000);
+                        }
+                        
+                        // 게임이 종료되었는지 확인 (경기종료, 종료, 대기 상태 모두 포함)
+                        if (currentGame.progressStatus === '경기종료' || 
+                            currentGame.bettingStart === '종료' || 
+                            currentGame.bettingStart === '대기') {
+                            
+                            if (currentGame.bettingStart === '대기') {
+                                console.log('⏳ 배팅 대기 상태 감지! 다음 게임으로 넘어갑니다.');
+                            } else {
+                                console.log('🏁 게임 종료 감지! 다음 게임으로 넘어갑니다.');
                             }
                             
-                            // 게임이 종료되었는지 확인 (경기종료, 종료, 대기 상태 모두 포함)
-                            if (currentGame.progressStatus === '경기종료' || 
-                                currentGame.bettingStart === '종료' || 
-                                currentGame.bettingStart === '대기') {
+                            // 다음 게임 찾기 (현재 게임 번호보다 큰 번호 중에서)
+                            const nextGame = data.games.find(game => {
+                                const currentNum = currentGame.gameNumber || currentGame.number;
+                                const nextNum = game.gameNumber || game.number;
+                                return nextNum > currentNum && game.bettingStart === '시작';
+                            });
+                            
+                            if (nextGame) {
+                                console.log('🎯 다음 게임 발견:', nextGame);
                                 
-                                if (currentGame.bettingStart === '대기') {
-                                    console.log('⏳ 배팅 대기 상태 감지! 다음 게임으로 넘어갑니다.');
-                                } else {
-                                    console.log('🏁 게임 종료 감지! 다음 게임으로 넘어갑니다.');
-                                }
+                                // 새로운 게임 선택
+                                selectedGame = nextGame;
+                                previousBettingStart = nextGame.bettingStart;
                                 
-                                // 다음 게임 찾기 (현재 게임 번호보다 큰 번호 중에서)
-                                const nextGame = data.games.find(game => {
-                                    const currentNum = currentGame.gameNumber || currentGame.number;
-                                    const nextNum = game.gameNumber || game.number;
-                                    return nextNum > currentNum && game.bettingStart === '시작';
-                                });
+                                // 배팅 선택 초기화
+                                resetBettingSelection();
                                 
-                                if (nextGame) {
-                                    console.log('🎯 다음 게임 발견:', nextGame);
+                                // 음성 안내
+                                speakText(`다음 경기 ${nextGame.gameNumber || nextGame.number}경기로 넘어갑니다.`, 1.0);
+                                
+                                console.log('✅ 다음 게임으로 자동 전환 완료');
+                            } else {
+                                // 다음 게임이 없으면 첫 번째 게임으로 돌아가기
+                                const firstGame = data.games.find(game => game.bettingStart === '시작');
+                                if (firstGame) {
+                                    console.log('🔄 다음 게임이 없어 첫 번째 게임으로 돌아갑니다:', firstGame);
                                     
-                                    // 새로운 게임 선택
-                                    selectedGame = nextGame;
-                                    previousBettingStart = nextGame.bettingStart;
+                                    selectedGame = firstGame;
+                                    previousBettingStart = firstGame.bettingStart;
                                     
-                                    // 배팅 선택 초기화
                                     resetBettingSelection();
                                     
-                                    // 음성 안내
-                                    speakText(`다음 경기 ${nextGame.gameNumber || nextGame.number}경기로 넘어갑니다.`, 1.0);
-                                    
-                                    console.log('✅ 다음 게임으로 자동 전환 완료');
+                                    speakText(`첫 번째 경기 ${firstGame.gameNumber || firstGame.number}경기로 돌아갑니다.`, 1.0);
+                                    console.log('✅ 첫 번째 게임으로 순환 완료');
                                 } else {
-                                    // 다음 게임이 없으면 첫 번째 게임으로 돌아가기
-                                    const firstGame = data.games.find(game => game.bettingStart === '시작');
-                                    if (firstGame) {
-                                        console.log('🔄 다음 게임이 없어 첫 번째 게임으로 돌아갑니다:', firstGame);
+                                    // 모든 게임이 비활성 상태일 때 서버에 첫 번째 게임 활성화 요청
+                                    console.log('⚠️ 활성화된 게임이 없습니다. 서버에 첫 번째 게임 활성화를 요청합니다.');
+                                    
+                                    try {
+                                        const response = await fetch('/api/activate-first-game', {
+                                            method: 'POST',
+                                            headers: {
+                                                'Content-Type': 'application/json'
+                                            }
+                                        });
                                         
-                                        selectedGame = firstGame;
-                                        previousBettingStart = firstGame.bettingStart;
+                                        const activationData = await response.json();
+                                        if (activationData.success) {
+                                            console.log('✅ 서버에서 첫 번째 게임 활성화 완료:', activationData.game);
+                                            
+                                            // 활성화된 게임 정보로 업데이트
+                                            const firstGame = data.games.find(game => game.gameNumber === 1 || game.number === 1);
+                                            if (firstGame) {
+                                                firstGame.bettingStart = '시작';
+                                                firstGame.bettingStop = '진행';
+                                                
+                                                selectedGame = firstGame;
+                                                previousBettingStart = '시작';
+                                                
+                                                resetBettingSelection();
+                                                
+                                                // 게임 선택 모달 다시 로드하여 선택된 게임 표시
+                                                loadSimpleGames();
+                                                
+                                                speakText(`첫 번째 경기 ${firstGame.gameNumber || firstGame.number}경기를 활성화했습니다.`, 1.0);
+                                                console.log('✅ 첫 번째 게임 서버 활성화 완료');
+                                            }
+                                        } else {
+                                            console.log('⚠️ 서버에서 첫 번째 게임 활성화 실패:', activationData.message);
+                                            
+                                            // 서버 활성화 실패 시 클라이언트에서 임시로 활성화
+                                            const firstGame = data.games[0];
+                                            if (firstGame) {
+                                                firstGame.bettingStart = '시작';
+                                                firstGame.bettingStop = '진행';
+                                                
+                                                selectedGame = firstGame;
+                                                previousBettingStart = '시작';
+                                                
+                                                resetBettingSelection();
+                                                loadSimpleGames();
+                                                
+                                                speakText(`첫 번째 경기 ${firstGame.gameNumber || firstGame.number}경기를 임시로 활성화했습니다.`, 1.0);
+                                                console.log('✅ 첫 번째 게임 임시 활성화 완료');
+                                            }
+                                        }
+                                    } catch (error) {
+                                        console.error('❌ 첫 번째 게임 활성화 요청 오류:', error);
                                         
-                                        resetBettingSelection();
-                                        
-                                        speakText(`첫 번째 경기 ${firstGame.gameNumber || firstGame.number}경기로 돌아갑니다.`, 1.0);
-                                        console.log('✅ 첫 번째 게임으로 순환 완료');
-                                    } else {
-                                        // 모든 게임이 비활성 상태일 때 첫 번째 게임을 강제로 활성화
-                                        console.log('⚠️ 활성화된 게임이 없습니다. 첫 번째 게임을 강제로 활성화합니다.');
-                                        
+                                        // 오류 발생 시 클라이언트에서 임시로 활성화
                                         const firstGame = data.games[0];
                                         if (firstGame) {
-                                            // 클라이언트에서 임시로 상태 변경
                                             firstGame.bettingStart = '시작';
                                             firstGame.bettingStop = '진행';
                                             
@@ -1593,81 +1645,79 @@
                                             previousBettingStart = '시작';
                                             
                                             resetBettingSelection();
-                                            
-                                            // 게임 선택 모달 다시 로드하여 선택된 게임 표시
                                             loadSimpleGames();
                                             
-                                            speakText(`첫 번째 경기 ${firstGame.gameNumber || firstGame.number}경기를 활성화했습니다.`, 1.0);
-                                            console.log('✅ 첫 번째 게임 강제 활성화 완료');
-                                        }
-                                    }
-                                }
-                            } else {
-                                // 이전 상태 업데이트
-                                previousBettingStart = currentGame.bettingStart;
-                                
-                                // 선택된 게임 정보 업데이트
-                                selectedGame.bettingStart = currentGame.bettingStart;
-                                selectedGame.bettingStop = currentGame.bettingStop;
-                                
-                                console.log('✅ 게임 정보 업데이트:', {
-                                    bettingStart: selectedGame.bettingStart,
-                                    bettingStop: selectedGame.bettingStop
-                                });
-                                
-                                // 게임 상태에 따른 UI 업데이트
-                                if (currentGame.bettingStart === '시작') {
-                                    // 배팅 가능한 상태
-                                    enableBettingChoices();
-                                    enableBettingSelection();
-                                    enablePredictionButton();
-                                    
-                                    // 게임 선택 모달 업데이트
-                                    loadSimpleGames();
-                                } else if (currentGame.bettingStart === '중지' || currentGame.bettingStart === '종료') {
-                                    // 배팅 불가능한 상태 - 다음 게임으로 넘어가기
-                                    console.log('🔄 현재 게임이 비활성 상태입니다. 다음 게임을 찾습니다.');
-                                    
-                                    const nextGame = data.games.find(game => {
-                                        const currentNum = currentGame.gameNumber || currentGame.number;
-                                        const nextNum = game.gameNumber || game.number;
-                                        return nextNum > currentNum && game.bettingStart === '시작';
-                                    });
-                                    
-                                    if (nextGame) {
-                                        console.log('🎯 다음 활성 게임 발견:', nextGame);
-                                        selectedGame = nextGame;
-                                        previousBettingStart = nextGame.bettingStart;
-                                        
-                                        resetBettingSelection();
-                                        loadSimpleGames();
-                                        
-                                        speakText(`다음 경기 ${nextGame.gameNumber || nextGame.number}경기로 넘어갑니다.`, 1.0);
-                                    } else {
-                                        // 다음 게임이 없으면 첫 번째 게임으로
-                                        const firstActiveGame = data.games.find(game => game.bettingStart === '시작');
-                                        if (firstActiveGame) {
-                                            selectedGame = firstActiveGame;
-                                            previousBettingStart = firstActiveGame.bettingStart;
-                                            
-                                            resetBettingSelection();
-                                            loadSimpleGames();
-                                            
-                                            speakText(`첫 번째 경기 ${firstActiveGame.gameNumber || firstActiveGame.number}경기로 돌아갑니다.`, 1.0);
+                                            speakText(`첫 번째 경기 ${firstGame.gameNumber || firstGame.number}경기를 임시로 활성화했습니다.`, 1.0);
+                                            console.log('✅ 첫 번째 게임 임시 활성화 완료');
                                         }
                                     }
                                 }
                             }
+                        } else {
+                            // 이전 상태 업데이트
+                            previousBettingStart = currentGame.bettingStart;
+                            
+                            // 선택된 게임 정보 업데이트
+                            selectedGame.bettingStart = currentGame.bettingStart;
+                            selectedGame.bettingStop = currentGame.bettingStop;
+                            
+                            console.log('✅ 게임 정보 업데이트:', {
+                                bettingStart: selectedGame.bettingStart,
+                                bettingStop: selectedGame.bettingStop
+                            });
+                            
+                            // 게임 상태에 따른 UI 업데이트
+                            if (currentGame.bettingStart === '시작') {
+                                // 배팅 가능한 상태
+                                enableBettingChoices();
+                                enableBettingSelection();
+                                enablePredictionButton();
+                                
+                                // 게임 선택 모달 업데이트
+                                loadSimpleGames();
+                            } else if (currentGame.bettingStart === '중지' || currentGame.bettingStart === '종료') {
+                                // 배팅 불가능한 상태 - 다음 게임으로 넘어가기
+                                console.log('🔄 현재 게임이 비활성 상태입니다. 다음 게임을 찾습니다.');
+                                
+                                const nextGame = data.games.find(game => {
+                                    const currentNum = currentGame.gameNumber || currentGame.number;
+                                    const nextNum = game.gameNumber || game.number;
+                                    return nextNum > currentNum && game.bettingStart === '시작';
+                                });
+                                
+                                if (nextGame) {
+                                    console.log('🎯 다음 활성 게임 발견:', nextGame);
+                                    selectedGame = nextGame;
+                                    previousBettingStart = nextGame.bettingStart;
+                                    
+                                    resetBettingSelection();
+                                    loadSimpleGames();
+                                    
+                                    speakText(`다음 경기 ${nextGame.gameNumber || nextGame.number}경기로 넘어갑니다.`, 1.0);
+                                } else {
+                                    // 다음 게임이 없으면 첫 번째 게임으로
+                                    const firstActiveGame = data.games.find(game => game.bettingStart === '시작');
+                                    if (firstActiveGame) {
+                                        selectedGame = firstActiveGame;
+                                        previousBettingStart = firstActiveGame.bettingStart;
+                                        
+                                        resetBettingSelection();
+                                        loadSimpleGames();
+                                        
+                                        speakText(`첫 번째 경기 ${firstActiveGame.gameNumber || firstActiveGame.number}경기로 돌아갑니다.`, 1.0);
+                                    }
+                                }
+                            }
                         }
+                    }
                 }
-            })
-            .catch(error => {
-                    console.error('배팅 상태 확인 오류:', error);
-                });
+            } catch (error) {
+                console.error('배팅 상태 확인 오류:', error);
+            }
         }
 
         // 배팅 선택 초기화 함수
-        function resetBettingSelection() {
+        async function resetBettingSelection() {
             console.log('🔄 배팅 선택 초기화 시작...');
             
             // 선택된 배팅 유형 초기화
@@ -1704,6 +1754,36 @@
                 btn.classList.remove('bg-blue-500', 'bg-blue-600');
                 btn.classList.add('bg-gray-600');
             });
+            
+            // 서버에 배팅 데이터 초기화 요청 (새로운 게임에서 배팅할 수 있도록)
+            try {
+                const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
+                const userId = currentUser.userId || currentUser.id;
+                
+                if (userId && selectedGame) {
+                    console.log('🔄 서버에 배팅 데이터 초기화 요청:', { userId, gameNumber: selectedGame.gameNumber || selectedGame.number });
+                    
+                    const response = await fetch('/api/clear-user-betting', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            userId: userId,
+                            gameNumber: selectedGame.gameNumber || selectedGame.number
+                        })
+                    });
+                    
+                    const data = await response.json();
+                    if (data.success) {
+                        console.log('✅ 서버 배팅 데이터 초기화 완료');
+                    } else {
+                        console.log('⚠️ 서버 배팅 데이터 초기화 실패:', data.message);
+                    }
+                }
+            } catch (error) {
+                console.error('❌ 서버 배팅 데이터 초기화 오류:', error);
+            }
             
             console.log('✅ 배팅 선택 초기화 완료');
         }
@@ -2376,47 +2456,6 @@
         }
 
 
-
-
-
-            
-        // 테스트 데이터 생성 함수
-        async function createTestGames() {
-            try {
-                console.log('🧪 테스트 데이터 생성 시작');
-                
-                const response = await fetch('/api/create-test-games', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    }
-                });
-                
-                const data = await response.json();
-                console.log('🧪 테스트 데이터 생성 결과:', data);
-                
-                if (data.success) {
-                    alert('테스트 데이터가 생성되었습니다. 페이지를 새로고침하세요.');
-                    location.reload();
-                    } else {
-                    alert('테스트 데이터 생성 실패: ' + data.message);
-                }
-            } catch (error) {
-                console.error('❌ 테스트 데이터 생성 오류:', error);
-                alert('테스트 데이터 생성 중 오류가 발생했습니다.');
-            }
-        }
-
-        // 경기 상태 텍스트 및 클래스 함수
-        function getStatusText(game) {
-            console.log('🔍 경기 상태 확인:', {
-                gameNumber: game.number,
-                progressStatus: game.progressStatus,
-                gameStatus: game.gameStatus,
-                noGame: game.noGame,
-                startTime: game.startTime,
-                endTime: game.endTime
-            });
             
             // 우천취소, 경기취소 등 특별한 상황은 우선 처리
             if (game.noGame === '우천' || game.noGame === '번개/천둥' || game.noGame === '경기취소' || game.noGame === '우천취소') {
