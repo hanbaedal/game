@@ -769,8 +769,8 @@
                     bettingStop: selectedGameData.bettingStop || ''
                 };
                 
-                // 경기 선택 모달을 선택된 경기만 표시하도록 변경
-                showSelectedGameOnly(gameNumber, matchup, selectedGameData);
+                // 경기 선택 모달을 선택된 경기만 표시하도록 변경 (정규화된 selectedGame 사용)
+                showSelectedGameOnly(gameNumber, matchup, selectedGame);
                 
                 // 베팅 선택 활성화 (먼저)
                 enableBettingSelection();
@@ -809,17 +809,16 @@
             const container = document.getElementById('gameSelectionContainer');
             if (!container) return;
             
-            // gameData가 없거나 undefined인 경우 안전하게 처리
-            if (!gameData) {
-                console.warn('⚠️ gameData가 없습니다. 기본값을 사용합니다.');
-                gameData = {};
-            }
+            // 표시 데이터 안전 구성 (두 번째 이후 빈 값으로 보이는 문제 방지)
+            const base = (gameData && (gameData.gameNumber || gameData.number)) ? gameData : (typeof selectedGame === 'object' ? selectedGame : {});
             
-            // DB에서 읽어온 데이터를 그대로 사용 (시간 계산 삭제)
-            const progressStatus = gameData.progressStatus || '경기전';
-            const bettingStart = gameData.bettingStart || '중지';
-            const startTime = gameData.startTime || '시간 미정';
-            const date = gameData.date || '날짜 미정';
+            // DB에서 읽어온 데이터 사용 + 합리적 폴백
+            const bettingStart = base && base.bettingStart ? base.bettingStart : '중지';
+            const progressStatus = base && base.progressStatus
+                ? base.progressStatus
+                : (bettingStart === '시작' ? '경기중' : '경기전');
+            const startTime = (base && base.startTime) ? base.startTime : (selectedGame && selectedGame.startTime) ? selectedGame.startTime : '시간 미정';
+            const date = (base && base.date) ? base.date : (selectedGame && selectedGame.date) ? selectedGame.date : '날짜 미정';
             
             const isActive = progressStatus === '경기중' && bettingStart === '시작';
             const statusClass = isActive ? 'text-green-300' : 'text-red-300';
@@ -873,6 +872,11 @@
             betBtn.disabled = true;
             betBtn.classList.add('opacity-50', 'cursor-not-allowed');
             betBtn.classList.remove('cursor-pointer');
+
+            // 경기 선택 모달 다시 표시
+            if (typeof loadSimpleGames === 'function') {
+                loadSimpleGames();
+            }
         }
 
 
