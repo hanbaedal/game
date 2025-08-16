@@ -715,35 +715,19 @@
             
             gameSelectionInProgress = true;
             
-            // 경기 선택 음성 안내 (순차적)
-            speakText(`${matchup}의 경기를 선택하셨습니다.`);
+            // 경기 선택 시 음성 안내 제거 (요청에 따라 비활성화)
             
-            // 첫 번째 음성 완료 후 두 번째 음성 (약 3초 후)
-            setTimeout(() => {
-                speakText('빠던나인 게임은 야구게임 예측 게임으로, 일차 버전에서는 타자의 배팅을 예측하는 것을 게임으로 만들었습니다.');
-            }, 3000);
-            
-            // 두 번째 음성 완료 후 세 번째 음성 (약 6초 후)
-            setTimeout(() => {
-                speakText('배팅 포인트는 일차 버전에서 100포인트 고정했습니다.');
-            }, 6000);
-            
-            // 경기 선택 시 모든 배팅 데이터 강제 초기화
+            // 경기 선택 시 배팅 데이터 초기화 요청(백그라운드, UI 블로킹 없음)
             try {
-                console.log('🧹 강제 초기화 시작...');
-                const response = await fetch('/api/clear-all-betting-data', {
+                fetch('/api/clear-all-betting-data', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' }
-                });
-                
-                const data = await response.json();
-                if (data.success) {
-                    console.log('✅ 강제 초기화 완료:', data.message);
-                } else {
-                    console.error('❌ 강제 초기화 실패:', data.message);
-                }
+                })
+                .then(res => res.json())
+                .then(data => console.log('🧹 강제 초기화 응답:', data))
+                .catch(err => console.warn('⚠️ 강제 초기화 호출 경고:', err));
             } catch (error) {
-                console.error('❌ 강제 초기화 오류:', error);
+                console.warn('⚠️ 강제 초기화 호출 오류(무시):', error);
             }
             
             // 포인트 초기화 플래그 리셋
@@ -791,10 +775,8 @@
                 enableBettingPoints();
                 
                 console.log('✅ 경기 선택 완료:', selectedGame);
-                // 경기 선택 완료 후 플래그 리셋
-                setTimeout(() => {
-                    gameSelectionInProgress = false;
-                }, 10000); // 모든 음성 완료 후
+                // 플래그 즉시 해제 (첫 클릭 즉시 반응)
+                gameSelectionInProgress = false;
             } else {
                 console.error('❌ 선택된 경기 데이터를 찾을 수 없습니다.');
                 alert('경기 선택 중 오류가 발생했습니다.');
