@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>설정</title>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Noto Sans KR', sans-serif;
+            background: #e0e4e8;
+            min-height: 100vh;
+        }
+
+        .header {
+            background: #000000;
+            padding: 20px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            position: fixed;
+            top: 0;
+            width: 100%;
+            z-index: 100;
+        }
+
+        .header-content {
+            max-width: 600px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .logo {
+            width: 40px;
+            height: 40px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .logo:hover {
+            transform: scale(1.1);
+        }
+
+        .home-button {
+            color: #ffffff;
+            font-size: 20px;
+            cursor: pointer;
+            padding: 10px;
+            transition: all 0.3s ease;
+        }
+
+        .home-button:hover {
+            color: #007bff;
+            transform: scale(1.1);
+        }
+
+        .title-container {
+            display: flex;
+            align-items: center;
+            text-align: center;
+            gap: 8px;
+        }
+
+        .user-name {
+            font-size: 14px;
+            color: #ffffff;
+            font-weight: 500;
+        }
+
+        .title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #ffffff;
+        }
+
+        .settings-container {
+            max-width: 600px;
+            margin: 80px auto 20px;
+            padding: 20px;
+        }
+
+        .settings-section {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+            margin-bottom: 20px;
+            overflow: hidden;
+        }
+
+        .settings-item {
+            display: flex;
+            align-items: center;
+            padding: 20px;
+            border-bottom: 1px solid #eee;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .settings-item:last-child {
+            border-bottom: none;
+        }
+
+        .settings-item:hover {
+            background-color: #f8f9fa;
+        }
+
+        .settings-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: #f0f2f5;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 15px;
+        }
+
+        .settings-icon i {
+            color: #666;
+            font-size: 18px;
+        }
+
+        .settings-content {
+            flex: 1;
+        }
+
+        .settings-title {
+            font-size: 16px;
+            color: #333;
+            margin-bottom: 5px;
+        }
+
+        .settings-description {
+            font-size: 14px;
+            color: #666;
+        }
+
+        .arrow-icon {
+            color: #999;
+            font-size: 16px;
+        }
+
+        .warning {
+            color: #dc3545;
+        }
+
+        .warning .settings-icon {
+            background: #fff0f0;
+        }
+
+        .warning .settings-icon i {
+            color: #dc3545;
+        }
+
+        .warning .settings-title {
+            color: #dc3545;
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <div class="header-content">
+            <a href="index.html" class="logo">
+                <img src="/img/logo.png" width="40" height="40" alt="PPADUN 로고">
+            </a>
+            <div class="title-container">
+                <span id="userNameDisplay" class="user-name"></span>
+                <h1 class="title">설정</h1>
+            </div>
+            <a href="index.html" class="back-button">
+                <i class="fas fa-home"></i>
+            </a>
+        </div>
+    </header>
+
+    <div class="settings-container">
+        <div class="settings-section">
+            <div class="settings-item" onclick="location.href='user-info.html'">
+                <div class="settings-icon">
+                    <i class="fas fa-user"></i>
+                </div>
+                <div class="settings-content">
+                    <div class="settings-title">회원정보</div>
+                    <div class="settings-description">개인정보 수정 및 관리</div>
+                </div>
+                <i class="fas fa-chevron-right arrow-icon"></i>
+            </div>
+
+            <div class="settings-item" onclick="location.href='customer-service.html'">
+                <div class="settings-icon">
+                    <i class="fas fa-headset"></i>
+                </div>
+                <div class="settings-content">
+                    <div class="settings-title">고객센터</div>
+                    <div class="settings-description">문의사항 및 도움말</div>
+                </div>
+                <i class="fas fa-chevron-right arrow-icon"></i>
+            </div>
+
+            <div class="settings-item" onclick="location.href='membership.html'">
+                <div class="settings-icon">
+                    <i class="fas fa-crown"></i>
+                </div>
+                <div class="settings-content">
+                    <div class="settings-title">멤버십관리</div>
+                    <div class="settings-description">멤버십 등급 및 혜택</div>
+                </div>
+                <i class="fas fa-chevron-right arrow-icon"></i>
+            </div>
+        </div>
+
+        <div class="settings-section">
+            <div class="settings-item" onclick="location.href='notice.html'">
+                <div class="settings-icon">
+                    <i class="fas fa-bullhorn"></i>
+                </div>
+                <div class="settings-content">
+                    <div class="settings-title">공지사항</div>
+                    <div class="settings-description">최신 소식 및 안내</div>
+                </div>
+                <i class="fas fa-chevron-right arrow-icon"></i>
+            </div>
+
+            <div class="settings-item" onclick="location.href='payment.html'">
+                <div class="settings-icon">
+                    <i class="fas fa-credit-card"></i>
+                </div>
+                <div class="settings-content">
+                    <div class="settings-title">결제방법</div>
+                    <div class="settings-description">결제 수단 관리</div>
+                </div>
+                <i class="fas fa-chevron-right arrow-icon"></i>
+            </div>
+
+            <div class="settings-item" onclick="location.href='donation.html'">
+                <div class="settings-icon">
+                    <i class="fas fa-hand-holding-heart"></i>
+                </div>
+                <div class="settings-content">
+                    <div class="settings-title">기부현황</div>
+                    <div class="settings-description">기부 내역 및 현황</div>
+                </div>
+                <i class="fas fa-chevron-right arrow-icon"></i>
+            </div>
+        </div>
+
+        <div class="settings-section">
+            <div class="settings-item warning" onclick="handleAccountDeletion()">
+                <div class="settings-icon">
+                    <i class="fas fa-user-slash"></i>
+                </div>
+                <div class="settings-content">
+                    <div class="settings-title">회원탈퇴</div>
+                    <div class="settings-description">계정을 영구적으로 삭제합니다</div>
+                </div>
+                <i class="fas fa-chevron-right arrow-icon"></i>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 페이지 로드 시 사용자 정보 로드
+        document.addEventListener('DOMContentLoaded', () => {
+            loadUserInfo();
+        });
+
+        // 사용자 정보 로드 및 표시
+        function loadUserInfo() {
+            try {
+                const storedUser = localStorage.getItem('currentUser');
+                if (storedUser) {
+                    const currentUser = JSON.parse(storedUser);
+                    
+                    // 사용자 이름 표시
+                    document.getElementById('userNameDisplay').textContent = `${currentUser.name}님`;
+                } else {
+                    // 로그인하지 않은 경우
+                    document.getElementById('userNameDisplay').textContent = '';
+                }
+            } catch (error) {
+                console.error('사용자 정보 로드 오류:', error);
+                document.getElementById('userNameDisplay').textContent = '';
+            }
+        }
+
+        function handleAccountDeletion() {
+            if (confirm('정말로 회원탈퇴를 하시겠습니까? 이 작업은 되돌릴 수 없습니다.')) {
+                alert('회원탈퇴가 처리되었습니다.');
+                location.href = 'login.html';
+            }
+        }
+    </script>
+</body>
+</html> 

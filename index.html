@@ -1976,8 +1976,8 @@
                 const pointsData = await pointsResponse.json();
                 const pointsPerWinner = pointsData.success ? pointsData.data.pointsPerWinner : 0;
                 const totalWinAmount = 100 + pointsPerWinner; // 고정 배팅 포인트(100) + 성공자당 분배 포인트
-                const calculatedDonationAmount = Math.floor(totalWinAmount * (percentage / 100)); // 기부할 포인트
-                const remainingAmount = totalWinAmount - calculatedDonationAmount; // 남은 포인트
+                const calculatedDonationAmount = Math.floor(pointsPerWinner * (percentage / 100)); // 기부할 포인트
+                const remainingAmount = 100 + (pointsPerWinner - calculatedDonationAmount); // 남은 포인트
                 
                 // 한국 시간대로 오늘 날짜 계산
                 const now = new Date();
@@ -2623,8 +2623,8 @@
                 const data = await response.json();
                 const pointsPerWinner = data.success ? data.data.pointsPerWinner : 0;
                 const totalWinAmount = 100 + pointsPerWinner; // 고정 배팅 포인트(100) + 성공자당 분배 포인트
-                const donationAmount = Math.floor(totalWinAmount * (percent / 100)); // 기부할 포인트
-                const remainingAmount = totalWinAmount - donationAmount; // 남은 포인트
+                const donationAmount = Math.floor(pointsPerWinner * (percent / 100)); // 기부할 포인트
+                const remainingAmount = 100 + (pointsPerWinner - donationAmount); // 남은 포인트
                 
                 // 실제 기부 API 호출
                 const donationResponse = await fetch('/api/donation', {
