@@ -1565,17 +1565,25 @@
                                 }, 4000);
                             }
                             
-                            // 게임이 종료되었는지 확인
-                            if (currentGame.progressStatus === '경기종료' || currentGame.bettingStart === '종료') {
-                                console.log('🏁 게임 종료 감지! 다음 게임으로 넘어갑니다.');
+                            // 게임이 종료되었는지 확인 (경기종료, 종료, 대기 상태 모두 포함)
+                            if (currentGame.progressStatus === '경기종료' || 
+                                currentGame.bettingStart === '종료' || 
+                                currentGame.bettingStart === '대기') {
                                 
-                                // 다음 게임 찾기
-                                const nextGame = data.games.find(game => 
-                                    game.gameNumber === (currentGame.gameNumber + 1) ||
-                                    game.number === (currentGame.number + 1)
-                                );
+                                if (currentGame.bettingStart === '대기') {
+                                    console.log('⏳ 배팅 대기 상태 감지! 다음 게임으로 넘어갑니다.');
+                                } else {
+                                    console.log('🏁 게임 종료 감지! 다음 게임으로 넘어갑니다.');
+                                }
                                 
-                                if (nextGame && nextGame.bettingStart === '시작') {
+                                // 다음 게임 찾기 (현재 게임 번호보다 큰 번호 중에서)
+                                const nextGame = data.games.find(game => {
+                                    const currentNum = currentGame.gameNumber || currentGame.number;
+                                    const nextNum = game.gameNumber || game.number;
+                                    return nextNum > currentNum && game.bettingStart === '시작';
+                                });
+                                
+                                if (nextGame) {
                                     console.log('🎯 다음 게임 발견:', nextGame);
                                     
                                     // 새로운 게임 선택
@@ -1593,7 +1601,22 @@
                                     
                                     console.log('✅ 다음 게임으로 자동 전환 완료');
                                 } else {
-                                    console.log('⚠️ 다음 게임이 없거나 아직 시작되지 않음');
+                                    // 다음 게임이 없으면 첫 번째 게임으로 돌아가기
+                                    const firstGame = data.games.find(game => game.bettingStart === '시작');
+                                    if (firstGame) {
+                                        console.log('🔄 다음 게임이 없어 첫 번째 게임으로 돌아갑니다:', firstGame);
+                                        
+                                        selectedGame = firstGame;
+                                        previousBettingStart = firstGame.bettingStart;
+                                        
+                                        updateSimpleGameDisplay(firstGame.gameNumber || firstGame.number, firstGame.matchup, firstGame);
+                                        resetBettingSelection();
+                                        
+                                        speakText(`첫 번째 경기 ${firstGame.gameNumber || firstGame.number}경기로 돌아갑니다.`, 1.0);
+                                        console.log('✅ 첫 번째 게임으로 순환 완료');
+                                    } else {
+                                        console.log('⚠️ 활성화된 게임이 없습니다.');
+                                    }
                                 }
                             } else {
                                 // 이전 상태 업데이트
