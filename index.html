@@ -834,6 +834,7 @@
 
         // 경기 선택 초기화 함수
         function resetGameSelection() {
+            window.resultFlowActive = false;
             window.selectedChoice = null;
             selectedGame = null;
             
@@ -1773,6 +1774,7 @@
         // 배팅 선택 초기화 함수
         async function resetBettingSelection() {
             console.log('🔄 배팅 선택 초기화 시작...');
+            window.resultFlowActive = false;
             
             // 선택된 배팅 유형 초기화
             window.selectedChoice = null;
@@ -3200,6 +3202,8 @@
         // 결과 대기 및 성공/기부 모달 연동
         function waitForResult() {
             console.log('🔄 결과 대기 시작...');
+            // 라운드 시작 시 결과 처리 중복 가드 초기화
+            window.resultFlowActive = false;
             let checkCount = 0;
             
             const resultCheckInterval = setInterval(async () => {
