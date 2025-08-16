@@ -2793,9 +2793,19 @@
                 
                 const data = await response.json();
                 const pointsPerWinner = data.success ? data.data.pointsPerWinner : 0;
+                const totalUniqueUsers = data.success ? data.data.totalUniqueUsers : 0;
+                const winnerCount = data.success ? data.data.winnerCount : 0;
                 const totalWinAmount = 100 + pointsPerWinner; // 고정 배팅 포인트(100) + 성공자당 분배 포인트
-                const donationAmount = Math.floor(pointsPerWinner * (percent / 100)); // 기부할 포인트
-                const remainingAmount = 100 + (pointsPerWinner - donationAmount); // 남은 포인트
+                
+                // 혼자서 게임할 때 (참가자 1명, 승자 1명)
+                if (totalUniqueUsers === 1 && winnerCount === 1) {
+                    speakText('혼자서 게임하셨네요! 친구들과 함께하면 더 재미있어요!');
+                    showSoloWinModal(totalWinAmount);
+                    return;
+                }
+                
+                const donationAmount = Math.floor(pointsPerWinner * (percent / 100)); // 기부할 포인트 (승리 수당에서만)
+                const remainingAmount = 100 + (pointsPerWinner - donationAmount); // 남은 포인트 (원금 + (승리 수당 - 기부))
                 
                 // 실제 기부 API 호출
                 const donationResponse = await fetch('/api/donation', {
@@ -3109,6 +3119,10 @@
             const celebrationText = `와! 축하합니다! ${winAmount}포인트를 획득하셨습니다!`;
             speakText(celebrationText, 1.1); // 속도를 약간 빠르게, 더 기쁜 톤
             
+            // 수당 계산 분리 표시
+            const originalBet = 100; // 원금
+            const winningBonus = winAmount - originalBet; // 승리 수당
+            
             const oldModal = document.getElementById('successModal');
             if (oldModal) oldModal.remove();
             const modal = document.createElement('div');
@@ -3119,10 +3133,8 @@
                     <h3 class="text-lg font-bold mb-4 text-green-400">🎉 축하합니다!</h3>
                     <div class="mb-4 space-y-2">
                         <p class="text-lg font-bold">총 획득 포인트: <span class="text-yellow-300">${winAmount}</span></p>
-                        <div class="text-sm text-gray-300">
-                            <p>원금: 100포인트</p>
-                            <p>승리 수당: ${winAmount - 100}포인트</p>
-                        </div>
+                        <p class="text-sm text-gray-300">원금: <span class="text-blue-300">${originalBet}</span></p>
+                        <p class="text-sm text-gray-300">승리 수당: <span class="text-green-300">${winningBonus}</span></p>
                     </div>
                     <p class="text-sm text-gray-300">클릭하여 기부 모달로 이동</p>
                 </div>
@@ -3146,6 +3158,40 @@
             modalContent.onclick = function() {
                 modal.remove();
                 showDonationModal();
+            };
+        }
+
+        // 혼자서 게임할 때 승리 모달 (기부 모달 대신)
+        function showSoloWinModal(winAmount) {
+            const celebrationText = `와! 축하합니다! ${winAmount}포인트를 획득하셨습니다!`;
+            speakText(celebrationText, 1.1);
+            
+            const oldModal = document.getElementById('soloWinModal');
+            if (oldModal) oldModal.remove();
+            const modal = document.createElement('div');
+            modal.id = 'soloWinModal';
+            modal.className = 'fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50';
+            modal.innerHTML = `
+                <div class="bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4 text-center cursor-pointer">
+                    <h3 class="text-lg font-bold mb-4 text-green-400">🎉 축하합니다!</h3>
+                    <div class="mb-4 space-y-2">
+                        <p class="text-lg font-bold">총 획득 포인트: <span class="text-yellow-300">${winAmount}</span></p>
+                        <p class="text-sm text-gray-300">원금: <span class="text-blue-300">100</span></p>
+                        <p class="text-sm text-gray-300">승리 수당: <span class="text-green-300">${winAmount - 100}</span></p>
+                    </div>
+                    <p class="text-sm text-red-400 font-bold mb-3">혼자서 게임하셨네요!</p>
+                    <p class="text-sm text-gray-300">친구들과 함께하면 더 재미있어요!</p>
+                    <p class="text-sm text-gray-300">클릭하여 다음 게임으로</p>
+                </div>
+            `;
+            document.body.appendChild(modal);
+            
+            // 모달 클릭 시 게임으로 돌아감
+            modal.onclick = function() {
+                modal.remove();
+                showSelectedGameOnly();
+                enableBettingSelection();
+                enableBettingPoints();
             };
         }
 
@@ -3196,6 +3242,23 @@
             };
         }
 
+        // 공통 함수들
+        function getKoreanDate() {
+            const now = new Date();
+            const koreaTime = new Date(now.getTime() + (9 * 60 * 60 * 1000)); // UTC+9
+            return koreaTime.getFullYear().toString() +
+                   '-' + String(koreaTime.getMonth() + 1).padStart(2, '0') +
+                   '-' + String(koreaTime.getDate()).padStart(2, '0');
+        }
+        
+        function calculateWinnings(pointsPerWinner) {
+            return 100 + pointsPerWinner; // 원금 + 승리 수당
+        }
+        
+        function calculateDonation(winningBonus, percentage) {
+            return Math.floor(winningBonus * (percentage / 100)); // 승리 수당에서만 기부 계산
+        }
+        
         // 매치업을 일반 텍스트로 표시하는 함수
         function getMatchupWithLogos(matchup) {
             return matchup || '';
