@@ -801,6 +801,14 @@
                 : (bettingStart === '시작' ? '경기중' : '경기전');
             const startTime = (base && base.startTime) ? base.startTime : (selectedGame && selectedGame.startTime) ? selectedGame.startTime : '시간 미정';
             const date = (base && base.date) ? base.date : (selectedGame && selectedGame.date) ? selectedGame.date : '날짜 미정';
+            // matchup 안전 폴백: 인자 → gameData.matchup → home/away 조합 → selectedGame
+            const displayMatchup = (typeof matchup === 'string' && matchup)
+                ? matchup
+                : (base && base.matchup)
+                    ? base.matchup
+                    : (base && base.homeTeam && base.awayTeam)
+                        ? `${base.homeTeam} vs ${base.awayTeam}`
+                        : (selectedGame && (selectedGame.matchup || (selectedGame.homeTeam && selectedGame.awayTeam ? `${selectedGame.homeTeam} vs ${selectedGame.awayTeam}` : '')));
             
             const isActive = progressStatus === '경기중' && bettingStart === '시작';
             const statusClass = isActive ? 'text-green-300' : 'text-red-300';
@@ -812,7 +820,7 @@
                         <div onclick="resetGameSelection()" class="bg-blue-600 rounded-lg p-2 cursor-pointer hover:bg-blue-700 transition-colors">
                             <div class="flex justify-between items-center">
                                 <div class="flex-1 min-w-0">
-                                    <div class="font-bold text-white text-xs truncate">${getMatchupWithLogos(matchup)}</div>
+                                    <div class="font-bold text-white text-xs truncate">${getMatchupWithLogos(displayMatchup)}</div>
                                 </div>
                                 <div class="text-xs text-blue-200 opacity-75 flex-shrink-0 ml-2">
                                     ${startTime} | ${progressStatus}
@@ -2168,8 +2176,8 @@
             try {
                 console.log('🎯 기부 처리 시작:', { percentage });
                 
-                // 선택된 게임 정보 가져오기
-                const selectedGame = await getSelectedGame();
+                // 선택된 게임 정보 가져오기 (전역 상태 사용)
+                const selectedGame = window.selectedGame;
                 if (!selectedGame || !selectedGame.gameNumber) {
                     speakText('게임 정보가 올바르지 않습니다. 게임을 다시 선택해주세요.');
                     alert('게임 정보가 올바르지 않습니다. 게임을 다시 선택해주세요.');
@@ -3170,6 +3178,12 @@
                                 // 실제 배팅 데이터에서 사용자의 선택 확인
                                 const userChoice = window.selectedChoice;
                                 const adminResult = currentGame.predictionResult;
+                                // 중복 처리 방지 가드
+                                if (window.resultFlowActive) {
+                                    console.log('⛔ 결과 처리 이미 진행 중 - 중복 처리 차단');
+                                    return;
+                                }
+                                window.resultFlowActive = true;
                                 
                                 // 더 정확한 비교를 위해 공백 제거 및 정규화
                                 const normalizedUserChoice = userChoice ? userChoice.trim() : '';
