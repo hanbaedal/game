@@ -861,9 +861,6 @@
             betBtn.disabled = true;
             betBtn.classList.add('opacity-50', 'cursor-not-allowed');
             betBtn.classList.remove('cursor-pointer');
-            
-            // 경기 목록 다시 로드
-            loadSimpleGames();
         }
 
 
@@ -1620,9 +1617,6 @@
                                                 
                                                 resetBettingSelection();
                                                 
-                                                // 게임 선택 모달 다시 로드하여 선택된 게임 표시
-                                                loadSimpleGames();
-                                                
                                                 speakText(`첫 번째 경기 ${firstGame.gameNumber || firstGame.number}경기를 활성화했습니다.`, 1.0);
                                                 console.log('✅ 첫 번째 게임 서버 활성화 완료');
                                             }
@@ -1639,9 +1633,6 @@
                                                 previousBettingStart = '시작';
                                                 
                                                 resetBettingSelection();
-                                                
-                                                // 게임 선택 모달 다시 로드하여 선택된 게임 표시
-                                                loadSimpleGames();
                                                 
                                                 speakText(`첫 번째 경기 ${firstGame.gameNumber || firstGame.number}경기를 활성화했습니다.`, 1.0);
                                                 console.log('✅ 첫 번째 게임 클라이언트 임시 활성화 완료');
@@ -1660,9 +1651,6 @@
                                             previousBettingStart = '시작';
                                             
                                             resetBettingSelection();
-                                            
-                                            // 게임 선택 모달 다시 로드하여 선택된 게임 표시
-                                            loadSimpleGames();
                                             
                                             speakText(`첫 번째 경기 ${firstGame.gameNumber || firstGame.number}경기를 활성화했습니다.`, 1.0);
                                             console.log('✅ 첫 번째 게임 클라이언트 임시 활성화 완료 (오류 시)');
@@ -1689,9 +1677,6 @@
                                 enableBettingChoices();
                                 enableBettingSelection();
                                 enablePredictionButton();
-                                
-                                // 게임 선택 모달 업데이트
-                                loadSimpleGames();
                             } else if (currentGame.bettingStart === '중지' || currentGame.bettingStart === '종료') {
                                 // 배팅 불가능한 상태 - 다음 게임으로 넘어가기
                                 console.log('🔄 현재 게임이 비활성 상태입니다. 다음 게임을 찾습니다.');
@@ -1708,7 +1693,6 @@
                                     previousBettingStart = nextGame.bettingStart;
                                     
                                     resetBettingSelection();
-                                    loadSimpleGames();
                                     
                                     speakText(`다음 경기 ${nextGame.gameNumber || nextGame.number}경기로 넘어갑니다.`, 1.0);
                                 } else {
@@ -1719,7 +1703,6 @@
                                         previousBettingStart = firstActiveGame.bettingStart;
                                         
                                         resetBettingSelection();
-                                        loadSimpleGames();
                                         
                                         speakText(`첫 번째 경기 ${firstActiveGame.gameNumber || firstActiveGame.number}경기로 돌아갑니다.`, 1.0);
                                     }
@@ -2328,11 +2311,9 @@
                             );
                         } else {
                             console.warn('⚠️ selectedGame이 없습니다. 기본 화면으로 돌아갑니다.');
-                            loadSimpleGames(); // 기본 게임 목록으로 돌아가기
                         }
                     } catch (error) {
                         console.error('❌ 게임 화면 업데이트 오류:', error);
-                        loadSimpleGames(); // 오류 시 기본 게임 목록으로 돌아가기
                     }
                     enableBettingSelection();
                     enableBettingPoints();
