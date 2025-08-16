@@ -1689,6 +1689,31 @@
                                 
                                 if (nextGame) {
                                     console.log('🎯 다음 활성 게임 발견:', nextGame);
+                                    
+                                    // 이전 게임에서 사용자 배팅 데이터 초기화
+                                    if (currentUser && currentUser.userId && selectedGame) {
+                                        try {
+                                            console.log('🧹 이전 게임 배팅 데이터 초기화 중...');
+                                            const response = await fetch('/api/clear-user-betting', {
+                                                method: 'POST',
+                                                headers: { 'Content-Type': 'application/json' },
+                                                body: JSON.stringify({
+                                                    userId: currentUser.userId,
+                                                    gameNumber: selectedGame.gameNumber || selectedGame.number
+                                                })
+                                            });
+                                            
+                                            const clearData = await response.json();
+                                            if (clearData.success) {
+                                                console.log('✅ 이전 게임 배팅 데이터 초기화 완료');
+                                            } else {
+                                                console.log('⚠️ 이전 게임 배팅 데이터 초기화 실패:', clearData.message);
+                                            }
+                                        } catch (error) {
+                                            console.error('❌ 이전 게임 배팅 데이터 초기화 오류:', error);
+                                        }
+                                    }
+                                    
                                     selectedGame = nextGame;
                                     previousBettingStart = nextGame.bettingStart;
                                     
@@ -1699,6 +1724,30 @@
                                     // 다음 게임이 없으면 첫 번째 게임으로
                                     const firstActiveGame = data.games.find(game => game.bettingStart === '시작');
                                     if (firstActiveGame) {
+                                        // 이전 게임에서 사용자 배팅 데이터 초기화
+                                        if (currentUser && currentUser.userId && selectedGame) {
+                                            try {
+                                                console.log('🧹 이전 게임 배팅 데이터 초기화 중...');
+                                                const response = await fetch('/api/clear-user-betting', {
+                                                    method: 'POST',
+                                                    headers: { 'Content-Type': 'application/json' },
+                                                    body: JSON.stringify({
+                                                        userId: currentUser.userId,
+                                                        gameNumber: selectedGame.gameNumber || selectedGame.number
+                                                    })
+                                                });
+                                                
+                                                const clearData = await response.json();
+                                                if (clearData.success) {
+                                                    console.log('✅ 이전 게임 배팅 데이터 초기화 완료');
+                                                } else {
+                                                    console.log('⚠️ 이전 게임 배팅 데이터 초기화 실패:', clearData.message);
+                                                }
+                                            } catch (error) {
+                                                console.error('❌ 이전 게임 배팅 데이터 초기화 오류:', error);
+                                            }
+                                        }
+                                        
                                         selectedGame = firstActiveGame;
                                         previousBettingStart = firstActiveGame.bettingStart;
                                         
@@ -1754,30 +1803,6 @@
                 btn.classList.remove('bg-blue-500', 'bg-blue-600');
                 btn.classList.add('bg-gray-600');
             });
-            
-            // 서버에서 사용자 배팅 데이터 초기화 (새로운 게임으로 넘어갈 때)
-            if (selectedGame && currentUser && currentUser.userId) {
-                try {
-                    console.log('🧹 서버에서 사용자 배팅 데이터 초기화 중...');
-                    const response = await fetch('/api/clear-user-betting', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            userId: currentUser.userId,
-                            gameNumber: selectedGame.gameNumber || selectedGame.number
-                        })
-                    });
-                    
-                    const data = await response.json();
-                    if (data.success) {
-                        console.log('✅ 서버 배팅 데이터 초기화 완료:', data.message);
-                    } else {
-                        console.log('⚠️ 서버 배팅 데이터 초기화 실패:', data.message);
-                    }
-                } catch (error) {
-                    console.error('❌ 서버 배팅 데이터 초기화 오류:', error);
-                }
-            }
             
             console.log('✅ 배팅 선택 초기화 완료');
         }
