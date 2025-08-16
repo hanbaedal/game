@@ -2194,6 +2194,8 @@
         async function processDonation(percentage) {
             try {
                 console.log('🎯 기부 처리 시작:', { percentage });
+                // 요청에 따라 기부 비율은 고정 10%
+                const donationPercent = 10;
                 
                 // 선택된 게임 정보 가져오기 (전역 상태 사용)
                 const selectedGame = window.selectedGame;
@@ -2241,7 +2243,7 @@
                 const totalWinAmount = calculateWinnings(pointsPerWinner);
                 const originalBet = 100; // 원금 (기부 대상 아님)
                 const winningBonus = pointsPerWinner; // 승리수당만 기부 대상
-                const calculatedDonationAmount = calculateDonation(winningBonus, percentage);
+                const calculatedDonationAmount = calculateDonation(winningBonus, donationPercent);
                 
                 // 혼자서 승리한 경우 감지
                 const totalUniqueUsers = pointsData.data.totalUniqueUsers || 1;
@@ -2257,7 +2259,7 @@
                     원금: originalBet,
                     승리수당: winningBonus,
                     총획득: totalWinAmount,
-                    기부비율: percentage,
+                    기부비율: donationPercent,
                     기부금액: calculatedDonationAmount,
                     기부후받는포인트: totalWinAmount - calculatedDonationAmount
                 });
@@ -2272,7 +2274,7 @@
                         userId: currentUser.userId,
                         userName: currentUser.name,
                         donationAmount: calculatedDonationAmount,
-                        percentage: percentage
+                        percentage: donationPercent
                     })
                 });
 
@@ -2285,14 +2287,14 @@
                     localStorage.setItem('currentUser', JSON.stringify(currentUser));
                     
                     // 기부 완료 음성 안내
-                    speakText(`${percentage}퍼센트 기부가 완료되었습니다. ${calculatedDonationAmount}포인트를 기부하셨습니다.`);
+                    speakText(`${donationPercent}퍼센트 기부가 완료되었습니다. ${calculatedDonationAmount}포인트를 기부하셨습니다.`);
                     
                     // 기부 모달 닫기
                     document.getElementById('donationModal').style.display = 'none';
                     document.getElementById('donationConfirm').classList.add('hidden');
                     
                     // 기부 완료 모달 표시
-                    showDonationCompleteModal(calculatedDonationAmount, percentage);
+                    showDonationCompleteModal(calculatedDonationAmount, donationPercent);
                     
                     // 기부 완료 후 배팅 선택 화면으로 돌아가기 (게임 선택 유지)
                     try {
