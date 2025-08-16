@@ -1615,7 +1615,24 @@
                                         speakText(`첫 번째 경기 ${firstGame.gameNumber || firstGame.number}경기로 돌아갑니다.`, 1.0);
                                         console.log('✅ 첫 번째 게임으로 순환 완료');
                                     } else {
-                                        console.log('⚠️ 활성화된 게임이 없습니다.');
+                                        // 모든 게임이 비활성 상태일 때 첫 번째 게임을 강제로 활성화
+                                        console.log('⚠️ 활성화된 게임이 없습니다. 첫 번째 게임을 강제로 활성화합니다.');
+                                        
+                                        const firstGame = data.games[0];
+                                        if (firstGame) {
+                                            // 클라이언트에서 임시로 상태 변경
+                                            firstGame.bettingStart = '시작';
+                                            firstGame.bettingStop = '진행';
+                                            
+                                            selectedGame = firstGame;
+                                            previousBettingStart = '시작';
+                                            
+                                            updateSimpleGameDisplay(firstGame.gameNumber || firstGame.number, firstGame.matchup, firstGame);
+                                            resetBettingSelection();
+                                            
+                                            speakText(`첫 번째 경기 ${firstGame.gameNumber || firstGame.number}경기를 활성화했습니다.`, 1.0);
+                                            console.log('✅ 첫 번째 게임 강제 활성화 완료');
+                                        }
                                     }
                                 }
                             } else {
