@@ -3650,5 +3650,95 @@ app.get('/', (req, res) => {
             }
         });
 
+        // 사용자 배팅 데이터 초기화 API
+        app.post('/api/clear-user-betting', async (req, res) => {
+            try {
+                const { userId, gameNumber } = req.body;
+                
+                if (!userId || !gameNumber) {
+                    return res.status(400).json({
+                        success: false,
+                        message: '사용자 ID와 게임 번호가 필요합니다.'
+                    });
+                }
+                
+                console.log(`🧹 사용자 ${userId}의 게임 ${gameNumber} 배팅 데이터 초기화 시작...`);
+                
+                // 해당 게임의 컬렉션 가져오기
+                const gameCollection = getBettingGameCollection(gameNumber);
+                
+                // 오늘 날짜 계산
+                const today = new Date();
+                const koreaTime = new Date(today.getTime() + (9 * 60 * 60 * 1000));
+                const todayString = koreaTime.getFullYear().toString() + 
+                                   '-' + String(koreaTime.getMonth() + 1).padStart(2, '0') + 
+                                   '-' + String(koreaTime.getDate()).padStart(2, '0');
+                
+                // 해당 게임에서 사용자의 배팅 데이터 제거
+                const result = await gameCollection.updateOne(
+                    {
+                        date: todayString,
+                        gameNumber: parseInt(gameNumber)
+                    },
+                    {
+                        $pull: { bets: { userId: userId } }
+                    }
+                );
+                
+                if (result.matchedCount === 0) {
+                    return res.status(404).json({
+                        success: false,
+                        message: '해당 게임을 찾을 수 없습니다.'
+                    });
+                }
+                
+                // 업데이트된 게임 데이터 조회
+                const updatedGame = await gameCollection.findOne({
+                    date: todayString,
+                    gameNumber: parseInt(gameNumber)
+                });
+                
+                if (updatedGame) {
+                    // betCounts와 totalBets 재계산
+                    const newBetCounts = {
+                        '1루': 0, '2루': 0, '3루': 0, '홈런': 0, '삼진': 0, '아웃': 0
+                    };
+                    
+                    for (const bet of updatedGame.bets) {
+                        newBetCounts[bet.prediction] = (newBetCounts[bet.prediction] || 0) + 1;
+                    }
+                    
+                    await gameCollection.updateOne(
+                        { _id: updatedGame._id },
+                        { 
+                            $set: { 
+                                betCounts: newBetCounts,
+                                totalBets: updatedGame.bets.length
+                            }
+                        }
+                    );
+                }
+                
+                console.log(`✅ 사용자 ${userId}의 게임 ${gameNumber} 배팅 데이터 초기화 완료`);
+                
+                res.json({
+                    success: true,
+                    message: '사용자 배팅 데이터가 초기화되었습니다.',
+                    data: {
+                        userId: userId,
+                        gameNumber: gameNumber,
+                        date: todayString
+                    }
+                });
+                
+            } catch (error) {
+                console.error('사용자 배팅 데이터 초기화 오류:', error);
+                res.status(500).json({
+                    success: false,
+                    message: '사용자 배팅 데이터 초기화 중 오류가 발생했습니다.'
+                });
+            }
+        });
+
         // 서버 시작
         startServer(); 
