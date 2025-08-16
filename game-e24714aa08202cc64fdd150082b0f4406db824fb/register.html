@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>회원가입</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        // Tailwind CSS CDN 경고 숨기기
+        console.warn = function() {};
+        console.error = function() {};
+    </script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        /* 모달 스타일 */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+        }
+        .modal-content {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            max-width: 90%;
+            width: 300px;
+        }
+        .modal-close {
+            position: absolute;
+            right: 10px;
+            top: 10px;
+            cursor: pointer;
+            font-size: 20px;
+        }
+        .error-message {
+            color: #ef4444;
+            font-size: 0.75rem;
+            margin-top: 0.25rem;
+        }
+        .success-message {
+            color: #10b981;
+            font-size: 0.75rem;
+            margin-top: 0.25rem;
+        }
+    </style>
+</head>
+<body class="flex justify-center items-center h-screen bg-gray-200">
+    <!-- 알림 모달 -->
+    <div id="alertModal" class="modal">
+        <div class="modal-content">
+            <span class="modal-close" onclick="closeModal()">&times;</span>
+            <p id="modalMessage" class="text-center text-sm mb-4"></p>
+            <button onclick="closeModal()" class="w-full bg-blue-500 text-white py-2 rounded text-sm">확인</button>
+        </div>
+    </div>
+
+    <div class="w-80 bg-white p-6 rounded-lg shadow-lg relative">
+        <!-- Title -->
+        <h2 class="text-center text-lg font-bold mb-4">회원가입</h2>
+
+        <!-- Form Fields -->
+        <div class="space-y-2">
+            <div class="mb-2">
+                <label class="text-xs font-medium block mb-1">아이디 <span class="text-red-500">*</span></label>
+                <div class="flex items-center gap-2">
+                    <input type="text" id="userId" placeholder="아이디를 입력하세요" class="w-full p-1.5 border rounded text-sm" autocomplete="off" maxlength="20">
+                    <button onclick="checkDuplicateId()" title="아이디 중복 확인" class="bg-blue-500 text-white px-2 py-1.5 rounded hover:bg-blue-600 flex-shrink-0">
+                        <i class="fas fa-check text-sm"></i>
+                    </button>
+                </div>
+                <p id="idCheckMessage" class="text-xs mt-1 hidden"></p>
+            </div>
+            
+            <div class="mb-2">
+                <label class="text-xs font-medium block mb-1">비밀번호 <span class="text-red-500">*</span></label>
+                <div class="relative">
+                    <input type="password" id="password" placeholder="비밀번호를 입력하세요" class="w-full p-1.5 pr-10 border rounded text-sm" autocomplete="new-password" minlength="6">
+                    <button type="button" onclick="togglePasswordVisibility('password')" class="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700">
+                        <i id="passwordEyeIcon" class="fas fa-eye"></i>
+                    </button>
+                </div>
+                <p id="passwordMessage" class="text-xs mt-1 hidden"></p>
+            </div>
+            
+            <div class="mb-2">
+                <label class="text-xs font-medium block mb-1">비밀번호 확인 <span class="text-red-500">*</span></label>
+                <div class="relative">
+                    <input type="password" id="passwordConfirm" placeholder="비밀번호를 다시 입력하세요" class="w-full p-1.5 pr-10 border rounded text-sm" autocomplete="new-password">
+                    <button type="button" onclick="togglePasswordVisibility('passwordConfirm')" class="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700">
+                        <i id="passwordConfirmEyeIcon" class="fas fa-eye"></i>
+                    </button>
+                </div>
+                <p id="passwordConfirmMessage" class="text-xs mt-1 hidden"></p>
+            </div>
+
+            <div class="mb-2">
+                <label class="text-xs font-medium block mb-1">이름 <span class="text-red-500">*</span></label>
+                <input type="text" id="name" placeholder="이름을 입력하세요" class="w-full p-1.5 border rounded text-sm" autocomplete="off" maxlength="20">
+            </div>
+
+            <div class="mb-2">
+                <label class="text-xs font-medium block mb-1">이메일 <span class="text-red-500">*</span></label>
+                <input type="email" id="email" placeholder="이메일을 입력하세요" class="w-full p-1.5 border rounded text-sm" autocomplete="off">
+                <p id="emailMessage" class="text-xs mt-1 hidden"></p>
+            </div>
+
+            <div class="mb-2">
+                <label class="block text-xs mt-3 mb-1" for="phone">휴대폰 번호 <span class="text-red-500">*</span></label>
+                <div class="flex items-center gap-2 mb-2">
+                    <input id="phone" type="text" maxlength="13" class="w-full p-1.5 rounded bg-white text-black border border-gray-300 text-sm" placeholder="010-0000-0000" autocomplete="off">
+                    <button onclick="sendVerificationCode()" class="bg-blue-500 text-white px-2 py-1.5 rounded hover:bg-blue-600 flex-shrink-0 text-sm">
+                        인증번호 발송
+                    </button>
+                </div>
+                <div id="verificationSection" class="hidden">
+                    <div class="flex items-center gap-2 mb-2">
+                        <input id="verificationCode" type="text" class="w-full p-1.5 rounded bg-white text-black border border-gray-300 text-sm" placeholder="인증번호 6자리 입력" autocomplete="off" maxlength="6">
+                        <button onclick="verifyCode()" class="bg-green-500 text-white px-2 py-1.5 rounded hover:bg-green-600 flex-shrink-0 text-sm">
+                            확인
+                        </button>
+                    </div>
+                    <p id="verificationMessage" class="text-xs mt-1 hidden"></p>
+                    <div id="timerDisplay" class="text-xs text-gray-500"></div>
+                </div>
+
+                <label class="block text-xs mt-3 mb-1" for="favoriteTeam">응원하는 팀 <span class="text-red-500">*</span></label>
+                <select id="favoriteTeam" class="w-full p-1.5 rounded bg-white text-black border border-gray-300 text-sm" autocomplete="off">
+                    <option value="">팀을 선택해주세요</option>
+                    <option value="SSG 랜더스">SSG 랜더스</option>
+                    <option value="키움 히어로즈">키움 히어로즈</option>
+                    <option value="LG 트윈스">LG 트윈스</option>
+                    <option value="KT 위즈">KT 위즈</option>
+                    <option value="KIA 타이거즈">KIA 타이거즈</option>
+                    <option value="NC 다이노스">NC 다이노스</option>
+                    <option value="삼성 라이온즈">삼성 라이온즈</option>
+                    <option value="롯데 자이언츠">롯데 자이언츠</option>
+                    <option value="두산 베어스">두산 베어스</option>
+                    <option value="한화 이글스">한화 이글스</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Submit Buttons -->
+        <div class="flex gap-2 mt-4">
+            <button onclick="register()" class="flex-1 bg-yellow-400 text-black font-bold py-2 rounded hover:bg-yellow-500">가입하기</button>
+            <button onclick="location.href='login.html'" class="flex-1 bg-blue-500 text-white font-bold py-2 rounded hover:bg-blue-600">로그인하러가기</button>
+        </div>
+    </div>
+
+    <!-- Font Awesome Icons -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/js/all.min.js"></script>
+    <script>
+        let verificationTimer;
+        let isPhoneVerified = false;
+        let isIdAvailable = false;
+
+        function showModal(message) {
+            document.getElementById('modalMessage').textContent = message;
+            document.getElementById('alertModal').style.display = 'block';
+        }
+
+        function closeModal() {
+            document.getElementById('alertModal').style.display = 'none';
+        }
+
+        // 비밀번호 보기/숨기기 토글 함수
+        function togglePasswordVisibility(fieldId) {
+            const passwordField = document.getElementById(fieldId);
+            const eyeIcon = document.getElementById(fieldId === 'password' ? 'passwordEyeIcon' : 'passwordConfirmEyeIcon');
+            
+            if (passwordField.type === 'password') {
+                passwordField.type = 'text';
+                eyeIcon.className = 'fas fa-eye-slash';
+            } else {
+                passwordField.type = 'password';
+                eyeIcon.className = 'fas fa-eye';
+            }
+        }
+
+        // 전화번호 자동 하이픈 추가
+        document.getElementById('phone').addEventListener('input', function(e) {
+            let value = e.target.value;
+            value = value.replace(/[^0-9]/g, '');
+            
+            if (value.length > 3 && value.length <= 7) {
+                value = value.slice(0, 3) + '-' + value.slice(3);
+            } else if (value.length > 7) {
+                value = value.slice(0, 3) + '-' + value.slice(3, 7) + '-' + value.slice(7);
+            }
+            
+            if (value.length > 13) {
+                value = value.slice(0, 13);
+            }
+            
+            e.target.value = value;
+        });
+
+        // 실시간 필드 검증
+        document.getElementById('userId').addEventListener('input', function() {
+            const userId = this.value;
+            const messageElement = document.getElementById('idCheckMessage');
+            
+            if (userId.length < 4) {
+                messageElement.textContent = '아이디는 4자 이상 입력해주세요.';
+                messageElement.className = 'error-message';
+                messageElement.classList.remove('hidden');
+                isIdAvailable = false;
+            } else if (userId.length > 20) {
+                messageElement.textContent = '아이디는 20자 이하로 입력해주세요.';
+                messageElement.className = 'error-message';
+                messageElement.classList.remove('hidden');
+                isIdAvailable = false;
+            } else {
+                messageElement.classList.add('hidden');
+            }
+        });
+
+        document.getElementById('password').addEventListener('input', function() {
+            const password = this.value;
+            const messageElement = document.getElementById('passwordMessage');
+            
+            if (password.length < 6) {
+                messageElement.textContent = '비밀번호는 6자 이상 입력해주세요.';
+                messageElement.className = 'error-message';
+                messageElement.classList.remove('hidden');
+            } else {
+                messageElement.classList.add('hidden');
+            }
+            
+            // 비밀번호 확인 검증
+            validatePasswordConfirm();
+        });
+
+        document.getElementById('passwordConfirm').addEventListener('input', validatePasswordConfirm);
+
+        function validatePasswordConfirm() {
+            const password = document.getElementById('password').value;
+            const passwordConfirm = document.getElementById('passwordConfirm').value;
+            const messageElement = document.getElementById('passwordConfirmMessage');
+            
+            if (passwordConfirm && password !== passwordConfirm) {
+                messageElement.textContent = '비밀번호가 일치하지 않습니다.';
+                messageElement.className = 'error-message';
+                messageElement.classList.remove('hidden');
+            } else if (passwordConfirm) {
+                messageElement.textContent = '비밀번호가 일치합니다.';
+                messageElement.className = 'success-message';
+                messageElement.classList.remove('hidden');
+            } else {
+                messageElement.classList.add('hidden');
+            }
+        }
+
+        document.getElementById('email').addEventListener('input', function() {
+            const email = this.value;
+            const messageElement = document.getElementById('emailMessage');
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            
+            if (email && !emailRegex.test(email)) {
+                messageElement.textContent = '올바른 이메일 형식을 입력해주세요.';
+                messageElement.className = 'error-message';
+                messageElement.classList.remove('hidden');
+            } else {
+                messageElement.classList.add('hidden');
+            }
+        });
+
+        async function checkDuplicateId() {
+            const userId = document.getElementById('userId').value;
+            const messageElement = document.getElementById('idCheckMessage');
+            
+            if (!userId) {
+                messageElement.textContent = '아이디를 입력해주세요.';
+                messageElement.className = 'error-message';
+                messageElement.classList.remove('hidden');
+                return;
+            }
+
+            if (userId.length < 4) {
+                messageElement.textContent = '아이디는 4자 이상 입력해주세요.';
+                messageElement.className = 'error-message';
+                messageElement.classList.remove('hidden');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/check-id', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ userId: userId })
+                });
+
+                const data = await response.json();
+                
+                if (data.success && data.available) {
+                    messageElement.textContent = '사용 가능한 아이디입니다.';
+                    messageElement.className = 'success-message';
+                    isIdAvailable = true;
+                } else {
+                    messageElement.textContent = data.message || '이미 사용 중인 아이디입니다.';
+                    messageElement.className = 'error-message';
+                    isIdAvailable = false;
+                }
+            } catch (error) {
+                console.error('서버 연결 오류:', error);
+                messageElement.textContent = '서버 연결 오류가 발생했습니다.';
+                messageElement.className = 'error-message';
+                isIdAvailable = false;
+            }
+            
+            messageElement.classList.remove('hidden');
+        }
+
+        async function sendVerificationCode() {
+            const phoneInput = document.getElementById('phone');
+            const phone = phoneInput.value;
+            const verificationSection = document.getElementById('verificationSection');
+            const timerDisplay = document.getElementById('timerDisplay');
+            const verificationCodeInput = document.getElementById('verificationCode');
+            
+            // 전화번호 형식 검증 (010-0000-0000)
+            const phoneRegex = /^010-\d{4}-\d{4}$/;
+            if (!phoneRegex.test(phone)) {
+                showModal('올바른 전화번호 형식을 입력해주세요. (예: 010-0000-0000)');
+                return;
+            }
+
+            // 임의의 6자리 인증번호 생성
+            const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
+
+            try {
+                // 테스트를 위해 서버 요청 대신 즉시 성공 처리
+                showModal(`인증번호가 발송되었습니다.\n\n인증번호: ${verificationCode}`);
+                verificationSection.classList.remove('hidden');
+                verificationCodeInput.value = verificationCode;
+                
+                // 타이머 설정 (3분)
+                let timeLeft = 180;
+                clearInterval(verificationTimer);
+                
+                verificationTimer = setInterval(() => {
+                    const minutes = Math.floor(timeLeft / 60);
+                    const seconds = timeLeft % 60;
+                    timerDisplay.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+                    
+                    if (timeLeft === 0) {
+                        clearInterval(verificationTimer);
+                        timerDisplay.textContent = '인증 시간이 만료되었습니다.';
+                    }
+                    timeLeft--;
+                }, 1000);
+            } catch (error) {
+                console.error('인증번호 발송 중 오류:', error);
+                showModal('서버 오류가 발생했습니다.');
+            }
+        }
+
+        async function verifyCode() {
+            const phone = document.getElementById('phone').value;
+            const code = document.getElementById('verificationCode').value;
+
+            if (!code) {
+                showModal('인증번호를 입력해주세요.');
+                return;
+            }
+
+            // 테스트를 위해 항상 인증 성공 처리
+            showModal('휴대폰 인증이 완료되었습니다.');
+            clearInterval(verificationTimer);
+            isPhoneVerified = true;
+            document.getElementById('verificationSection').classList.add('hidden');
+        }
+
+        async function register() {
+            const userId = document.getElementById('userId').value;
+            const password = document.getElementById('password').value;
+            const passwordConfirm = document.getElementById('passwordConfirm').value;
+            const name = document.getElementById('name').value;
+            const email = document.getElementById('email').value;
+            const phone = document.getElementById('phone').value;
+            const favoriteTeam = document.getElementById('favoriteTeam').value;
+
+            // 입력값 검증
+            if (!userId || !password || !passwordConfirm || !name || !phone) {
+                showModal('모든 필수 정보를 입력해주세요.');
+                return;
+            }
+
+            if (userId.length < 4) {
+                showModal('아이디는 4자 이상 입력해주세요.');
+                return;
+            }
+
+            if (password.length < 6) {
+                showModal('비밀번호는 6자 이상 입력해주세요.');
+                return;
+            }
+
+            if (password !== passwordConfirm) {
+                showModal('비밀번호가 일치하지 않습니다.');
+                return;
+            }
+
+            if (!isIdAvailable) {
+                showModal('아이디 중복 확인을 완료해주세요.');
+                return;
+            }
+
+            if (!isPhoneVerified) {
+                showModal('휴대폰 인증을 완료해주세요.');
+                return;
+            }
+
+            try {
+                const formData = {
+                    userId: userId,
+                    password: password,
+                    name: name,
+                    phone: phone
+                };
+
+                console.log('전송할 데이터:', formData); // 데이터 확인용 로그
+
+                const response = await fetch('/api/register', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(formData)
+                });
+
+                let responseData;
+                try {
+                    responseData = await response.json();
+                } catch (e) {
+                    console.error('서버 응답을 JSON으로 파싱할 수 없습니다:', e);
+                    responseData = await response.text();
+                    console.log('서버 원본 응답:', responseData);
+                    throw new Error('서버에서 잘못된 응답 형식이 반환되었습니다.');
+                }
+
+                if (!response.ok) {
+                    throw new Error(responseData.message || responseData.error || '회원가입 처리 중 오류가 발생했습니다.');
+                }
+
+                showModal('회원가입이 완료되었습니다.');
+                
+                // 회원가입 성공 시 입력 필드 초기화
+                document.getElementById('userId').value = '';
+                document.getElementById('password').value = '';
+                document.getElementById('passwordConfirm').value = '';
+                document.getElementById('name').value = '';
+                document.getElementById('email').value = '';
+                document.getElementById('phone').value = '';
+                document.getElementById('favoriteTeam').value = '';
+                isPhoneVerified = false;
+                isIdAvailable = false;
+
+                // 1초 후 로그인 페이지로 이동
+                setTimeout(() => {
+                    window.location.href = 'login.html';
+                }, 1000);
+            } catch (error) {
+                console.error('회원가입 처리 중 오류:', error);
+                showModal(error.message || '서버 연결 오류가 발생했습니다. 서버가 실행 중인지 확인해주세요.');
+            }
+        }
+    </script>
+</body>
+</html>

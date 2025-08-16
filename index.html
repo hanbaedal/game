@@ -2064,9 +2064,10 @@
                 });
                 
                 const pointsData = await pointsResponse.json();
-                if (!pointsData.success) {
-                    throw new Error('승리 포인트 계산 실패: ' + pointsData.message);
-                }
+                const pointsPerWinner = pointsData.success ? pointsData.data.pointsPerWinner : 0;
+                const totalWinAmount = 100 + pointsPerWinner; // 고정 배팅 포인트(100) + 성공자당 분배 포인트
+                const calculatedDonationAmount = Math.floor(pointsPerWinner * (percentage / 100)); // 기부할 포인트
+                const remainingAmount = 100 + (pointsPerWinner - calculatedDonationAmount); // 남은 포인트
                 
                 const pointsPerWinner = pointsData.data.pointsPerWinner || 0;
                 const totalWinAmount = calculateWinnings(pointsPerWinner);
@@ -2791,34 +2792,10 @@
                 });
                 
                 const data = await response.json();
-                if (!data.success) {
-                    throw new Error('승리 포인트 계산 실패: ' + data.message);
-                }
-                
-                const pointsPerWinner = data.data.pointsPerWinner || 0;
-                const totalWinAmount = calculateWinnings(pointsPerWinner);
-                const originalBet = 100; // 원금 (기부 대상 아님)
-                const winningBonus = pointsPerWinner; // 승리수당만 기부 대상
-                const donationAmount = calculateDonation(winningBonus, percent);
-                
-                // 혼자서 승리한 경우 감지
-                const totalUniqueUsers = data.data.totalUniqueUsers || 1;
-                const winnerCount = data.data.winnerCount || 1;
-                
-                if (totalUniqueUsers === 1 && winnerCount === 1) {
-                    console.log('🎯 혼자서 승리 감지 - 기부 모달 대신 안내 모달 표시');
-                    showSoloWinModal();
-                    return; // 기부 처리 중단
-                }
-                
-                console.log('💰 기부 계산:', {
-                    원금: originalBet,
-                    승리수당: winningBonus,
-                    총획득: totalWinAmount,
-                    기부비율: percent,
-                    기부금액: donationAmount,
-                    기부후받는포인트: totalWinAmount - donationAmount
-                });
+                const pointsPerWinner = data.success ? data.data.pointsPerWinner : 0;
+                const totalWinAmount = 100 + pointsPerWinner; // 고정 배팅 포인트(100) + 성공자당 분배 포인트
+                const donationAmount = Math.floor(pointsPerWinner * (percent / 100)); // 기부할 포인트
+                const remainingAmount = 100 + (pointsPerWinner - donationAmount); // 남은 포인트
                 
                 // 실제 기부 API 호출
                 const donationResponse = await fetch('/api/donation', {
