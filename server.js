@@ -702,6 +702,65 @@ app.post('/api/betting/submit', async (req, res) => {
         });
     }
 });
+ 
+ // 첫 번째 게임 활성화 API
+ app.post('/api/activate-first-game', async (req, res) => {
+     try {
+         // 한국 시간(YYYY-MM-DD)
+         const todayString = getKoreaDateString();
+ 
+         const teamGamesCollection = getTeamGamesCollection();
+         // 오늘 경기 중 가장 이른 경기 찾기
+         const firstList = await teamGamesCollection
+             .find({ date: todayString })
+             .sort({ gameNumber: 1 })
+             .limit(1)
+             .toArray();
+ 
+         if (!firstList || firstList.length === 0) {
+             return res.status(404).json({
+                 success: false,
+                 message: '오늘 경기 데이터가 없습니다.'
+             });
+         }
+ 
+         const firstGame = firstList[0];
+ 
+         // 상태를 배팅 가능으로 전환
+         await teamGamesCollection.updateOne(
+             { _id: firstGame._id },
+             {
+                 $set: {
+                     bettingStart: '시작',
+                     bettingStop: '진행',
+                     // 진행 상태가 없으면 기본값으로 경기중 세팅
+                     progressStatus: firstGame.progressStatus || '경기중',
+                     updatedAt: new Date()
+                 }
+             }
+         );
+ 
+         const updated = await teamGamesCollection.findOne({ _id: firstGame._id });
+ 
+         return res.json({
+             success: true,
+             message: '첫 번째 경기를 활성화했습니다.',
+             game: {
+                 gameNumber: updated.gameNumber,
+                 matchup: updated.matchup,
+                 bettingStart: updated.bettingStart,
+                 bettingStop: updated.bettingStop,
+                 progressStatus: updated.progressStatus
+             }
+         });
+     } catch (error) {
+         console.error('첫 번째 게임 활성화 오류:', error);
+         return res.status(500).json({
+             success: false,
+             message: '첫 번째 게임 활성화 중 오류가 발생했습니다.'
+         });
+     }
+ });
 
 // 게임 상태 조회 API
 app.get('/api/games/status', async (req, res) => {
