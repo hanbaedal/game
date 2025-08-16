@@ -374,58 +374,73 @@
         }
 
         // 로그인 상태 확인 함수
-        async function checkLoginStatus() {
-            try {
-                const storedUser = localStorage.getItem('currentUser');
-                if (storedUser) {
-                    currentUser = JSON.parse(storedUser);
-                    
-                    // 사용자 이름 표시
-                    const userNameDisplay = document.getElementById('userNameDisplay');
-                    if (userNameDisplay) {
-                        userNameDisplay.textContent = currentUser.isGuest ? '게스트' : currentUser.name;
-                    }
-                    
-                    // 포인트 표시
-                    const userPoints = document.getElementById('userPoints');
-                    if (userPoints) {
-                        userPoints.textContent = `${currentUser.points || 0}포인트`;
-                    }
-                    
-                    // 로그인/로그아웃 버튼 상태 변경
-                    const loginButton = document.getElementById('loginButton');
-                    const logoutButton = document.getElementById('logoutButton');
-                    
-                    if (loginButton) loginButton.style.display = 'none';
-                    if (logoutButton) logoutButton.style.display = 'block';
-                    
-                } else {
-                    currentUser = null;
-                    
-                    // 로그인/로그아웃 버튼 상태 변경
-                    const loginButton = document.getElementById('loginButton');
-                    const logoutButton = document.getElementById('logoutButton');
-                    
-                    if (loginButton) loginButton.style.display = 'block';
-                    if (logoutButton) logoutButton.style.display = 'none';
+
+
+        // 사용자 로그인 상태 확인 및 UI 업데이트 함수
+        function checkUserLoginStatus() {
+            const userData = JSON.parse(localStorage.getItem('currentUser') || '{}');
+            const userNameDisplay = document.getElementById('userNameDisplay');
+            const loginButton = document.getElementById('loginButton');
+            const logoutButton = document.getElementById('logoutButton');
+            
+            if (userData && userData.userId && !userData.isGuest) {
+                // 로그인된 사용자
+                currentUser = userData; // 전역 변수 설정
+                
+                if (userNameDisplay) {
+                    userNameDisplay.textContent = `${userData.name || userData.userName || '사용자'}님`;
+                    userNameDisplay.style.display = 'block';
                 }
-            } catch (error) {
-                console.error('사용자 정보 파싱 오류:', error);
-                localStorage.removeItem('currentUser');
-                currentUser = null;
+                if (loginButton) loginButton.style.display = 'none';
+                if (logoutButton) logoutButton.style.display = 'block';
                 
-                // 오류 발생 시에도 기본 상태 설정
-                const loginButton = document.getElementById('loginButton');
-                const logoutButton = document.getElementById('logoutButton');
+                console.log('✅ 로그인된 사용자:', userData.name || userData.userName);
+            } else {
+                // 로그인되지 않은 사용자
+                currentUser = null; // 전역 변수 초기화
                 
+                if (userNameDisplay) {
+                    userNameDisplay.textContent = '';
+                    userNameDisplay.style.display = 'none';
+                }
                 if (loginButton) loginButton.style.display = 'block';
                 if (logoutButton) logoutButton.style.display = 'none';
+                
+                console.log('❌ 로그인되지 않은 사용자');
             }
+        }
+
+        // 브라우저 종료 시 로그아웃 처리 설정 (비활성화)
+        function setupBrowserCloseLogout() {
+            // 로그아웃 기능 비활성화 - 불필요한 API 호출 방지
+            console.log('🔐 브라우저 종료 시 로그아웃 기능 비활성화됨');
+            
+            // beforeunload 이벤트 (브라우저 탭/창 닫기) - 비활성화
+            // window.addEventListener('beforeunload', function(e) {
+            //     if (currentUser && !currentUser.isGuest && currentUser.userId) {
+            //         console.log('🔐 브라우저 종료 시 로그아웃:', currentUser.userId);
+            //         navigator.sendBeacon('/api/logout', JSON.stringify({
+            //             userId: currentUser.userId
+            //         }));
+            //     }
+            // });
+            
+            // pagehide 이벤트 (페이지 숨김, 모바일에서 더 안정적) - 비활성화
+            // window.addEventListener('pagehide', function(e) {
+            //     if (currentUser && !currentUser.isGuest && currentUser.userId) {
+            //         console.log('🔐 페이지 숨김 시 로그아웃:', currentUser.userId);
+            //         navigator.sendBeacon('/api/logout', JSON.stringify({
+            //             userId: currentUser.userId
+            //         }));
+            //     }
+            // });
         }
 
         // 페이지 로드 시 실행
         document.addEventListener('DOMContentLoaded', async function() {
-            await checkLoginStatus();
+            // 사용자 로그인 상태 확인 및 UI 업데이트
+            checkUserLoginStatus();
+            
             updateCurrentDate();
             await loadSimpleGames(); // 새로운 간단한 경기 로드
             setupButtonEventListeners();
@@ -1585,19 +1600,17 @@
                                     console.log('⚠️ 활성화된 게임이 없습니다. 서버에 첫 번째 게임 활성화를 요청합니다.');
                                     
                                     try {
-                                        const response = await fetch('/api/activate-first-game', {
+                                        const activateResponse = await fetch('/api/activate-first-game', {
                                             method: 'POST',
-                                            headers: {
-                                                'Content-Type': 'application/json'
-                                            }
+                                            headers: { 'Content-Type': 'application/json' }
                                         });
                                         
-                                        const activationData = await response.json();
-                                        if (activationData.success) {
-                                            console.log('✅ 서버에서 첫 번째 게임 활성화 완료:', activationData.game);
+                                        const activateData = await activateResponse.json();
+                                        if (activateData.success) {
+                                            console.log('✅ 서버에서 첫 번째 게임 활성화 완료:', activateData.game);
                                             
-                                            // 활성화된 게임 정보로 업데이트
-                                            const firstGame = data.games.find(game => game.gameNumber === 1 || game.number === 1);
+                                            // 활성화된 게임으로 선택
+                                            const firstGame = data.games[0];
                                             if (firstGame) {
                                                 firstGame.bettingStart = '시작';
                                                 firstGame.bettingStop = '진행';
@@ -1614,7 +1627,7 @@
                                                 console.log('✅ 첫 번째 게임 서버 활성화 완료');
                                             }
                                         } else {
-                                            console.log('⚠️ 서버에서 첫 번째 게임 활성화 실패:', activationData.message);
+                                            console.log('❌ 서버 활성화 실패, 클라이언트에서 임시 활성화:', activateData.message);
                                             
                                             // 서버 활성화 실패 시 클라이언트에서 임시로 활성화
                                             const firstGame = data.games[0];
@@ -1626,16 +1639,18 @@
                                                 previousBettingStart = '시작';
                                                 
                                                 resetBettingSelection();
+                                                
+                                                // 게임 선택 모달 다시 로드하여 선택된 게임 표시
                                                 loadSimpleGames();
                                                 
-                                                speakText(`첫 번째 경기 ${firstGame.gameNumber || firstGame.number}경기를 임시로 활성화했습니다.`, 1.0);
-                                                console.log('✅ 첫 번째 게임 임시 활성화 완료');
+                                                speakText(`첫 번째 경기 ${firstGame.gameNumber || firstGame.number}경기를 활성화했습니다.`, 1.0);
+                                                console.log('✅ 첫 번째 게임 클라이언트 임시 활성화 완료');
                                             }
                                         }
                                     } catch (error) {
                                         console.error('❌ 첫 번째 게임 활성화 요청 오류:', error);
                                         
-                                        // 오류 발생 시 클라이언트에서 임시로 활성화
+                                        // 오류 시 클라이언트에서 임시로 활성화
                                         const firstGame = data.games[0];
                                         if (firstGame) {
                                             firstGame.bettingStart = '시작';
@@ -1645,10 +1660,12 @@
                                             previousBettingStart = '시작';
                                             
                                             resetBettingSelection();
+                                            
+                                            // 게임 선택 모달 다시 로드하여 선택된 게임 표시
                                             loadSimpleGames();
                                             
-                                            speakText(`첫 번째 경기 ${firstGame.gameNumber || firstGame.number}경기를 임시로 활성화했습니다.`, 1.0);
-                                            console.log('✅ 첫 번째 게임 임시 활성화 완료');
+                                            speakText(`첫 번째 경기 ${firstGame.gameNumber || firstGame.number}경기를 활성화했습니다.`, 1.0);
+                                            console.log('✅ 첫 번째 게임 클라이언트 임시 활성화 완료 (오류 시)');
                                         }
                                     }
                                 }
@@ -1755,34 +1772,28 @@
                 btn.classList.add('bg-gray-600');
             });
             
-            // 서버에 배팅 데이터 초기화 요청 (새로운 게임에서 배팅할 수 있도록)
-            try {
-                const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
-                const userId = currentUser.userId || currentUser.id;
-                
-                if (userId && selectedGame) {
-                    console.log('🔄 서버에 배팅 데이터 초기화 요청:', { userId, gameNumber: selectedGame.gameNumber || selectedGame.number });
-                    
+            // 서버에서 사용자 배팅 데이터 초기화 (새로운 게임으로 넘어갈 때)
+            if (selectedGame && currentUser && currentUser.userId) {
+                try {
+                    console.log('🧹 서버에서 사용자 배팅 데이터 초기화 중...');
                     const response = await fetch('/api/clear-user-betting', {
                         method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        },
+                        headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
-                            userId: userId,
+                            userId: currentUser.userId,
                             gameNumber: selectedGame.gameNumber || selectedGame.number
                         })
                     });
                     
                     const data = await response.json();
                     if (data.success) {
-                        console.log('✅ 서버 배팅 데이터 초기화 완료');
+                        console.log('✅ 서버 배팅 데이터 초기화 완료:', data.message);
                     } else {
                         console.log('⚠️ 서버 배팅 데이터 초기화 실패:', data.message);
                     }
+                } catch (error) {
+                    console.error('❌ 서버 배팅 데이터 초기화 오류:', error);
                 }
-            } catch (error) {
-                console.error('❌ 서버 배팅 데이터 초기화 오류:', error);
             }
             
             console.log('✅ 배팅 선택 초기화 완료');
@@ -2421,41 +2432,50 @@
             document.getElementById('currentDate').textContent = dateString;
         }
 
-        // 페이지 로드 시 날짜 표시
-        document.addEventListener('DOMContentLoaded', function() {
-            updateCurrentDate();
+
+
+
+
+
+
             
-            // 브라우저 종료 시 로그아웃 처리
-            setupBrowserCloseLogout();
-        });
-        
-        // 브라우저 종료 시 로그아웃 처리 설정 (비활성화)
-        function setupBrowserCloseLogout() {
-            // 로그아웃 기능 비활성화 - 불필요한 API 호출 방지
-            console.log('🔐 브라우저 종료 시 로그아웃 기능 비활성화됨');
-            
-            // beforeunload 이벤트 (브라우저 탭/창 닫기) - 비활성화
-            // window.addEventListener('beforeunload', function(e) {
-            //     if (currentUser && !currentUser.isGuest && currentUser.userId) {
-            //         console.log('🔐 브라우저 종료 시 로그아웃:', currentUser.userId);
-            //         navigator.sendBeacon('/api/logout', JSON.stringify({
-            //             userId: currentUser.userId
-            //         }));
-            //     }
-            // });
-            
-            // pagehide 이벤트 (페이지 숨김, 모바일에서 더 안정적) - 비활성화
-            // window.addEventListener('pagehide', function(e) {
-            //     if (currentUser && !currentUser.isGuest && currentUser.userId) {
-            //         console.log('🔐 페이지 숨김 시 로그아웃:', currentUser.userId);
-            //         navigator.sendBeacon('/api/logout', JSON.stringify({
-            //             userId: currentUser.userId
-            //         }));
-            //     }
-            // });
+        // 테스트 데이터 생성 함수
+        async function createTestGames() {
+            try {
+                console.log('🧪 테스트 데이터 생성 시작');
+                
+                const response = await fetch('/api/create-test-games', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                const data = await response.json();
+                console.log('🧪 테스트 데이터 생성 결과:', data);
+                
+                if (data.success) {
+                    alert('테스트 데이터가 생성되었습니다. 페이지를 새로고침하세요.');
+                    location.reload();
+                    } else {
+                    alert('테스트 데이터 생성 실패: ' + data.message);
+                }
+            } catch (error) {
+                console.error('❌ 테스트 데이터 생성 오류:', error);
+                alert('테스트 데이터 생성 중 오류가 발생했습니다.');
+            }
         }
 
-
+        // 경기 상태 텍스트 및 클래스 함수
+        function getStatusText(game) {
+            console.log('🔍 경기 상태 확인:', {
+                gameNumber: game.number,
+                progressStatus: game.progressStatus,
+                gameStatus: game.gameStatus,
+                noGame: game.noGame,
+                startTime: game.startTime,
+                endTime: game.endTime
+            });
             
             // 우천취소, 경기취소 등 특별한 상황은 우선 처리
             if (game.noGame === '우천' || game.noGame === '번개/천둥' || game.noGame === '경기취소' || game.noGame === '우천취소') {
@@ -2637,13 +2657,7 @@
             window.location.href = '/attendance.html';
         }
         
-        // 페이지 로드 시 날짜 표시
-        document.addEventListener('DOMContentLoaded', function() {
-            updateCurrentDate();
-            
-            // 브라우저 종료 시 로그아웃 처리
-            setupBrowserCloseLogout();
-        });
+
 
         let bettingStatusInterval = null;
 
@@ -3414,6 +3428,8 @@
                 });
             }
         }
+
+
     </script>
 </body>
 </html> 
