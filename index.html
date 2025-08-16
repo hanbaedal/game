@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>배팅 페이지</title>
     <link rel="icon" type="image/x-icon" href="/favicon.ico">
-    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,typography,aspect-ratio"></script>
     <script>
         // Tailwind CSS CDN 경고 숨기기
         console.warn = function() {};
@@ -1565,28 +1565,102 @@
                                 }, 4000);
                             }
                             
-                            // 이전 상태 업데이트
-                            previousBettingStart = currentGame.bettingStart;
-                            
-                            // 선택된 게임 정보 업데이트
-                            selectedGame.bettingStart = currentGame.bettingStart;
-                            selectedGame.bettingStop = currentGame.bettingStop;
-                            
-                            console.log('✅ 게임 정보 업데이트:', {
-                                bettingStart: selectedGame.bettingStart,
-                                bettingStop: selectedGame.bettingStop
-                            });
-                            
-                            // 배팅 선택 버튼 상태 업데이트
-                            enableBettingChoices();
-                            enableBettingSelection();
-                            enablePredictionButton();
+                            // 게임이 종료되었는지 확인
+                            if (currentGame.progressStatus === '경기종료' || currentGame.bettingStart === '종료') {
+                                console.log('🏁 게임 종료 감지! 다음 게임으로 넘어갑니다.');
+                                
+                                // 다음 게임 찾기
+                                const nextGame = data.games.find(game => 
+                                    game.gameNumber === (currentGame.gameNumber + 1) ||
+                                    game.number === (currentGame.number + 1)
+                                );
+                                
+                                if (nextGame && nextGame.bettingStart === '시작') {
+                                    console.log('🎯 다음 게임 발견:', nextGame);
+                                    
+                                    // 새로운 게임 선택
+                                    selectedGame = nextGame;
+                                    previousBettingStart = nextGame.bettingStart;
+                                    
+                                    // 게임 선택 모달 업데이트
+                                    updateSimpleGameDisplay(nextGame.gameNumber || nextGame.number, nextGame.matchup, nextGame);
+                                    
+                                    // 배팅 선택 초기화
+                                    resetBettingSelection();
+                                    
+                                    // 음성 안내
+                                    speakText(`다음 경기 ${nextGame.gameNumber || nextGame.number}경기로 넘어갑니다.`, 1.0);
+                                    
+                                    console.log('✅ 다음 게임으로 자동 전환 완료');
+                                } else {
+                                    console.log('⚠️ 다음 게임이 없거나 아직 시작되지 않음');
+                                }
+                            } else {
+                                // 이전 상태 업데이트
+                                previousBettingStart = currentGame.bettingStart;
+                                
+                                // 선택된 게임 정보 업데이트
+                                selectedGame.bettingStart = currentGame.bettingStart;
+                                selectedGame.bettingStop = currentGame.bettingStop;
+                                
+                                console.log('✅ 게임 정보 업데이트:', {
+                                    bettingStart: selectedGame.bettingStart,
+                                    bettingStop: selectedGame.bettingStop
+                                });
+                                
+                                // 배팅 선택 버튼 상태 업데이트
+                                enableBettingChoices();
+                                enableBettingSelection();
+                                enablePredictionButton();
+                            }
                         }
                 }
             })
             .catch(error => {
                     console.error('배팅 상태 확인 오류:', error);
                 });
+        }
+
+        // 배팅 선택 초기화 함수
+        function resetBettingSelection() {
+            console.log('🔄 배팅 선택 초기화 시작...');
+            
+            // 선택된 배팅 유형 초기화
+            window.selectedChoice = null;
+            selectedChoice = null;
+            selectedAmount = 100;
+            
+            // 배팅 선택 텍스트 초기화
+            const selectedBettingText = document.getElementById('selectedBettingText');
+            if (selectedBettingText) {
+                selectedBettingText.textContent = '배팅 유형을 선택하세요';
+                selectedBettingText.className = 'font-bold text-gray-300';
+            }
+            
+            // 배팅 선택 버튼 초기화
+            const bettingSelectionBtn = document.getElementById('bettingSelectionBtn');
+            if (bettingSelectionBtn) {
+                bettingSelectionBtn.className = 'w-full p-3 bg-gray-700 rounded cursor-pointer hover:bg-gray-600 transition-colors text-left';
+                bettingSelectionBtn.disabled = true;
+                bettingSelectionBtn.classList.add('opacity-50', 'cursor-not-allowed');
+                bettingSelectionBtn.classList.remove('cursor-pointer');
+            }
+            
+            // 예측하기 버튼 비활성화
+            const betBtn = document.getElementById('betBtn');
+            if (betBtn) {
+                betBtn.disabled = true;
+                betBtn.classList.add('opacity-50', 'cursor-not-allowed');
+                betBtn.classList.remove('cursor-pointer');
+            }
+            
+            // 배팅 선택 버튼들 초기화
+            document.querySelectorAll('.bet-choice-btn').forEach(btn => {
+                btn.classList.remove('bg-blue-500', 'bg-blue-600');
+                btn.classList.add('bg-gray-600');
+            });
+            
+            console.log('✅ 배팅 선택 초기화 완료');
         }
 
         // 로그아웃 함수
@@ -2143,17 +2217,6 @@
             return koreaTime.getFullYear().toString() + 
                    String(koreaTime.getMonth() + 1).padStart(2, '0') + 
                    String(koreaTime.getDate()).padStart(2, '0');
-        }
-
-        // 공통 수당 계산 함수
-        function calculateWinnings(pointsPerWinner) {
-            const originalBet = 100; // 고정 배팅 포인트
-            return originalBet + pointsPerWinner; // 원금 + 승리 수당
-        }
-
-        // 공통 기부 계산 함수 (승리수당에서만 계산)
-        function calculateDonation(winningBonus, percentage) {
-            return Math.floor(winningBonus * (percentage / 100)); // 승리수당에서만 기부 계산
         }
 
         // 혼자서 승리 시 안내 모달 표시 함수
