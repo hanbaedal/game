@@ -776,7 +776,7 @@
                 
                 console.log('✅ 경기 선택 완료:', selectedGame);
                 // 플래그 즉시 해제 (첫 클릭 즉시 반응)
-                gameSelectionInProgress = false;
+                    gameSelectionInProgress = false;
             } else {
                 console.error('❌ 선택된 경기 데이터를 찾을 수 없습니다.');
                 alert('경기 선택 중 오류가 발생했습니다.');
@@ -862,10 +862,10 @@
             betBtn.disabled = true;
             betBtn.classList.add('opacity-50', 'cursor-not-allowed');
             betBtn.classList.remove('cursor-pointer');
-
+            
             // 경기 선택 모달 다시 표시
             if (typeof loadSimpleGames === 'function') {
-                loadSimpleGames();
+            loadSimpleGames();
             }
         }
 
@@ -1132,6 +1132,25 @@
                 speakText('경기를 선택해주세요.');
                 alert('경기를 선택해주세요.');
                 return;
+            }
+            // 운영자-사용자 동기화 강제 확인 (실시간)
+            try {
+                const liveResp = await fetch('/api/team-games');
+                if (liveResp.ok) {
+                    const liveData = await liveResp.json();
+                    const liveGame = (liveData.games || []).find(g =>
+                        (g.gameNumber || g.number) === (selectedGame.gameNumber || selectedGame.number)
+                    );
+                    if (!liveGame || liveGame.bettingStart !== '시작' || liveGame.bettingStop !== '진행') {
+                        alert('운영자와 선택한 경기가 같고 진행 중일 때만 배팅할 수 있습니다.');
+                        return;
+                    }
+                    // 최신 상태로 동기화
+                    selectedGame.bettingStart = liveGame.bettingStart;
+                    selectedGame.bettingStop = liveGame.bettingStop;
+                }
+            } catch (e) {
+                console.warn('실시간 경기 상태 확인 실패(무시):', e);
             }
             console.log('🎯 배팅 처리 시작:', {
                 selectedGame: selectedGame.gameNumber || selectedGame.number,
