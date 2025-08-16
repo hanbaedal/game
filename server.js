@@ -2160,6 +2160,20 @@ app.post('/api/login', async (req, res) => {
             });
         }
         
+        // 동일 아이디 동시 로그인 금지
+        if (user.isLoggedIn) {
+            return res.status(409).json({
+                success: false,
+                message: '이미 다른 기기에서 로그인 중입니다. 기존 세션을 로그아웃한 후 다시 시도해주세요.'
+            });
+        }
+        
+        // 로그인 상태 플래그 설정
+        await userCollection.updateOne(
+            { userId: userId },
+            { $set: { isLoggedIn: true, lastLoginAt: new Date() } }
+        );
+        
         // 로그인 성공 시 사용자 정보 반환
         const userInfo = {
             userId: user.userId,
@@ -2214,7 +2228,7 @@ app.post('/api/logout', async (req, res) => {
         
         await userCollection.updateOne(
             { userId: userId },
-            { $set: { lastLogin: todayString } }
+            { $set: { lastLogin: todayString, isLoggedIn: false, lastLogoutAt: new Date() } }
         );
         
         console.log(`✅ 로그아웃 완료: ${userId}`);
