@@ -53,10 +53,7 @@
                         <div id="gameSelectionContainer" class="flex overflow-x-auto space-x-2 bg-gray-800 rounded p-2 border border-gray-600">
                             <!-- 경기 목록이 여기에 동적으로 추가됨 -->
                         </div>
-                        <!-- 선택된 경기 정보 표시 영역 -->
-                        <div id="selectedGameInfo" class="mt-2">
-                            <!-- 선택된 경기 정보가 여기에 표시됨 -->
-                        </div>
+
                     </div>
                 </div>
 
@@ -854,35 +851,7 @@
             loadSimpleGames();
         }
 
-        // DB 데이터를 사용한 경기 표시 업데이트
-        function updateSimpleGameDisplay(gameNumber, matchup, gameData) {
-            const gameInfoElement = document.getElementById('selectedGameInfo');
-            if (gameInfoElement && gameData) {
-                const progressStatus = gameData.progressStatus || '경기전';
-                const bettingStart = gameData.bettingStart || '중지';
-                const startTime = gameData.startTime || '시간 미정';
-                const date = gameData.date || '날짜 미정';
-                
-                const isActive = progressStatus === '경기중' && bettingStart === '시작';
-                const statusClass = isActive ? 'text-green-300' : 'text-red-300';
-                const statusText = isActive ? '경기중 + 베팅가능' : `${progressStatus} + ${bettingStart}`;
-                
-                gameInfoElement.innerHTML = `
-                    <div class="bg-blue-600 rounded-lg p-3 mb-3">
-                        <h3 class="text-white font-bold mb-2">🎯 선택된 경기</h3>
-                        <div class="text-white text-sm">
-                            <p><strong>경기번호:</strong> ${gameNumber}</p>
-                            <p><strong>매치업:</strong> ${matchup}</p>
-                            <p><strong>경기시간:</strong> ${startTime}</p>
-                            <p><strong>경기날짜:</strong> ${date}</p>
-                            <p><strong>상태:</strong> <span class="${statusClass}">${statusText}</span></p>
-                        </div>
-                    </div>
-                `;
-            } else {
-                console.error('❌ 경기 정보 표시 요소를 찾을 수 없거나 데이터가 없습니다.');
-            }
-        }
+
 
         // 게임선택 버튼 선택 함수
         function selectGameType(button) {
@@ -1590,9 +1559,6 @@
                                     selectedGame = nextGame;
                                     previousBettingStart = nextGame.bettingStart;
                                     
-                                    // 게임 선택 모달 업데이트
-                                    updateSimpleGameDisplay(nextGame.gameNumber || nextGame.number, nextGame.matchup, nextGame);
-                                    
                                     // 배팅 선택 초기화
                                     resetBettingSelection();
                                     
@@ -1609,7 +1575,6 @@
                                         selectedGame = firstGame;
                                         previousBettingStart = firstGame.bettingStart;
                                         
-                                        updateSimpleGameDisplay(firstGame.gameNumber || firstGame.number, firstGame.matchup, firstGame);
                                         resetBettingSelection();
                                         
                                         speakText(`첫 번째 경기 ${firstGame.gameNumber || firstGame.number}경기로 돌아갑니다.`, 1.0);
