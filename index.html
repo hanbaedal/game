@@ -914,70 +914,118 @@
             enablePredictionButton();
         }
 
-        // 배팅 선택 표시 업데이트
+        // 배팅 선택 표시 업데이트 (경기선택과 동일한 방식)
         function updateBettingSelectionDisplay(choice) {
             const bettingOptionsContainer = document.getElementById('bettingOptionsContainer');
             
             if (bettingOptionsContainer) {
-                // 모든 배팅 버튼 숨기기
-                const betButtons = bettingOptionsContainer.querySelectorAll('.bet-choice-btn');
-                betButtons.forEach(btn => {
-                    btn.style.display = 'none';
-                    btn.classList.remove('bg-blue-600', 'border-2', 'border-blue-400');
-                    btn.classList.add('bg-gray-700');
-                });
+                console.log(`🎯 배팅선택 완료: ${choice} - 선택된 것만 표시`);
                 
-                // 선택된 배팅 버튼만 표시하고 선택 상태 추가
-                const selectedButton = bettingOptionsContainer.querySelector(`[onclick*="${choice}"]`);
-                if (selectedButton) {
-                    selectedButton.style.display = 'block';
-                    selectedButton.classList.remove('bg-gray-700');
-                    selectedButton.classList.add('bg-blue-600', 'border-2', 'border-blue-400');
-                    
-                    // 선택된 버튼에 "다시 선택" 텍스트 추가
-                    const buttonContent = selectedButton.querySelector('.flex-1');
-                    if (buttonContent) {
-                        const originalText = buttonContent.innerHTML;
-                        buttonContent.innerHTML = originalText + '<div class="text-xs text-blue-300 mt-1">(클릭하여 다시 선택)</div>';
-                    }
-                    
-                    // 선택된 버튼에 다시 클릭하면 모든 옵션을 표시하는 이벤트 추가
-                    selectedButton.onclick = function() {
-                        showAllBettingOptions();
-                    };
-                }
+                // 선택된 배팅만 표시하는 HTML 생성 (경기선택과 유사한 방식)
+                bettingOptionsContainer.innerHTML = `
+                    <div class="w-full p-4 bg-blue-600 rounded border-2 border-blue-400 cursor-pointer hover:bg-blue-700 transition-colors" onclick="showAllBettingOptions()">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center">
+                                <div class="w-4 h-4 rounded-full ${getChoiceColor(choice)} mr-3"></div>
+                                <div>
+                                    <div class="font-bold text-white">${choice}</div>
+                                    <div class="text-xs text-blue-200">${getChoiceDescription(choice)}</div>
+                                </div>
+                            </div>
+                            <div class="text-xs text-blue-200">클릭하여 다시 선택</div>
+                        </div>
+                    </div>
+                `;
+                
+                console.log(`✅ ${choice} 선택됨 - 클릭 시 다시 선택 가능`);
             }
         }
+        
+        // 배팅 선택 색상 반환
+        function getChoiceColor(choice) {
+            const colors = {
+                '1루': 'bg-pink-300',
+                '2루': 'bg-orange-300', 
+                '3루': 'bg-yellow-300',
+                '홈런': 'bg-green-300',
+                '아웃': 'bg-purple-300'
+            };
+            return colors[choice] || 'bg-gray-300';
+        }
+        
+        // 배팅 선택 설명 반환
+        function getChoiceDescription(choice) {
+            const descriptions = {
+                '1루': '안타',
+                '2루': '2루타',
+                '3루': '3루타', 
+                '홈런': '홈런',
+                '아웃': '아웃'
+            };
+            return descriptions[choice] || choice;
+        }
 
-        // 모든 배팅 옵션 표시
+        // 모든 배팅 옵션 표시 (원래 5개 버튼 복원)
         function showAllBettingOptions() {
             const bettingOptionsContainer = document.getElementById('bettingOptionsContainer');
             
             if (bettingOptionsContainer) {
-                // 모든 배팅 버튼 표시
-                const betButtons = bettingOptionsContainer.querySelectorAll('.bet-choice-btn');
-                betButtons.forEach(btn => {
-                    btn.style.display = 'block';
-                    btn.classList.remove('bg-blue-600', 'border-2', 'border-blue-400');
-                    btn.classList.add('bg-gray-700');
-                    
-                    // 원래 텍스트 복원
-                    const buttonContent = btn.querySelector('.flex-1');
-                    if (buttonContent) {
-                        const originalText = buttonContent.innerHTML.replace('<div class="text-xs text-blue-300 mt-1">(클릭하여 다시 선택)</div>', '');
-                        buttonContent.innerHTML = originalText;
-                    }
-                    
-                    // 원래 onclick 이벤트 복원
-                    const choice = btn.getAttribute('onclick').match(/'([^']+)'/)[1];
-                    btn.onclick = function() {
-                        selectBetChoiceFromModal(choice);
-                    };
-                });
+                console.log('🔄 모든 배팅 옵션 다시 표시');
+                
+                // 원래 5개 버튼 HTML 복원
+                bettingOptionsContainer.innerHTML = `
+                    <button class="bet-choice-btn w-full p-3 bg-gray-700 rounded cursor-pointer hover:bg-gray-600 transition-colors text-left" onclick="selectBetChoiceFromModal('1루')">
+                        <div class="flex items-center">
+                            <div class="w-4 h-4 rounded-full bg-pink-300 mr-3"></div>
+                            <div class="flex-1">
+                                <div class="font-bold text-pink-300">1루</div>
+                                <div class="text-xs text-gray-400">안타</div>
+                            </div>
+                        </div>
+                    </button>
+                    <button class="bet-choice-btn w-full p-3 bg-gray-700 rounded cursor-pointer hover:bg-gray-600 transition-colors text-left" onclick="selectBetChoiceFromModal('2루')">
+                        <div class="flex items-center">
+                            <div class="w-4 h-4 rounded-full bg-orange-300 mr-3"></div>
+                            <div class="flex-1">
+                                <div class="font-bold text-orange-300">2루</div>
+                                <div class="text-xs text-gray-400">2루타</div>
+                            </div>
+                        </div>
+                    </button>
+                    <button class="bet-choice-btn w-full p-3 bg-gray-700 rounded cursor-pointer hover:bg-gray-600 transition-colors text-left" onclick="selectBetChoiceFromModal('3루')">
+                        <div class="flex items-center">
+                            <div class="w-4 h-4 rounded-full bg-yellow-300 mr-3"></div>
+                            <div class="flex-1">
+                                <div class="font-bold text-yellow-300">3루</div>
+                                <div class="text-xs text-gray-400">3루타</div>
+                            </div>
+                        </div>
+                    </button>
+                    <button class="bet-choice-btn w-full p-3 bg-gray-700 rounded cursor-pointer hover:bg-gray-600 transition-colors text-left" onclick="selectBetChoiceFromModal('홈런')">
+                        <div class="flex items-center">
+                            <div class="w-4 h-4 rounded-full bg-green-300 mr-3"></div>
+                            <div class="flex-1">
+                                <div class="font-bold text-green-300">홈런</div>
+                                <div class="text-xs text-gray-400">홈런</div>
+                            </div>
+                        </div>
+                    </button>
+                    <button class="bet-choice-btn w-full p-3 bg-gray-700 rounded cursor-pointer hover:bg-gray-600 transition-colors text-left" onclick="selectBetChoiceFromModal('아웃')">
+                        <div class="flex items-center">
+                            <div class="w-4 h-4 rounded-full bg-purple-300 mr-3"></div>
+                            <div class="flex-1">
+                                <div class="font-bold text-purple-300">아웃</div>
+                                <div class="text-xs text-gray-400">아웃</div>
+                            </div>
+                        </div>
+                    </button>
+                `;
                 
                 // 선택 상태 초기화
                 window.selectedChoice = null;
                 enablePredictionButton();
+                
+                console.log('✅ 5개 배팅 옵션 복원 완료');
             }
         }
 
