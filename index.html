@@ -860,55 +860,28 @@
             }
         }
 
-        // 배팅 선택 활성화 (운영자-사용자 동일 경기 여부를 실시간 검증, 깜빡임 방지)
+        // 배팅 선택 활성화 (간단하고 확실한 버전)
         function enableBettingSelection() {
             const bettingOptionsContainer = document.getElementById('bettingOptionsContainer');
-            if (!bettingOptionsContainer) return;
+            if (!bettingOptionsContainer || !selectedGame) return;
 
-            // 표시 상태 캐시 초기화
-            if (!window.__betSelState) {
-                const isVisible = window.getComputedStyle(bettingOptionsContainer).display !== 'none';
-                window.__betSelState = { visible: isVisible, lastCheckAt: 0, inFlight: false };
-            }
-
-            // 선택된 경기 없으면 숨김(상태 변화 있을 때만 DOM 변경)
-            if (!selectedGame || !selectedGame.gameNumber) {
-                if (window.__betSelState.visible !== false) {
-                    bettingOptionsContainer.style.display = 'none';
-                    window.__betSelState.visible = false;
-                }
-                return;
-            }
-
-            const now = Date.now();
-            // 1초 스로틀 및 중복 호출 방지
-            if (window.__betSelState.inFlight) return;
-            if (now - window.__betSelState.lastCheckAt < 1000) return;
-            window.__betSelState.inFlight = true;
-
-            // 운영자가 진행 중인 동일 경기인지 서버 기준으로 확인
-            fetch('/api/team-games')
-                .then(res => (res && res.ok ? res.json() : null))
-                .then(data => {
-                    const prevVisible = window.__betSelState.visible;
-                    let desiredVisible = false;
-                    if (data && Array.isArray(data.games)) {
-                        const liveGame = data.games.find(g => (g.gameNumber || g.number) === (selectedGame.gameNumber || selectedGame.number));
-                        desiredVisible = !!(liveGame && liveGame.bettingStart === '시작' && (liveGame.bettingStop === '진행' || liveGame.bettingStop === '시작'));
-                    }
-                    // 상태가 바뀔 때만 DOM 변경 → 깜빡임 방지
-                    if (prevVisible !== desiredVisible) {
-                        bettingOptionsContainer.style.display = desiredVisible ? 'block' : 'none';
-                        window.__betSelState.visible = desiredVisible;
-                    }
-                })
-                .catch(() => {
-                    // 오류 시 상태 유지 (DOM 변경 없음) → 깜빡임 방지
-                })
-                .finally(() => {
-                    window.__betSelState.lastCheckAt = Date.now();
-                    window.__betSelState.inFlight = false;
+            console.log(`🔍 enableBettingSelection 호출 - 경기 ${selectedGame.gameNumber}, 상태: ${selectedGame.bettingStart}`);
+            
+            // 선택한 게임이 시작 상태면 즉시 표시
+            if (selectedGame.bettingStart === '시작') {
+                bettingOptionsContainer.style.display = 'block';
+                
+                // 모든 배팅 버튼 표시
+                const betButtons = bettingOptionsContainer.querySelectorAll('.bet-choice-btn');
+                betButtons.forEach(btn => {
+                    btn.style.display = 'block';
                 });
+                
+                console.log(`✅ 경기 ${selectedGame.gameNumber} 배팅 옵션 활성화: ${betButtons.length}개 버튼`);
+            } else {
+                bettingOptionsContainer.style.display = 'none';
+                console.log(`❌ 경기 ${selectedGame.gameNumber} 배팅 옵션 비활성화`);
+            }
         }
 
         // 배팅 선택 비활성화
