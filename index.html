@@ -1024,17 +1024,25 @@
             selectBetChoiceFromModal(choice);
         }
 
-        // 배팅 선택 옵션 활성화
+        // 배팅 선택 옵션 활성화 (강화된 버전)
         function enableBettingChoices() {
             const bettingOptionsContainer = document.getElementById('bettingOptionsContainer');
             
             if (selectedGame && selectedGame.bettingStart === '시작') {
                 if (bettingOptionsContainer) {
                     bettingOptionsContainer.style.display = 'block';
+                    console.log('✅ enableBettingChoices: 배팅 옵션 활성화');
+                    
+                    // 모든 배팅 버튼도 표시되도록 보장
+                    const betButtons = bettingOptionsContainer.querySelectorAll('.bet-choice-btn');
+                    betButtons.forEach(btn => {
+                        btn.style.display = 'block';
+                    });
                 }
             } else {
                 if (bettingOptionsContainer) {
                     bettingOptionsContainer.style.display = 'none';
+                    console.log('❌ enableBettingChoices: 배팅 옵션 비활성화');
                 }
             }
         }
@@ -1555,9 +1563,12 @@
                             selectedGame.bettingStart = currentGame.bettingStart;
                             selectedGame.bettingStop = currentGame.bettingStop;
                             
-                            // 배팅선택 활성화
-                            enableBettingChoices();
-                            enableBettingSelection();
+                            // 배팅선택 활성화 (강제 표시)
+                            const bettingOptionsContainer = document.getElementById('bettingOptionsContainer');
+                            if (bettingOptionsContainer) {
+                                bettingOptionsContainer.style.display = 'block';
+                                console.log('✅ 배팅 옵션 강제 활성화');
+                            }
                             enablePredictionButton();
                             
                             }
