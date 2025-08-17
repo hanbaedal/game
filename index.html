@@ -1524,71 +1524,90 @@
         // 배팅 상태 확인 및 표시 함수 (수정)
         let previousBettingStart = null; // 이전 배팅 상태 저장
         
-        // 간단한 DB 체크 기반 배팅 상태 확인
         async function checkBettingStatus() {
-            if (!selectedGame || isBetting) return;
+            if (!selectedGame) return;
+            
+            // 이미 배팅이 완료된 경우 상태 확인 중단
+            if (isBetting) return;
+            
+            console.log('🔄 배팅 상태 확인 시작...');
             
             try {
-                // team-games 컬렉션에서 선택한 경기 상태만 체크
+            // 서버에서 최신 배팅 상태 가져오기
                 const response = await fetch('/api/team-games');
                 const data = await response.json();
                 
-                if (data && data.games) {
-                    const currentGame = data.games.find(game => 
-                        game.gameNumber === selectedGame.gameNumber
-                    );
-                    
-                    if (currentGame) {
-                        console.log(`🎯 경기 ${currentGame.gameNumber} DB 상태:`, {
-                            bettingStart: currentGame.bettingStart,
-                            bettingStop: currentGame.bettingStop
-                        });
+                    console.log('📊 서버 데이터:', data);
+                    if (data && data.games) {
+                    // 현재 선택된 게임의 상태 확인
+                        const currentGame = data.games.find(game => 
+                            game.number === selectedGame.number || 
+                            game.gameNumber === selectedGame.gameNumber ||
+                            game._id === selectedGame._id ||
+                            game.id === selectedGame.id
+                        );
                         
-                        // 게임 정보 업데이트
-                        selectedGame.bettingStart = currentGame.bettingStart;
-                        selectedGame.bettingStop = currentGame.bettingStop;
+                        console.log('🎯 현재 게임:', currentGame);
                         
-                        // DB 상태에 따른 UI 업데이트
-                        if (currentGame.bettingStart === '시작') {
-                            // 배팅 활성화
-                            showBettingOptions();
-                        } else {
-                            // 배팅 비활성화
-                            hideBettingOptions();
-                        }
-                    }
-                }
-            } catch (error) {
-                console.error('배팅 상태 확인 오류:', error);
-            }
-        }
-
-        // 간단한 배팅 옵션 표시 함수
-        function showBettingOptions() {
-            const container = document.getElementById('bettingOptionsContainer');
-            if (container) {
-                container.style.display = 'block';
-                
-                // 모든 배팅 버튼 표시
-                const buttons = container.querySelectorAll('.bet-choice-btn');
-                buttons.forEach(btn => {
-                    btn.style.display = 'block';
-                });
-                
-                console.log(`✅ 배팅 옵션 활성화: ${buttons.length}개 버튼 (1루/2루/3루/홈런/아웃)`);
-            }
-        }
-
-        // 간단한 배팅 옵션 숨김 함수
-        function hideBettingOptions() {
-            const container = document.getElementById('bettingOptionsContainer');
-            if (container) {
-                container.style.display = 'none';
-                console.log('❌ 배팅 옵션 비활성화');
-            }
-        }
-
-        // 이전 복잡한 로직 제거된 부분 정리
+                        if (currentGame) {
+                            // 선택한 게임이 배팅 시작 상태인지 확인 (다중 운영자 지원)
+                            const isGameActive = currentGame.bettingStart === '시작';
+                            
+                            console.log('🔄 선택한 게임 활성화 상태:', isGameActive);
+                            
+                            // 배팅 시작 상태 변경 감지 (더 넓은 조건으로 수정)
+                            if (currentGame.bettingStart === '시작' && (previousBettingStart !== '시작' || !previousBettingStart)) {
+                                console.log('🎤 선택한 게임 배팅 시작 감지!');
+                                console.log('🔍 이전 상태:', previousBettingStart, '→ 현재 상태:', currentGame.bettingStart);
+                            
+                            // 선택된 게임 정보 업데이트
+                            selectedGame.bettingStart = currentGame.bettingStart;
+                            selectedGame.bettingStop = currentGame.bettingStop;
+                            
+                            // 배팅선택 활성화 (강제 표시)
+                            enableBettingChoices();
+                            const bettingOptionsContainer = document.getElementById('bettingOptionsContainer');
+                            if (bettingOptionsContainer) {
+                                bettingOptionsContainer.style.display = 'block';
+                                console.log('✅ 배팅 옵션 강제 활성화');
+                                
+                                // 모든 배팅 버튼 강제 표시
+                                const betButtons = bettingOptionsContainer.querySelectorAll('.bet-choice-btn');
+                                betButtons.forEach(btn => {
+                                    btn.style.display = 'block';
+                                });
+                                console.log(`✅ ${betButtons.length}개 배팅 버튼 활성화`);
+                            }
+                            enablePredictionButton();
+                            
+                            }
+                            
+                            // 게임이 시작 상태라면 무조건 배팅 옵션 표시 (단순 로직)
+                            if (currentGame.bettingStart === '시작') {
+                                const bettingOptionsContainer = document.getElementById('bettingOptionsContainer');
+                                if (bettingOptionsContainer) {
+                                    bettingOptionsContainer.style.display = 'block';
+                                    console.log('🔄 DB 확인: 배팅 시작 상태 → 옵션 활성화');
+                                    
+                                    // 모든 배팅 버튼 표시
+                                    const betButtons = bettingOptionsContainer.querySelectorAll('.bet-choice-btn');
+                                    betButtons.forEach(btn => {
+                                        btn.style.display = 'block';
+                                    });
+                                    console.log(`✅ ${betButtons.length}개 버튼 표시: 1루/2루/3루/홈런/아웃`);
+                                }
+                            } else {
+                                // 시작 상태가 아니면 숨김
+                                const bettingOptionsContainer = document.getElementById('bettingOptionsContainer');
+                                if (bettingOptionsContainer) {
+                                    bettingOptionsContainer.style.display = 'none';
+                                    console.log('❌ DB 확인: 배팅 대기/중지 상태 → 옵션 비활성화');
+                                }
+                            }
+                            
+                            // 배팅 중지 상태 변경 감지 (실제로 상태가 변경될 때만)
+                            if (previousBettingStart && previousBettingStart !== '중지' && currentGame.bettingStart === '중지') {
+                                console.log('🎤 선택한 게임 배팅 중지 감지!');
                             
                             // 선택된 게임 정보 업데이트
                             selectedGame.bettingStart = currentGame.bettingStart;
