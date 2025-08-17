@@ -632,18 +632,7 @@
             
             // 경기 선택 시 음성 안내 제거 (요청에 따라 비활성화)
             
-            // 경기 선택 시 배팅 데이터 초기화 요청(백그라운드, UI 블로킹 없음)
-            try {
-                fetch('/api/clear-all-betting-data', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' }
-                })
-                .then(res => res.json())
-                .then(data => console.log('🧹 강제 초기화 응답:', data))
-                .catch(err => console.warn('⚠️ 강제 초기화 호출 경고:', err));
-            } catch (error) {
-                console.warn('⚠️ 강제 초기화 호출 오류(무시):', error);
-            }
+            // 경기 선택 시 불필요한 배팅 데이터 초기화 제거 (사용자 선택 경기 유지)
             
             // 포인트 초기화 플래그 리셋
             pointsInitialized = false;
@@ -1645,91 +1634,14 @@
                                 // enableBettingChoices(); // 중복 호출 방지
                                 // enableBettingSelection(); // 중복 호출 방지
                                 // enablePredictionButton(); // 중복 호출 방지
-                            } else if (currentGame.bettingStart === '중지' || currentGame.bettingStart === '종료') {
-                                // 배팅 불가능한 상태 - 다음 게임으로 넘어가기
-                                console.log('🔄 현재 게임이 비활성 상태입니다. 다음 게임을 찾습니다.');
+                            } else {
+                                // 배팅 불가능한 상태 - 사용자가 선택한 경기에서 대기
+                                console.log('⚠️ 선택한 경기가 아직 시작되지 않았습니다. 운영자 배팅시작 대기 중...');
                                 
-                                const nextGame = data.games.find(game => {
-                                    const currentNum = currentGame.gameNumber || currentGame.number;
-                                    const nextNum = game.gameNumber || game.number;
-                                    return nextNum > currentNum && game.bettingStart === '시작';
-                                });
-                                
-                                if (nextGame) {
-                                    console.log('🎯 다음 활성 게임 발견:', nextGame);
-                                    
-                                    // 이전 게임에서 사용자 배팅 데이터 초기화
-                                    if (currentUser && currentUser.userId && selectedGame) {
-                                        try {
-                                            console.log('🧹 이전 게임 배팅 데이터 초기화 중...');
-                                            const response = await fetch('/api/clear-user-betting', {
-                                                method: 'POST',
-                                                headers: { 'Content-Type': 'application/json' },
-                                                body: JSON.stringify({
-                                                    userId: currentUser.userId,
-                                                    gameNumber: selectedGame.gameNumber || selectedGame.number
-                                                })
-                                            });
-                                            
-                                            const clearData = await response.json();
-                                            if (clearData.success) {
-                                                console.log('✅ 이전 게임 배팅 데이터 초기화 완료');
-                                            } else {
-                                                console.log('⚠️ 이전 게임 배팅 데이터 초기화 실패:', clearData.message);
-                                            }
-                                        } catch (error) {
-                                            console.error('❌ 이전 게임 배팅 데이터 초기화 오류:', error);
-                                        }
-                                    }
-                                    
-                                    selectedGame = nextGame;
-                                    previousBettingStart = nextGame.bettingStart;
-                                    
-                                    resetBettingSelection();
-                                    
-                                    // speakText(`다음 경기 ${nextGame.gameNumber || nextGame.number}경기로 넘어갑니다.`, 1.0);
-                                } else {
-                                    // 다음 게임이 없으면 1경기로 순환 (무한 반복)
-                                    console.log('🔄 마지막 경기 완료, 1경기로 순환합니다.');
-                                    const firstGame = data.games.find(game => (game.gameNumber || game.number) === 1);
-                                    if (firstGame) {
-                                        // 이전 게임에서 사용자 배팅 데이터 초기화
-                                        if (currentUser && currentUser.userId && selectedGame) {
-                                            try {
-                                                console.log('🧹 이전 게임 배팅 데이터 초기화 중...');
-                                                const response = await fetch('/api/clear-user-betting', {
-                                                    method: 'POST',
-                                                    headers: { 'Content-Type': 'application/json' },
-                                                    body: JSON.stringify({
-                                                        userId: currentUser.userId,
-                                                        gameNumber: selectedGame.gameNumber || selectedGame.number
-                                                    })
-                                                });
-                                                
-                                                const clearData = await response.json();
-                                                if (clearData.success) {
-                                                    console.log('✅ 이전 게임 배팅 데이터 초기화 완료');
-                                                } else {
-                                                    console.log('⚠️ 이전 게임 배팅 데이터 초기화 실패:', clearData.message);
-                                                }
-                                            } catch (error) {
-                                                console.error('❌ 이전 게임 배팅 데이터 초기화 오류:', error);
-                                            }
-                                        }
-                                        
-                                        selectedGame = firstGame;
-                                        previousBettingStart = firstGame.bettingStart;
-                                        
-                                        resetBettingSelection();
-                                        showSelectedGameOnly(
-                                            firstGame.gameNumber || firstGame.number,
-                                            firstGame.matchup || `${firstGame.homeTeam || ''} vs ${firstGame.awayTeam || ''}`,
-                                            firstGame
-                                        );
-                                        
-                                        // speakText(`🔄 1경기로 순환합니다. 게임을 계속 진행합니다.`, 1.0);
-                                    }
-                                }
+                                // 자동 경기 전환 제거 - 사용자 선택 경기 유지
+                                disableBettingChoices();
+                                disableBettingSelection();
+                                disablePredictionButton();
                             }
                         }
                     }
