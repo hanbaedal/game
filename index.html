@@ -614,92 +614,7 @@
             }
         }
 
-        // 음성 큐 시스템
-        let speechQueue = [];
-        let isSpeaking = false;
 
-        // 음성 큐 처리 함수
-        function processSpeechQueue() {
-            if (speechQueue.length === 0 || isSpeaking) {
-                return;
-            }
-
-            isSpeaking = true;
-            const { text, rate, pitch } = speechQueue.shift();
-            
-            const utterance = new SpeechSynthesisUtterance(text);
-            utterance.lang = 'ko-KR';
-            utterance.rate = rate || 0.9;
-            utterance.pitch = pitch || 1.1;
-            utterance.volume = 0.9;
-            
-            // 음성 시작 이벤트
-            utterance.onstart = () => {
-                console.log('🎤 음성 재생 시작:', text);
-            };
-            
-            // 음성 완료 이벤트
-            utterance.onend = () => {
-                console.log('🎤 음성 재생 완료:', text);
-                isSpeaking = false;
-                // 큐에 남은 음성이 있으면 다음 음성 재생
-                setTimeout(() => processSpeechQueue(), 100);
-            };
-            
-            utterance.onerror = (event) => {
-                console.log('🎤 음성 재생 오류:', event.error);
-                isSpeaking = false;
-                // 오류 발생 시에도 다음 음성 재생
-                setTimeout(() => processSpeechQueue(), 100);
-            };
-            
-            speechSynthesis.speak(utterance);
-            console.log('🎤 음성 재생 요청 완료:', text);
-        }
-
-        // 음성 합성 함수 (큐 시스템 사용)
-        function speakText(text, rate = 0.9) {
-            console.log('🎤 음성 재생 시도:', text);
-            
-            if ('speechSynthesis' in window) {
-                // 축하하는 음성인지 확인
-                const isCelebration = text.includes('축하합니다') || text.includes('와!');
-                const isFailure = text.includes('아쉽네요') || text.includes('실패했습니다');
-                const isUrgent = text.includes('배팅선택을 할 수 있습니다');
-                const isStrict = text.includes('배팅을 할 수 없습니다');
-                
-                let finalRate = rate;
-                let finalPitch = 1.1;
-                
-                if (isCelebration) {
-                    finalRate = 1.1;
-                    finalPitch = 1.3; // 축하할 때는 더 높은 음조
-                } else if (isFailure) {
-                    finalRate = 0.7;
-                    finalPitch = 0.8; // 실패할 때는 더 낮은 음조
-                } else if (isUrgent) {
-                    finalRate = 1.3;
-                    finalPitch = 1.2; // 급한 목소리는 빠른 속도, 약간 높은 음조
-                } else if (isStrict) {
-                    finalRate = 0.8;
-                    finalPitch = 0.9; // 엄격한 목소리는 느린 속도, 낮은 음조
-                }
-                
-                // 음성을 큐에 추가 (특별 처리)
-                speechQueue.push({ text, rate: finalRate, pitch: finalPitch });
-                let logSuffix = '';
-                if (isCelebration) logSuffix = '(축하 음성)';
-                else if (isFailure) logSuffix = '(실패 음성)';
-                else if (isUrgent) logSuffix = '(급한 음성)';
-                else if (isStrict) logSuffix = '(엄격한 음성)';
-                console.log('🎤 음성 큐에 추가됨:', text, logSuffix);
-                
-                // 큐 처리 시작
-                processSpeechQueue();
-            } else {
-                console.log('🎤 음성 합성 API를 지원하지 않습니다.');
-            }
-        }
 
         // DB 데이터를 사용한 경기 선택 함수
         let gameSelectionInProgress = false; // 경기 선택 진행 중 플래그
@@ -1032,8 +947,6 @@
             // 선택된 배팅 표시
             updateBettingSelectionDisplay(choice);
             
-            // 배팅 선택 음성 안내
-            // speakText(`${choice} 선택했습니다.`); // 불필요한 음성 제거
             
             // 예측하기 버튼 활성화
             enablePredictionButton();
@@ -1166,17 +1079,17 @@
             const betBtn = document.getElementById('betBtn');
             if (betBtn.disabled) return;
             if (!window.selectedChoice) {
-                // speakText('배팅 유형을 선택해주세요.'); // 불필요한 음성 제거
+
                 alert('배팅 유형을 선택해주세요.');
                 return;
             }
             if (!currentUser || currentUser.isGuest) {
-                // speakText('로그인이 필요합니다.'); // 불필요한 음성 제거
+
                 alert('로그인이 필요합니다.');
                 return;
             }
             if (!selectedGame) {
-                // speakText('경기를 선택해주세요.'); // 불필요한 음성 제거
+
                 alert('경기를 선택해주세요.');
                 return;
             }
@@ -1281,8 +1194,6 @@
             `;
             document.body.appendChild(modal);
             document.getElementById('confirmBetBtn').onclick = function() {
-                // 배팅 확인 음성 안내
-                // speakText('배팅을 진행합니다.'); // 불필요한 음성 제거
                 
                 if (typeof confirmBet === 'function') {
                     confirmBet();
@@ -1649,8 +1560,6 @@
                             enableBettingSelection();
                             enablePredictionButton();
                             
-                                // 배팅 시작 음성 안내 (1번만)
-                                speakText('이제부터 배팅선택을 할 수 있습니다.', 1.3);
                             }
                             
                             // 배팅 중지 상태 변경 감지 (실제로 상태가 변경될 때만)
@@ -1665,9 +1574,6 @@
                             disableBettingChoices();
                             disableBettingSelection();
                             disablePredictionButton();
-                            
-                            // 배팅 중지 음성 안내 (필요시에만)
-                            // speakText('이제부터 배팅을 할 수 없습니다.', 0.8);
                             }
                             
                             // 이전 배팅 상태 업데이트
@@ -1738,7 +1644,7 @@
                                     
                                     resetBettingSelection();
                                     
-                                    speakText(`다음 경기 ${nextGame.gameNumber || nextGame.number}경기로 넘어갑니다.`, 1.0);
+                                    // speakText(`다음 경기 ${nextGame.gameNumber || nextGame.number}경기로 넘어갑니다.`, 1.0);
                                 } else {
                                     // 다음 게임이 없으면 1경기로 순환 (무한 반복)
                                     console.log('🔄 마지막 경기 완료, 1경기로 순환합니다.');
@@ -1778,7 +1684,7 @@
                                             firstGame
                                         );
                                         
-                                        speakText(`🔄 1경기로 순환합니다. 게임을 계속 진행합니다.`, 1.0);
+                                        // speakText(`🔄 1경기로 순환합니다. 게임을 계속 진행합니다.`, 1.0);
                                     }
                                 }
                             }
@@ -2086,7 +1992,7 @@
 
         function showDonationModal(winPoints = 0) {
             // 기부 모달 표시 음성 안내
-            speakText('기부 모달이 표시되었습니다. 원하는 기부 비율을 선택해주세요.');
+            // speakText('기부 모달이 표시되었습니다. 원하는 기부 비율을 선택해주세요.');
             
             const modal = document.getElementById('donationModal');
             if (modal) {
@@ -2125,7 +2031,7 @@
                 const donateNoBtn = modal.querySelector('#donateNoBtn');
                 if (donateNoBtn) {
                     donateNoBtn.onclick = function() {
-                        speakText('기부하지 않고 게임으로 돌아갑니다.');
+                        // speakText('기부하지 않고 게임으로 돌아갑니다.');
                         closeDonationModal();
                         // 기부하지 않고 게임으로 돌아가기
                         showSelectedGameOnly();
@@ -2150,7 +2056,7 @@
                 
                 if (confirmNoBtn) {
                     confirmNoBtn.onclick = function() {
-                        speakText('기부를 취소했습니다.');
+                        // speakText('기부를 취소했습니다.');
                         // 기부 확인 섹션 숨기기
                         const confirmSection = modal.querySelector('#donationConfirm');
                         if (confirmSection) {
@@ -2229,7 +2135,7 @@
                 // 선택된 게임 정보 가져오기 (전역 상태 사용)
                 const selectedGame = window.selectedGame;
                 if (!selectedGame || !selectedGame.gameNumber) {
-                    speakText('게임 정보가 올바르지 않습니다. 게임을 다시 선택해주세요.');
+                    // speakText('게임 정보가 올바르지 않습니다. 게임을 다시 선택해주세요.');
                     alert('게임 정보가 올바르지 않습니다. 게임을 다시 선택해주세요.');
                     return;
                 }
@@ -2245,13 +2151,13 @@
                     if (gameData.success && gameData.game.predictionResult) {
                         actualResult = gameData.game.predictionResult;
                     } else {
-                        speakText('게임 결과가 아직 입력되지 않았습니다.');
+                        // speakText('게임 결과가 아직 입력되지 않았습니다.');
                         alert('게임 결과가 아직 입력되지 않았습니다.');
                         return;
                     }
                 } catch (error) {
                     console.error('게임 정보 조회 오류:', error);
-                    speakText('게임 정보 조회 중 오류가 발생했습니다.');
+                    // speakText('게임 정보 조회 중 오류가 발생했습니다.');
                     alert('게임 정보 조회 중 오류가 발생했습니다.');
                     return;
                 }
@@ -2316,7 +2222,7 @@
                     localStorage.setItem('currentUser', JSON.stringify(currentUser));
                     
                     // 기부 완료 음성 안내
-                    speakText(`${donationPercent}퍼센트 기부가 완료되었습니다. ${calculatedDonationAmount}포인트를 기부하셨습니다.`);
+                    // speakText(`${donationPercent}퍼센트 기부가 완료되었습니다. ${calculatedDonationAmount}포인트를 기부하셨습니다.`);
                     
                     // 기부 모달 닫기
                     document.getElementById('donationModal').style.display = 'none';
@@ -2343,7 +2249,7 @@
                     enableBettingSelection();
                     enableBettingPoints();
                 } else {
-                    speakText('기부 처리 중 오류가 발생했습니다. 다시 시도해주세요.');
+                    // speakText('기부 처리 중 오류가 발생했습니다. 다시 시도해주세요.');
                     alert('기부 처리 중 오류가 발생했습니다: ' + data.message);
                 }
             } catch (error) {
@@ -2388,7 +2294,7 @@
             };
             
             // 음성 안내
-            speakText('혼자서 게임하셨군요. 이 게임은 친구들과 함께 즐기는 게임입니다.');
+            // speakText('혼자서 게임하셨군요. 이 게임은 친구들과 함께 즐기는 게임입니다.');
         }
 
         // 기부 완료 모달 표시 함수
@@ -2400,7 +2306,7 @@
             modal.style.display = 'flex';
             
             // 기부 완료 음성 안내
-            speakText('기부 완료 모달이 표시되었습니다. 원하는 기부 비율을 선택해주세요.');
+            // speakText('기부 완료 모달이 표시되었습니다. 원하는 기부 비율을 선택해주세요.');
             
             // 확인 버튼 이벤트
             document.getElementById('donationCompleteBtn').onclick = function() {
@@ -2800,7 +2706,7 @@
                 modal.classList.remove('hidden');
                 
                 // 기부 모달 음성 안내
-                speakText('기부 모달이 표시되었습니다. 원하는 기부 비율을 선택해주세요.');
+                // speakText('기부 모달이 표시되었습니다. 원하는 기부 비율을 선택해주세요.');
                 
                 // 기부 버튼 이벤트 리스너 설정
                 const donationBtns = modal.querySelectorAll('.donation-btn');
@@ -2835,7 +2741,7 @@
                 const donateNoBtn = modal.querySelector('#donateNoBtn');
                 if (donateNoBtn) {
                     donateNoBtn.onclick = function() {
-                        speakText('기부하지 않고 게임으로 돌아갑니다.');
+                        // speakText('기부하지 않고 게임으로 돌아갑니다.');
                         closeDonationModal();
                         // 기부하지 않고 게임으로 돌아가기
                         showSelectedGameOnly();
@@ -2860,7 +2766,7 @@
                 
                 if (confirmNoBtn) {
                     confirmNoBtn.onclick = function() {
-                        speakText('기부를 취소했습니다.');
+                        // speakText('기부를 취소했습니다.');
                         // 기부 확인 섹션 숨기기
                         const confirmSection = modal.querySelector('#donationConfirm');
                         if (confirmSection) {
@@ -2911,7 +2817,7 @@
                 // 선택된 게임 정보 가져오기
                 const selectedGame = await getSelectedGame();
                 if (!selectedGame || !selectedGame.gameNumber) {
-                    speakText('게임 정보가 올바르지 않습니다. 게임을 다시 선택해주세요.');
+                    // speakText('게임 정보가 올바르지 않습니다. 게임을 다시 선택해주세요.');
                     alert('게임 정보가 올바르지 않습니다. 게임을 다시 선택해주세요.');
                     return;
                 }
@@ -2927,13 +2833,13 @@
                     if (gameData.success && gameData.game.predictionResult) {
                         actualResult = gameData.game.predictionResult;
                     } else {
-                        speakText('게임 결과가 아직 입력되지 않았습니다.');
+                        // speakText('게임 결과가 아직 입력되지 않았습니다.');
                         alert('게임 결과가 아직 입력되지 않았습니다.');
                         return;
                     }
                 } catch (error) {
                     console.error('게임 정보 조회 오류:', error);
-                    speakText('게임 정보 조회 중 오류가 발생했습니다.');
+                    // speakText('게임 정보 조회 중 오류가 발생했습니다.');
                     alert('게임 정보 조회 중 오류가 발생했습니다.');
                     return;
                 }
@@ -2957,7 +2863,7 @@
                 
                 // 혼자서 게임할 때 (참가자 1명, 승자 1명)
                 if (totalUniqueUsers === 1 && winnerCount === 1) {
-                    speakText('혼자서 게임하셨네요! 친구들과 함께하면 더 재미있어요!');
+                    // speakText('혼자서 게임하셨네요! 친구들과 함께하면 더 재미있어요!');
                     showSoloWinModal(totalWinAmount);
                     return;
                 }
@@ -2988,7 +2894,7 @@
                     localStorage.setItem('currentUser', JSON.stringify(currentUser));
                     
                     // 기부 완료 음성 안내
-                    speakText(`${percent}퍼센트 기부가 완료되었습니다. ${donationAmount}포인트를 기부하셨습니다.`);
+                    // speakText(`${percent}퍼센트 기부가 완료되었습니다. ${donationAmount}포인트를 기부하셨습니다.`);
                     
                     closeDonationModal();
                     // 기부 완료 후 배팅 선택 화면으로 돌아가기 (게임 선택 유지)
@@ -3011,14 +2917,14 @@
                     enableBettingSelection();
                     enableBettingPoints();
                 } else {
-                    speakText('기부 처리 중 오류가 발생했습니다. 다시 시도해주세요.');
+                    // speakText('기부 처리 중 오류가 발생했습니다. 다시 시도해주세요.');
                     alert('기부 처리 중 오류가 발생했습니다: ' + donationData.message);
                 }
             } catch (error) {
                 console.error('기부 처리 중 오류:', error);
                 
                 // 기부 처리 오류 음성 안내
-                speakText('기부 처리 중 오류가 발생했습니다. 다시 시도해주세요.');
+                // speakText('기부 처리 중 오류가 발생했습니다. 다시 시도해주세요.');
                 
                 alert('기부 처리 중 오류가 발생했습니다.');
             }
@@ -3033,22 +2939,22 @@
             try {
                 // 필수 필드들이 올바르게 설정되었는지 확인
             if (!currentUser || !currentUser.userId) {
-                    speakText('사용자 정보가 없습니다. 다시 로그인해주세요.');
+                    // speakText('사용자 정보가 없습니다. 다시 로그인해주세요.');
                     alert('사용자 정보가 없습니다. 다시 로그인해주세요.');
                         return;
                     }
                 if (!window.selectedChoice) {
-                    speakText('배팅 선택이 되지 않았습니다.');
+                    // speakText('배팅 선택이 되지 않았습니다.');
                     alert('배팅 선택이 되지 않았습니다.');
                 return;
             }
                 if (!selectedAmount) {
-                    speakText('배팅 금액이 설정되지 않았습니다.');
+                    // speakText('배팅 금액이 설정되지 않았습니다.');
                     alert('배팅 금액이 설정되지 않았습니다.');
                     return;
                 }
                 if (!selectedGame || !selectedGame.date || !selectedGame.gameNumber) {
-                    speakText('게임 정보가 올바르지 않습니다. 게임을 다시 선택해주세요.');
+                    // speakText('게임 정보가 올바르지 않습니다. 게임을 다시 선택해주세요.');
                     alert('게임 정보가 올바르지 않습니다. 게임을 다시 선택해주세요.');
                     return;
                 }
@@ -3088,10 +2994,7 @@
                     console.log('✅ 배팅 성공 - game-member 컬렉션에 저장됨');
                     console.log('📊 저장된 배팅 데이터:', requestData);
                     
-                    // 배팅 성공 음성 안내 (간단하게)
-                    const successMessage = `배팅이 완료되었습니다.`;
-                    console.log('🎤 성공 음성 재생:', successMessage);
-                    speakText(successMessage);
+                    console.log('✅ 배팅 성공 처리 완료');
                     
                     // 배팅 성공 처리 완료
                     console.log('📈 배팅 완료');
@@ -3116,7 +3019,7 @@
                         // no-op: 사용자 선택 대기
                     } else {
                         // 그 외 오류는 사용자에게 알림
-                        speakText(`배팅에 실패했습니다. ${errorMessage}`);
+                        // speakText(`배팅에 실패했습니다. ${errorMessage}`);
                         alert('배팅 실패: ' + errorMessage);
                     }
                 }
@@ -3124,7 +3027,7 @@
                 console.error('배팅 처리 오류:', error);
                 
                 // 네트워크 오류 등 예외 상황 음성 안내
-                speakText('배팅 처리 중 오류가 발생했습니다. 다시 시도해주세요.');
+                // speakText('배팅 처리 중 오류가 발생했습니다. 다시 시도해주세요.');
                 
                 alert('배팅 처리 중 오류가 발생했습니다.');
             }
@@ -3147,7 +3050,7 @@
                     console.log('🔄 마지막 경기에서 1경기로 순환');
                     next = data.games.find(g => (g.gameNumber || g.number) === 1);
                     if (next) {
-                        speakText('🔄 1경기로 순환합니다. 게임을 계속 진행합니다.', 1.0);
+                        // speakText('🔄 1경기로 순환합니다. 게임을 계속 진행합니다.', 1.0);
                     }
                 }
                 
@@ -3341,7 +3244,7 @@
         function showSuccessModal(winAmount) {
             // 승리 음성 안내 (축하하는 톤)
             const celebrationText = `와! 축하합니다! ${winAmount}포인트를 획득하셨습니다!`;
-            speakText(celebrationText, 1.1); // 속도를 약간 빠르게, 더 기쁜 톤
+            // speakText(celebrationText, 1.1); // 속도를 약간 빠르게, 더 기쁜 톤
             
             // 수당 계산 분리 표시
             const originalBet = 100; // 원금
@@ -3387,9 +3290,6 @@
 
         // 혼자서 게임할 때 승리 모달 (기부 모달 대신)
         function showSoloWinModal(winAmount) {
-            const celebrationText = `와! 축하합니다! ${winAmount}포인트를 획득하셨습니다!`;
-            speakText(celebrationText, 1.1);
-            
             const oldModal = document.getElementById('soloWinModal');
             if (oldModal) oldModal.remove();
             const modal = document.createElement('div');
@@ -3429,10 +3329,6 @@
 
         // 실패 모달 (클릭 시 게임으로 돌아감)
         function showFailureModal() {
-            // 실패 음성 안내 (안타까운 톤)
-            const failureText = '아쉽네요... 예측에 실패했습니다. 다시 도전해보세요.';
-            speakText(failureText, 0.7); // 속도를 늦춰서 안타까운 톤
-            
             const oldModal = document.getElementById('failureModal');
             if (oldModal) oldModal.remove();
             const modal = document.createElement('div');
