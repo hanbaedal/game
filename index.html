@@ -759,6 +759,9 @@
                 // 베팅 선택 활성화 (먼저)
                 enableBettingSelection();
                 
+                // 이전 배팅 상태 초기화 (게임 선택 시)
+                previousBettingStart = selectedGameData.bettingStart || '대기';
+                
                 // 배팅 상태 실시간 확인 및 업데이트
             checkBettingStatus();
                 
@@ -1630,8 +1633,8 @@
                             
                             console.log('🔄 선택한 게임 활성화 상태:', isGameActive);
                             
-                            // 배팅 시작 상태 변경 감지 (선택한 게임이 활성화될 때)
-                            if (previousBettingStart !== '시작' && currentGame.bettingStart === '시작') {
+                            // 배팅 시작 상태 변경 감지 (실제로 상태가 변경될 때만)
+                            if (previousBettingStart && previousBettingStart !== '시작' && currentGame.bettingStart === '시작') {
                                 console.log('🎤 선택한 게임 배팅 시작 감지!');
                             
                             // 선택된 게임 정보 업데이트
@@ -1647,8 +1650,8 @@
                                 speakText('이제부터 배팅선택을 할 수 있습니다.', 1.3);
                             }
                             
-                            // 배팅 중지 상태 변경 감지
-                            if (previousBettingStart !== '중지' && currentGame.bettingStart === '중지') {
+                            // 배팅 중지 상태 변경 감지 (실제로 상태가 변경될 때만)
+                            if (previousBettingStart && previousBettingStart !== '중지' && currentGame.bettingStart === '중지') {
                                 console.log('🎤 선택한 게임 배팅 중지 감지!');
                             
                             // 선택된 게임 정보 업데이트
