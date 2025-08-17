@@ -1006,6 +1006,10 @@
             const bettingOptionsContainer = document.getElementById('bettingOptionsContainer');
             if (bettingOptionsContainer) {
                 bettingOptionsContainer.style.display = 'none';
+                // 상태 캐시도 업데이트
+                if (window.__betSelState) {
+                    window.__betSelState.visible = false;
+                }
             }
         }
 
@@ -1515,7 +1519,17 @@
             
             document.getElementById('loseConfirmBtn').onclick = function() {
                 document.body.removeChild(modal);
-                resetGame(); // 게임 초기화
+                // 같은 경기에서 다음 게임 준비 (경기 선택 유지)
+                resetBettingSelection();
+                if (selectedGame) {
+                    showSelectedGameOnly(
+                        selectedGame.gameNumber || selectedGame.number,
+                        selectedGame.matchup || `${selectedGame.homeTeam || ''} vs ${selectedGame.awayTeam || ''}`,
+                        selectedGame
+                    );
+                    enableBettingSelection();
+                    enableBettingPoints();
+                }
             };
         }
 
@@ -1612,10 +1626,17 @@
                         );
                         
                         console.log('🎯 현재 게임:', currentGame);
+                        console.log('🎯 운영자 활성 게임:', activeGame);
                         
                         if (currentGame) {
-                            // 배팅 시작 상태 변경 감지
-                            if (previousBettingStart !== '시작' && currentGame.bettingStart === '시작') {
+                            // 운영자와 사용자의 게임 선택이 일치하는지 확인
+                            const isOperatorUserGameMatch = activeGame && 
+                                ((activeGame.gameNumber || activeGame.number) === (currentGame.gameNumber || currentGame.number));
+                            
+                            console.log('🔄 운영자-사용자 게임 일치:', isOperatorUserGameMatch);
+                            
+                            // 배팅 시작 상태 변경 감지 (운영자와 사용자 게임이 일치할 때만)
+                            if (previousBettingStart !== '시작' && currentGame.bettingStart === '시작' && isOperatorUserGameMatch) {
                                 console.log('🎤 배팅 시작 감지!');
                             
                             // 선택된 게임 정보 업데이트
@@ -1634,9 +1655,13 @@
                                 }, 2000);
                             }
                             
-                            // 배팅 중지 상태 변경 감지
-                            if (previousBettingStart !== '중지' && currentGame.bettingStart === '중지') {
-                                console.log('🎤 배팅 중지 감지!');
+                            // 배팅 중지 상태 변경 감지 (또는 운영자-사용자 게임이 불일치할 때)
+                            if ((previousBettingStart !== '중지' && currentGame.bettingStart === '중지') || !isOperatorUserGameMatch) {
+                                if (currentGame.bettingStart === '중지') {
+                                    console.log('🎤 배팅 중지 감지!');
+                                } else if (!isOperatorUserGameMatch) {
+                                    console.log('🚫 운영자-사용자 게임 불일치로 비활성화');
+                                }
                             
                             // 선택된 게임 정보 업데이트
                             selectedGame.bettingStart = currentGame.bettingStart;
@@ -1727,9 +1752,10 @@
                                     
                                     speakText(`다음 경기 ${nextGame.gameNumber || nextGame.number}경기로 넘어갑니다.`, 1.0);
                                 } else {
-                                    // 다음 게임이 없으면 첫 번째 게임으로
-                                    const firstActiveGame = data.games.find(game => game.bettingStart === '시작');
-                                    if (firstActiveGame) {
+                                    // 다음 게임이 없으면 1경기로 순환 (무한 반복)
+                                    console.log('🔄 마지막 경기 완료, 1경기로 순환합니다.');
+                                    const firstGame = data.games.find(game => (game.gameNumber || game.number) === 1);
+                                    if (firstGame) {
                                         // 이전 게임에서 사용자 배팅 데이터 초기화
                                         if (currentUser && currentUser.userId && selectedGame) {
                                             try {
@@ -1754,12 +1780,17 @@
                                             }
                                         }
                                         
-                                        selectedGame = firstActiveGame;
-                                        previousBettingStart = firstActiveGame.bettingStart;
+                                        selectedGame = firstGame;
+                                        previousBettingStart = firstGame.bettingStart;
                                         
                                         resetBettingSelection();
+                                        showSelectedGameOnly(
+                                            firstGame.gameNumber || firstGame.number,
+                                            firstGame.matchup || `${firstGame.homeTeam || ''} vs ${firstGame.awayTeam || ''}`,
+                                            firstGame
+                                        );
                                         
-                                        speakText(`첫 번째 경기 ${firstActiveGame.gameNumber || firstActiveGame.number}경기로 돌아갑니다.`, 1.0);
+                                        speakText(`🔄 1경기로 순환합니다. 게임을 계속 진행합니다.`, 1.0);
                                     }
                                 }
                             }
@@ -1810,6 +1841,14 @@
                 btn.classList.remove('bg-blue-500', 'bg-blue-600');
                 btn.classList.add('bg-gray-600');
             });
+            
+            // 모든 배팅 옵션 표시 (이전 라운드에서 숨겨진 버튼들 복원)
+            showAllBettingOptions();
+            
+            // 배팅 선택 상태 캐시 완전 초기화 (4번째 게임부터 문제 방지)
+            if (window.__betSelState) {
+                window.__betSelState = null;
+            }
             
             console.log('✅ 배팅 선택 초기화 완료');
         }
@@ -2383,7 +2422,17 @@
             // 다음 게임 버튼 이벤트
             document.getElementById('nextGameBtn').onclick = function() {
                 modal.style.display = 'none';
-                resetGame(); // 게임 초기화하고 다시 시작
+                // 같은 경기에서 다음 게임 준비 (경기 선택 유지)
+                resetBettingSelection();
+                if (selectedGame) {
+                    showSelectedGameOnly(
+                        selectedGame.gameNumber || selectedGame.number,
+                        selectedGame.matchup || `${selectedGame.homeTeam || ''} vs ${selectedGame.awayTeam || ''}`,
+                        selectedGame
+                    );
+                    enableBettingSelection();
+                    enableBettingPoints();
+                }
             };
             
             // 음성 안내
@@ -3137,9 +3186,19 @@
                 if (!data || !data.games || !selectedGame) return;
                 const currentNum = selectedGame.gameNumber || selectedGame.number;
                 // 현재 번호보다 큰 경기 중 가장 앞의 경기로 이동
-                const next = data.games
+                let next = data.games
                     .filter(g => (g.gameNumber || g.number) > currentNum)
                     .sort((a,b) => (a.gameNumber||a.number) - (b.gameNumber||b.number))[0];
+                
+                // 다음 경기가 없으면 1경기로 순환 (무한 반복)
+                if (!next) {
+                    console.log('🔄 마지막 경기에서 1경기로 순환');
+                    next = data.games.find(g => (g.gameNumber || g.number) === 1);
+                    if (next) {
+                        speakText('🔄 1경기로 순환합니다. 게임을 계속 진행합니다.', 1.0);
+                    }
+                }
+                
                 if (next) {
                     selectedGame = {
                         ...selectedGame,
@@ -3402,9 +3461,17 @@
             // 모달 클릭 시 게임으로 돌아감
             modal.onclick = function() {
                 modal.remove();
-                showSelectedGameOnly();
-                enableBettingSelection();
-                enableBettingPoints();
+                // 같은 경기에서 다음 게임 준비 (경기 선택 유지)
+                resetBettingSelection();
+                if (selectedGame) {
+                    showSelectedGameOnly(
+                        selectedGame.gameNumber || selectedGame.number,
+                        selectedGame.matchup || `${selectedGame.homeTeam || ''} vs ${selectedGame.awayTeam || ''}`,
+                        selectedGame
+                    );
+                    enableBettingSelection();
+                    enableBettingPoints();
+                }
             };
         }
 
@@ -3440,18 +3507,34 @@
                 }
                 // 모달 배경을 클릭한 경우에만 게임으로 돌아감
                 modal.remove();
-                showSelectedGameOnly();
-                enableBettingSelection();
-                enableBettingPoints();
+                // 같은 경기에서 다음 게임 준비 (경기 선택 유지)
+                resetBettingSelection();
+                if (selectedGame) {
+                    showSelectedGameOnly(
+                        selectedGame.gameNumber || selectedGame.number,
+                        selectedGame.matchup || `${selectedGame.homeTeam || ''} vs ${selectedGame.awayTeam || ''}`,
+                        selectedGame
+                    );
+                    enableBettingSelection();
+                    enableBettingPoints();
+                }
             };
             
             // 모달 내부 컨텐츠 클릭 시에도 게임으로 돌아감
             const modalContent = modal.querySelector('.bg-gray-800');
             modalContent.onclick = function() {
                 modal.remove();
-                showSelectedGameOnly();
-                enableBettingSelection();
-                enableBettingPoints();
+                // 같은 경기에서 다음 게임 준비 (경기 선택 유지)
+                resetBettingSelection();
+                if (selectedGame) {
+                    showSelectedGameOnly(
+                        selectedGame.gameNumber || selectedGame.number,
+                        selectedGame.matchup || `${selectedGame.homeTeam || ''} vs ${selectedGame.awayTeam || ''}`,
+                        selectedGame
+                    );
+                    enableBettingSelection();
+                    enableBettingPoints();
+                }
             };
         }
 
