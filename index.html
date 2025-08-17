@@ -1549,13 +1549,13 @@
                 
                     console.log('📊 서버 데이터:', data);
                     if (data && data.games) {
-                    // 현재 선택된 게임의 상태 확인
+                    // 현재 선택된 게임의 상태 확인 (gameNumber만으로 간단하게)
                         const currentGame = data.games.find(game => 
-                            game.number === selectedGame.number || 
-                            game.gameNumber === selectedGame.gameNumber ||
-                            game._id === selectedGame._id ||
-                            game.id === selectedGame.id
+                            game.gameNumber === selectedGame.gameNumber
                         );
+                        
+                        console.log(`🔍 찾는 경기 번호: ${selectedGame.gameNumber}`);
+                        console.log(`🔍 서버에서 찾은 경기:`, currentGame);
                         
                         console.log('🎯 현재 게임:', currentGame);
                         
@@ -1563,7 +1563,10 @@
                             // 선택한 게임이 배팅 시작 상태인지 확인 (다중 운영자 지원)
                             const isGameActive = currentGame.bettingStart === '시작';
                             
-                            console.log('🔄 선택한 게임 활성화 상태:', isGameActive);
+                            console.log(`🔄 경기 ${currentGame.gameNumber} 상태 확인:`);
+                            console.log(`   - bettingStart: "${currentGame.bettingStart}"`);
+                            console.log(`   - bettingStop: "${currentGame.bettingStop}"`);
+                            console.log(`   - 활성화 여부: ${isGameActive}`);
                             
                             // 배팅 시작 상태 변경 감지 (더 넓은 조건으로 수정)
                             if (currentGame.bettingStart === '시작' && (previousBettingStart !== '시작' || !previousBettingStart)) {
