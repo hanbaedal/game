@@ -1027,7 +1027,7 @@
             updateBettingSelectionDisplay(choice);
             
             // 배팅 선택 음성 안내
-            speakText(`${choice} 선택했습니다.`);
+            // speakText(`${choice} 선택했습니다.`); // 불필요한 음성 제거
             
             // 예측하기 버튼 활성화
             enablePredictionButton();
@@ -1160,17 +1160,17 @@
             const betBtn = document.getElementById('betBtn');
             if (betBtn.disabled) return;
             if (!window.selectedChoice) {
-                speakText('배팅 유형을 선택해주세요.');
+                // speakText('배팅 유형을 선택해주세요.'); // 불필요한 음성 제거
                 alert('배팅 유형을 선택해주세요.');
                 return;
             }
             if (!currentUser || currentUser.isGuest) {
-                speakText('로그인이 필요합니다.');
+                // speakText('로그인이 필요합니다.'); // 불필요한 음성 제거
                 alert('로그인이 필요합니다.');
                 return;
             }
             if (!selectedGame) {
-                speakText('경기를 선택해주세요.');
+                // speakText('경기를 선택해주세요.'); // 불필요한 음성 제거
                 alert('경기를 선택해주세요.');
                 return;
             }
@@ -1276,7 +1276,7 @@
             document.body.appendChild(modal);
             document.getElementById('confirmBetBtn').onclick = function() {
                 // 배팅 확인 음성 안내
-                speakText('배팅을 진행합니다.');
+                // speakText('배팅을 진행합니다.'); // 불필요한 음성 제거
                 
                 if (typeof confirmBet === 'function') {
                     confirmBet();
@@ -1614,9 +1614,6 @@
                 
                     console.log('📊 서버 데이터:', data);
                     if (data && data.games) {
-                    // 운영자가 선택한 활성 게임 찾기 (bettingStart가 '시작'인 게임)
-                    const activeGame = data.games.find(game => game.bettingStart === '시작');
-                    
                     // 현재 선택된 게임의 상태 확인
                         const currentGame = data.games.find(game => 
                             game.number === selectedGame.number || 
@@ -1626,18 +1623,16 @@
                         );
                         
                         console.log('🎯 현재 게임:', currentGame);
-                        console.log('🎯 운영자 활성 게임:', activeGame);
                         
                         if (currentGame) {
-                            // 운영자와 사용자의 게임 선택이 일치하는지 확인
-                            const isOperatorUserGameMatch = activeGame && 
-                                ((activeGame.gameNumber || activeGame.number) === (currentGame.gameNumber || currentGame.number));
+                            // 선택한 게임이 배팅 시작 상태인지 확인 (다중 운영자 지원)
+                            const isGameActive = currentGame.bettingStart === '시작';
                             
-                            console.log('🔄 운영자-사용자 게임 일치:', isOperatorUserGameMatch);
+                            console.log('🔄 선택한 게임 활성화 상태:', isGameActive);
                             
-                            // 배팅 시작 상태 변경 감지 (운영자와 사용자 게임이 일치할 때만)
-                            if (previousBettingStart !== '시작' && currentGame.bettingStart === '시작' && isOperatorUserGameMatch) {
-                                console.log('🎤 배팅 시작 감지!');
+                            // 배팅 시작 상태 변경 감지 (선택한 게임이 활성화될 때)
+                            if (previousBettingStart !== '시작' && currentGame.bettingStart === '시작') {
+                                console.log('🎤 선택한 게임 배팅 시작 감지!');
                             
                             // 선택된 게임 정보 업데이트
                             selectedGame.bettingStart = currentGame.bettingStart;
@@ -1648,20 +1643,13 @@
                             enableBettingSelection();
                             enablePredictionButton();
                             
-                                // 급한 목소리로 두 번 반복
+                                // 배팅 시작 음성 안내 (1번만)
                                 speakText('이제부터 배팅선택을 할 수 있습니다.', 1.3);
-                                setTimeout(() => {
-                                    speakText('이제부터 배팅선택을 할 수 있습니다.', 1.3);
-                                }, 2000);
                             }
                             
-                            // 배팅 중지 상태 변경 감지 (또는 운영자-사용자 게임이 불일치할 때)
-                            if ((previousBettingStart !== '중지' && currentGame.bettingStart === '중지') || !isOperatorUserGameMatch) {
-                                if (currentGame.bettingStart === '중지') {
-                                    console.log('🎤 배팅 중지 감지!');
-                                } else if (!isOperatorUserGameMatch) {
-                                    console.log('🚫 운영자-사용자 게임 불일치로 비활성화');
-                                }
+                            // 배팅 중지 상태 변경 감지
+                            if (previousBettingStart !== '중지' && currentGame.bettingStart === '중지') {
+                                console.log('🎤 선택한 게임 배팅 중지 감지!');
                             
                             // 선택된 게임 정보 업데이트
                             selectedGame.bettingStart = currentGame.bettingStart;
@@ -1672,11 +1660,8 @@
                             disableBettingSelection();
                             disablePredictionButton();
                             
-                            // 배팅 중지 시에만 음성 안내 (게임 불일치는 음성 없음)
-                            if (currentGame.bettingStart === '중지' && previousBettingStart !== '중지') {
-                                speakText('이제부터 배팅을 할 수 없습니다.', 0.8);
-                            }
-                            // 게임 불일치는 조용히 비활성화 (음성 메시지 없음)
+                            // 배팅 중지 음성 안내 (필요시에만)
+                            // speakText('이제부터 배팅을 할 수 없습니다.', 0.8);
                             }
                             
                             // 이전 배팅 상태 업데이트
@@ -3133,8 +3118,8 @@
                     console.log('✅ 배팅 성공 - game-member 컬렉션에 저장됨');
                     console.log('📊 저장된 배팅 데이터:', requestData);
                     
-                    // 배팅 성공 음성 안내 (더 명확하게)
-                    const successMessage = `${window.selectedChoice}에 100포인트 배팅이 완료되었습니다.`;
+                    // 배팅 성공 음성 안내 (간단하게)
+                    const successMessage = `배팅이 완료되었습니다.`;
                     console.log('🎤 성공 음성 재생:', successMessage);
                     speakText(successMessage);
                     
