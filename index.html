@@ -1555,22 +1555,46 @@
                             
                             console.log('🔄 선택한 게임 활성화 상태:', isGameActive);
                             
-                            // 배팅 시작 상태 변경 감지 (실제로 상태가 변경될 때만)
-                            if (previousBettingStart && previousBettingStart !== '시작' && currentGame.bettingStart === '시작') {
+                            // 배팅 시작 상태 변경 감지 (더 넓은 조건으로 수정)
+                            if (currentGame.bettingStart === '시작' && (previousBettingStart !== '시작' || !previousBettingStart)) {
                                 console.log('🎤 선택한 게임 배팅 시작 감지!');
+                                console.log('🔍 이전 상태:', previousBettingStart, '→ 현재 상태:', currentGame.bettingStart);
                             
                             // 선택된 게임 정보 업데이트
                             selectedGame.bettingStart = currentGame.bettingStart;
                             selectedGame.bettingStop = currentGame.bettingStop;
                             
                             // 배팅선택 활성화 (강제 표시)
+                            enableBettingChoices();
                             const bettingOptionsContainer = document.getElementById('bettingOptionsContainer');
                             if (bettingOptionsContainer) {
                                 bettingOptionsContainer.style.display = 'block';
                                 console.log('✅ 배팅 옵션 강제 활성화');
+                                
+                                // 모든 배팅 버튼 강제 표시
+                                const betButtons = bettingOptionsContainer.querySelectorAll('.bet-choice-btn');
+                                betButtons.forEach(btn => {
+                                    btn.style.display = 'block';
+                                });
+                                console.log(`✅ ${betButtons.length}개 배팅 버튼 활성화`);
                             }
                             enablePredictionButton();
                             
+                            }
+                            
+                            // 게임이 이미 시작 상태라면 항상 배팅 옵션 표시
+                            if (currentGame.bettingStart === '시작') {
+                                const bettingOptionsContainer = document.getElementById('bettingOptionsContainer');
+                                if (bettingOptionsContainer && bettingOptionsContainer.style.display === 'none') {
+                                    bettingOptionsContainer.style.display = 'block';
+                                    console.log('🔄 이미 시작된 게임 - 배팅 옵션 활성화');
+                                    
+                                    // 모든 배팅 버튼 표시
+                                    const betButtons = bettingOptionsContainer.querySelectorAll('.bet-choice-btn');
+                                    betButtons.forEach(btn => {
+                                        btn.style.display = 'block';
+                                    });
+                                }
                             }
                             
                             // 배팅 중지 상태 변경 감지 (실제로 상태가 변경될 때만)
